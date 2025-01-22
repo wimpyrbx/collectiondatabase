@@ -28,4 +28,8 @@ export interface CardHeaderProps {
   startCollapsed?: boolean;
   isCollapsed?: boolean;
   onCollapseToggle?: () => void;
+  bgColor?: string;
+  icon?: React.ReactNode;
+  iconColor?: string;
+  textColor?: string;
 } 

@@ -3,7 +3,7 @@ import React from 'react';
 import Page from '@/components/page/Page';
 import { useInventory } from '@/hooks/useInventory';
 import { InventoryViewItem } from '@/types/inventory';
-import { FaBox } from 'react-icons/fa';
+import { FaListAlt } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
@@ -19,7 +19,8 @@ const Home = () => {
       accessor: (item: InventoryViewItem) => item.product_title,
       sortable: true,
       tooltip: {
-        text: 'Click to sort by product title'
+        text: 'Click to sort by product title',
+        style: 'minimal'        
       }
     },
     {
@@ -102,9 +103,9 @@ const Home = () => {
   return (
     <Page
       title="Inventory"
-      icon={<FaBox />}
+      icon={<FaListAlt />}
       bgColor="bg-gray-800"
-      iconColor="text-red-500"
+      iconColor="text-orange-500"
       subtitle="Manage your inventory items"
     >
       <Card
@@ -112,6 +113,9 @@ const Home = () => {
       >
         <Card.Header
           title="Inventory"
+          icon={<FaListAlt />}
+          iconColor="text-orange-500"
+          collapsible={true}
         />
         <Card.Body>
           <BaseFilterableTable<InventoryViewItem>
