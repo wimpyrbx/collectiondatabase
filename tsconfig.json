@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node", // Use Node.js-style module resolution
+    "jsx": "react-jsx", // Enable the new JSX transform for React 17+
+    "module": "esnext", // Use ES modules
+    "target": "esnext", // Target the latest ECMAScript version
+    "baseUrl": ".", // Base directory for module resolution
+    "paths": {
+      "@/*": ["src/*"] // Path aliases for imports
+    },
+    "allowJs": false, // Disallow JavaScript files
+    "resolveJsonModule": true, // Allow importing JSON files
+    "isolatedModules": true, // Ensure each file can be transpiled independently
+    "esModuleInterop": true, // Enable ES module interop for CommonJS modules
+    "strict": true, // Enable all strict type-checking options
+    "skipLibCheck": true, // Skip type-checking of declaration files
+    "forceConsistentCasingInFileNames": true, // Ensure consistent file casing
+    "noEmit": true // Disable emitting JavaScript files (useful for Vite projects)
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"], // Include only .ts and .tsx files
+  "exclude": ["node_modules"] // Exclude node_modules
+}
