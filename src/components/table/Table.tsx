@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { Tooltip } from '@/components/tooltip/Tooltip';
 import { TableProps } from './types';
 import { TooltipProps } from '@/utils/tooltip';
+import { useUpdateAnimation } from '@/hooks/useUpdateAnimation';
 
 export interface Column<T> {
   key: string;
@@ -40,8 +41,11 @@ export function Table<T>({
   rowClassName,
   pagination,
   sortBy,
-  sortDirection
+  sortDirection,
+  updatedId
 }: TableProps<T>) {
+  const { className: animationClass } = useUpdateAnimation(updatedId || '');
+
   // Track previous data for comparison
   const prevDataRef = React.useRef<Map<string, any>>(new Map());
   const [changedRows, setChangedRows] = React.useState<Set<string>>(new Set());
@@ -316,6 +320,9 @@ export function Table<T>({
             {data.map((item) => {
               const rowKey = keyExtractor(item);
               const isChanged = changedRows.has(rowKey);
+              // Convert both to strings for comparison since updatedId might be a number
+              const isUpdated = updatedId !== null && updatedId !== undefined && 
+                              rowKey.toString() === updatedId.toString();
               
               return (
                 <tr 
@@ -325,7 +332,8 @@ export function Table<T>({
                     'transition-all duration-0',
                     'hover:bg-gray-900/50',
                     isChanged && 'animate-fadeOut',
-                    rowClassName
+                    rowClassName,
+                    isUpdated && 'animate-flash-green'
                   )}
                 >
                   {columns.map((column) => (

@@ -37,4 +37,5 @@ export interface TableProps<T> {
   pagination?: TablePagination;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
+  updatedId?: string | number | null;
 } 

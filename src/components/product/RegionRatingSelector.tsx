@@ -82,7 +82,7 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
           onChange={(e) => handleRegionChange(e.target.value)}
           className="w-full p-2 text-sm border border-gray-700 rounded-lg bg-gray-900 text-gray-300"
         >
-          <option value="">Region</option>
+          <option value="">Select ...</option>
           {regionsData.regions.map((region) => (
             <option key={region.id} value={region.name}>
               {region.display_name}
@@ -97,7 +97,7 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
           disabled={!value.region}
           className="w-full p-2 text-sm border border-gray-700 rounded-lg bg-gray-900 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <option value="">Rating System</option>
+          <option value="">Select ...</option>
           {availableRatingSystems.map((system) => (
             <option key={system.id} value={system.name}>
               {system.display_name}
@@ -112,7 +112,7 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
           disabled={!value.ratingSystem}
           className="w-full p-2 text-sm border border-gray-700 rounded-lg bg-gray-900 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <option value="">Rating</option>
+          <option value="">Select ...</option>
           {availableRatings.map((rating) => (
             <option key={rating.id} value={rating.name}>
               {rating.display_name}

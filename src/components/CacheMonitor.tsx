@@ -3,10 +3,45 @@ import { useCacheMonitor } from '@/hooks/useCacheMonitor';
 import { FaDatabase, FaTimes, FaClock } from 'react-icons/fa';
 import clsx from 'clsx';
 import { CacheDataModal } from './modal/CacheDataModal';
+import { TagsRelationshipView } from '@/types/tags';
 
 interface CacheMonitorProps {
   collapsed: boolean;
 }
+
+const getEntryCount = (entry: ReturnType<typeof useCacheMonitor>[0]) => {
+  // If it's an array, return its length
+  if (Array.isArray(entry.data)) {
+    return entry.data.length.toString();
+  }
+  
+  // Special handling for tags view
+  if (entry.queryKey[0] === 'tags' && entry.data) {
+    const tagsData = entry.data as TagsRelationshipView;
+    if (tagsData.combined_data) {
+      const productsCount = Object.keys(tagsData.combined_data.products || {}).length;
+      const inventoryCount = Object.keys(tagsData.combined_data.inventory || {}).length;
+      return `${productsCount}/${inventoryCount}`;
+    }
+  }
+  
+  return '0';
+};
+
+const getEntryCountColor = (entry: ReturnType<typeof useCacheMonitor>[0]) => {
+  if (Array.isArray(entry.data)) {
+    return 'text-green-500';
+  }
+  
+  if (entry.queryKey[0] === 'tags' && entry.data) {
+    const tagsData = entry.data as TagsRelationshipView;
+    if (tagsData.combined_data) {
+      return 'text-green-500';
+    }
+  }
+  
+  return 'text-gray-500';
+};
 
 export const CacheMonitor: React.FC<CacheMonitorProps> = ({ collapsed }) => {
   const [isEnabled, setIsEnabled] = React.useState(false);
@@ -95,9 +130,11 @@ export const CacheMonitor: React.FC<CacheMonitorProps> = ({ collapsed }) => {
                 </div>
                     {/* right align */}
                 <div className="text-gray-500 text-xs w-[25px] flex justify-end">
-                    <span className="text-gray-500 text-xs">(<span className={
-                        Array.isArray(entry.data) ? 'text-green-500' : 'text-gray-500'
-                    }>{Array.isArray(entry.data) ? entry.data.length : '0'}</span>)</span>
+                    <span className="text-gray-500 text-xs">(
+                      <span className={getEntryCountColor(entry)}>
+                        {getEntryCount(entry)}
+                      </span>
+                    )</span>
                 </div>
                 {/* right align */}
                 <div className="flex items-center gap-1.5 text-[9px] lowercase text-gray-500 group-hover:text-gray-400 justify-end">

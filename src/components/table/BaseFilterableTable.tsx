@@ -1,6 +1,7 @@
 import React from 'react';
 import { Table, type Column } from '@/components/table/Table';
 import { Button } from '@/components/ui';
+import { useUpdateAnimation } from '@/hooks/useUpdateAnimation';
 
 export interface FilterOption {
   value: string;
@@ -47,6 +48,8 @@ export interface BaseFilterableTableProps<T> {
     onPageChange: (page: number) => void;
     onPageSizeChange: (size: number) => void;
   };
+
+  updatedId?: string | number | null;
 }
 
 export const BaseFilterableTable = <T extends Record<string, any>>({
@@ -66,8 +69,10 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
   sortDirection,
   onSort,
   pagination,
+  updatedId
 }: BaseFilterableTableProps<T>) => {
   const [isFiltersExpanded, setIsFiltersExpanded] = React.useState(false);
+  const { className: animationClass } = useUpdateAnimation(updatedId || '');
 
   return (
     <div className="space-y-4">
@@ -165,6 +170,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
         sortBy={sortBy}
         sortDirection={sortDirection}
         pagination={pagination}
+        updatedId={updatedId}
       />
     </div>
   );

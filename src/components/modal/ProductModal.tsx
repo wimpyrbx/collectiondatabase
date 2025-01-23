@@ -17,12 +17,14 @@ interface ProductModalProps {
   product: ProductViewItem | null;
   isOpen: boolean;
   onClose: () => void;
+  onUpdateSuccess?: (productId: number) => void;
 }
 
 export const ProductModal: React.FC<ProductModalProps> = ({
   product,
   isOpen,
-  onClose
+  onClose,
+  onUpdateSuccess
 }) => {
   const { updateProduct, isUpdating } = useProductsTable();
   const { getProductTags } = useTagsCache();
@@ -94,7 +96,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Ensure we prevent default form submission
     if (!product) return;
 
     // Validate required fields
@@ -113,7 +115,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     try {
       await updateProduct({ id: product.product_id, updates });
       setError(null);
-      onClose();
+      // Ensure we're passing the numeric ID
+      if (onUpdateSuccess) {
+        onUpdateSuccess(product.product_id);
+      }
     } catch (error) {
       console.error('Failed to update product:', error);
       setError(error instanceof Error ? error.message : 'Failed to update product');
@@ -265,6 +270,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   onClick={handleClose}
                   bgColor="bg-red-900"
                   iconLeft={<FaTimes />}
+                  type="button"
                 >
                   Cancel
                 </Button>

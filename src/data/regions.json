@@ -1,17 +1,239 @@
 {
     "regions": [
       {
+        "id": 2,
+        "name": "NTSC",
+        "display_name": "NTSC (North America)",
+        "display_order": 1,
+        "description": "Games released in North America and other NTSC regions",
+        "rating_systems": [
+          {
+            "id": 4,
+            "name": "ESRB",
+            "display_name": "ESRB (Entertainment Software Rating Board)",
+            "display_order": 1,
+            "description": "North American rating system",
+            "ratings": [
+              {
+                "id": 16,
+                "name": "ESRB EC",
+                "display_name": "Early Childhood",
+                "display_order": 1,
+                "description": "Content intended for early childhood",
+                "image_path": "images/ratings/ntsc/esrb/esrb ec.webp"
+              },
+              {
+                "id": 17,
+                "name": "ESRB E",
+                "display_name": "Everyone",
+                "display_order": 2,
+                "description": "Content suitable for all ages",
+                "image_path": "images/ratings/ntsc/esrb/esrb e.webp"
+              },
+              {
+                "id": 18,
+                "name": "ESRB E10",
+                "display_name": "Everyone 10+",
+                "display_order": 3,
+                "description": "Content suitable for ages 10 and older",
+                "image_path": "images/ratings/ntsc/esrb/esrb e10.webp"
+              },
+              {
+                "id": 19,
+                "name": "ESRB T",
+                "display_name": "Teen",
+                "display_order": 4,
+                "description": "Content suitable for ages 13 and older",
+                "image_path": "images/ratings/ntsc/esrb/esrb t.webp"
+              },
+              {
+                "id": 20,
+                "name": "ESRB M",
+                "display_name": "Mature",
+                "display_order": 5,
+                "description": "Content suitable for ages 17 and older",
+                "image_path": "images/ratings/ntsc/esrb/esrb m.webp"
+              },
+              {
+                "id": 21,
+                "name": "ESRB AO",
+                "display_name": "Adults Only",
+                "display_order": 6,
+                "description": "Content suitable only for adults ages 18 and older",
+                "image_path": "images/ratings/ntsc/esrb/esrb ao.webp"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "name": "NTSC-J",
+        "display_name": "NTSC-J (Japan)",
+        "display_order": 2,
+        "description": "Games released in Japan and other NTSC-J regions",
+        "rating_systems": [
+          {
+            "id": 5,
+            "name": "CERO",
+            "display_name": "CERO (Computer Entertainment Rating Organization)",
+            "display_order": 1,
+            "description": "Japanese rating system",
+            "ratings": [
+              {
+                "id": 22,
+                "name": "CERO_A",
+                "display_name": "A (All Ages)",
+                "display_order": 1,
+                "description": "Content suitable for all ages",
+                "image_path": "images/ratings/ntsc-j/cero/cero a.webp"
+              },
+              {
+                "id": 23,
+                "name": "CERO_B",
+                "display_name": "B (12+)",
+                "display_order": 2,
+                "description": "Content suitable for ages 12 and older",
+                "image_path": "images/ratings/ntsc-j/cero/cero b.webp"
+              },
+              {
+                "id": 24,
+                "name": "CERO_C",
+                "display_name": "C (15+)",
+                "display_order": 3,
+                "description": "Content suitable for ages 15 and older",
+                "image_path": "images/ratings/ntsc-j/cero/cero c.webp"
+              },
+              {
+                "id": 25,
+                "name": "CERO_D",
+                "display_name": "D (17+)",
+                "display_order": 4,
+                "description": "Content suitable for ages 17 and older",
+                "image_path": "images/ratings/ntsc-j/cero/cero d.webp"
+              },
+              {
+                "id": 26,
+                "name": "CERO_Z",
+                "display_name": "Z (18+)",
+                "display_order": 5,
+                "description": "Content suitable only for ages 18 and older",
+                "image_path": "images/ratings/ntsc-j/cero/cero z.webp"
+              }
+            ]
+          }
+        ]
+      },
+      {
         "id": 1,
         "name": "PAL",
         "display_name": "PAL (Europe/Australia)",
-        "display_order": 1,
+        "display_order": 3,
         "description": "Games released in Europe, Australia, and other PAL regions",
         "rating_systems": [
+          {
+            "id": 3,
+            "name": "ACB",
+            "display_name": "ACB (Australian Classification Board)",
+            "display_order": 1,
+            "description": "Australian rating system",
+            "ratings": [
+              {
+                "id": 11,
+                "name": "ACB G",
+                "display_name": "G (General)",
+                "display_order": 1,
+                "description": "Suitable for general audiences",
+                "image_path": "images/ratings/pal/acb/acb g.webp"
+              },
+              {
+                "id": 12,
+                "name": "ACB PG",
+                "display_name": "PG (Parental Guidance)",
+                "display_order": 2,
+                "description": "Parental guidance recommended",
+                "image_path": "images/ratings/pal/acb/acb pg.webp"
+              },
+              {
+                "id": 13,
+                "name": "ACB M",
+                "display_name": "M (Mature)",
+                "display_order": 3,
+                "description": "Recommended for mature audiences",
+                "image_path": "images/ratings/pal/acb/acb m.webp"
+              },
+              {
+                "id": 14,
+                "name": "ACB MA15",
+                "display_name": "MA15+ (Mature Accompanied)",
+                "display_order": 4,
+                "description": "Not suitable for people under 15",
+                "image_path": "images/ratings/pal/acb/acb ma.webp"
+              },
+              {
+                "id": 15,
+                "name": "ACB R18",
+                "display_name": "R18+ (Restricted)",
+                "display_order": 5,
+                "description": "Restricted to adults",
+                "image_path": "images/ratings/pal/acb/acb r18.webp"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "name": "BBFC",
+            "display_name": "BBFC (British Board of Film Classification)",
+            "display_order": 2,
+            "description": "UK rating system for films and video games",
+            "ratings": [
+              {
+                "id": 27,
+                "name": "BBFC U",
+                "display_name": "U (Universal)",
+                "display_order": 1,
+                "description": "Suitable for all ages",
+                "image_path": "images/ratings/pal/bbfc/bbfc u.webp"
+              },
+              {
+                "id": 28,
+                "name": "BBFC PG",
+                "display_name": "PG (Parental Guidance)",
+                "display_order": 2,
+                "description": "Parental guidance recommended",
+                "image_path": "images/ratings/pal/bbfc/bbfc pg.webp"
+              },
+              {
+                "id": 29,
+                "name": "BBFC 12",
+                "display_name": "12 (Suitable for 12 and over)",
+                "display_order": 3,
+                "description": "Suitable for ages 12 and older",
+                "image_path": "images/ratings/pal/bbfc/bbfc 12.webp"
+              },
+              {
+                "id": 30,
+                "name": "BBFC 15",
+                "display_name": "15 (Suitable for 15 and over)",
+                "display_order": 4,
+                "description": "Suitable for ages 15 and older",
+                "image_path": "images/ratings/pal/bbfc/bbfc 15.webp"
+              },
+              {
+                "id": 31,
+                "name": "BBFC 18",
+                "display_name": "18 (Suitable for adults only)",
+                "display_order": 5,
+                "description": "Suitable only for adults ages 18 and older",
+                "image_path": "images/ratings/pal/bbfc/bbfc 18.webp"
+              }
+            ]
+          },
           {
             "id": 1,
             "name": "PEGI",
             "display_name": "PEGI (Pan European Game Information)",
-            "display_order": 1,
+            "display_order": 3,
             "description": "European rating system",
             "ratings": [
               {
@@ -60,14 +282,14 @@
             "id": 2,
             "name": "USK",
             "display_name": "USK (Unterhaltungssoftware Selbstkontrolle)",
-            "display_order": 2,
+            "display_order": 4,
             "description": "German rating system",
             "ratings": [
               {
                 "id": 6,
                 "name": "USK 0",
                 "display_name": "USK 0",
-                "display_order": 6,
+                "display_order": 1,
                 "description": "Approved without age restriction",
                 "image_path": "images/ratings/pal/usk/usk 0.webp"
               },
@@ -75,7 +297,7 @@
                 "id": 7,
                 "name": "USK 6",
                 "display_name": "USK 6",
-                "display_order": 7,
+                "display_order": 2,
                 "description": "Approved for ages 6 and older",
                 "image_path": "images/ratings/pal/usk/usk 6.webp"
               },
@@ -83,7 +305,7 @@
                 "id": 8,
                 "name": "USK 12",
                 "display_name": "USK 12",
-                "display_order": 8,
+                "display_order": 3,
                 "description": "Approved for ages 12 and older",
                 "image_path": "images/ratings/pal/usk/usk 12.webp"
               },
@@ -91,7 +313,7 @@
                 "id": 9,
                 "name": "USK 16",
                 "display_name": "USK 16",
-                "display_order": 9,
+                "display_order": 4,
                 "description": "Approved for ages 16 and older",
                 "image_path": "images/ratings/pal/usk/usk 16.webp"
               },
@@ -99,182 +321,9 @@
                 "id": 10,
                 "name": "USK 18",
                 "display_name": "USK 18",
-                "display_order": 10,
+                "display_order": 5,
                 "description": "Adults only",
                 "image_path": "images/ratings/pal/usk/usk 18.webp"
-              }
-            ]
-          },
-          {
-            "id": 3,
-            "name": "ACB",
-            "display_name": "ACB (Australian Classification Board)",
-            "display_order": 3,
-            "description": "Australian rating system",
-            "ratings": [
-              {
-                "id": 11,
-                "name": "ACB G",
-                "display_name": "G (General)",
-                "display_order": 11,
-                "description": "Suitable for general audiences",
-                "image_path": "images/ratings/pal/acb/acb g.webp"
-              },
-              {
-                "id": 12,
-                "name": "ACB PG",
-                "display_name": "PG (Parental Guidance)",
-                "display_order": 12,
-                "description": "Parental guidance recommended",
-                "image_path": "images/ratings/pal/acb/acb pg.webp"
-              },
-              {
-                "id": 13,
-                "name": "ACB M",
-                "display_name": "M (Mature)",
-                "display_order": 13,
-                "description": "Recommended for mature audiences",
-                "image_path": "images/ratings/pal/acb/acb m.webp"
-              },
-              {
-                "id": 14,
-                "name": "ACB MA15",
-                "display_name": "MA15+ (Mature Accompanied)",
-                "display_order": 14,
-                "description": "Not suitable for people under 15",
-                "image_path": "images/ratings/pal/acb/acb ma.webp"
-              },
-              {
-                "id": 15,
-                "name": "ACB R18",
-                "display_name": "R18+ (Restricted)",
-                "display_order": 15,
-                "description": "Restricted to adults",
-                "image_path": "images/ratings/pal/acb/acb r18.webp"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": 2,
-        "name": "NTSC",
-        "display_name": "NTSC (North America)",
-        "display_order": 2,
-        "description": "Games released in North America and other NTSC regions",
-        "rating_systems": [
-          {
-            "id": 4,
-            "name": "ESRB",
-            "display_name": "ESRB (Entertainment Software Rating Board)",
-            "display_order": 4,
-            "description": "North American rating system",
-            "ratings": [
-              {
-                "id": 16,
-                "name": "ESRB EC",
-                "display_name": "Early Childhood",
-                "display_order": 16,
-                "description": "Content intended for early childhood",
-                "image_path": "images/ratings/ntsc/esrb/esrb ec.webp"
-              },
-              {
-                "id": 17,
-                "name": "ESRB E",
-                "display_name": "Everyone",
-                "display_order": 17,
-                "description": "Content suitable for all ages",
-                "image_path": "images/ratings/ntsc/esrb/esrb e.webp"
-              },
-              {
-                "id": 18,
-                "name": "ESRB E10",
-                "display_name": "Everyone 10+",
-                "display_order": 18,
-                "description": "Content suitable for ages 10 and older",
-                "image_path": "images/ratings/ntsc/esrb/esrb e10.webp"
-              },
-              {
-                "id": 19,
-                "name": "ESRB T",
-                "display_name": "Teen",
-                "display_order": 19,
-                "description": "Content suitable for ages 13 and older",
-                "image_path": "images/ratings/ntsc/esrb/esrb t.webp"
-              },
-              {
-                "id": 20,
-                "name": "ESRB M",
-                "display_name": "Mature",
-                "display_order": 20,
-                "description": "Content suitable for ages 17 and older",
-                "image_path": "images/ratings/ntsc/esrb/esrb m.webp"
-              },
-              {
-                "id": 21,
-                "name": "ESRB AO",
-                "display_name": "Adults Only",
-                "display_order": 21,
-                "description": "Content suitable only for adults ages 18 and older",
-                "image_path": "images/ratings/ntsc/esrb/esrb ao.webp"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": 3,
-        "name": "NTSC-J",
-        "display_name": "NTSC-J (Japan)",
-        "display_order": 3,
-        "description": "Games released in Japan and other NTSC-J regions",
-        "rating_systems": [
-          {
-            "id": 5,
-            "name": "CERO",
-            "display_name": "CERO (Computer Entertainment Rating Organization)",
-            "display_order": 5,
-            "description": "Japanese rating system",
-            "ratings": [
-              {
-                "id": 22,
-                "name": "CERO_A",
-                "display_name": "A (All Ages)",
-                "display_order": 22,
-                "description": "Content suitable for all ages",
-                "image_path": "images/ratings/ntsc-j/cero/cero a.webp"
-              },
-              {
-                "id": 23,
-                "name": "CERO_B",
-                "display_name": "B (12+)",
-                "display_order": 23,
-                "description": "Content suitable for ages 12 and older",
-                "image_path": "images/ratings/ntsc-j/cero/cero b.webp"
-              },
-              {
-                "id": 24,
-                "name": "CERO_C",
-                "display_name": "C (15+)",
-                "display_order": 24,
-                "description": "Content suitable for ages 15 and older",
-                "image_path": "images/ratings/ntsc-j/cero/cero c.webp"
-              },
-              {
-                "id": 25,
-                "name": "CERO_D",
-                "display_name": "D (17+)",
-                "display_order": 25,
-                "description": "Content suitable for ages 17 and older",
-                "image_path": "images/ratings/ntsc-j/cero/cero d.webp"
-              },
-              {
-                "id": 26,
-                "name": "CERO_Z",
-                "display_name": "Z (18+)",
-                "display_order": 26,
-                "description": "Content suitable only for ages 18 and older",
-                "image_path": "images/ratings/ntsc-j/cero/cero z.webp"
               }
             ]
           }

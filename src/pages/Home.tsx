@@ -16,6 +16,7 @@ const Home = () => {
   const { data, isLoading, isError, error } = useProductsCache();
   const { getProductTags } = useTagsCache();
   const [selectedProduct, setSelectedProduct] = React.useState<ProductViewItem | null>(null);
+  const [updatedProductId, setUpdatedProductId] = React.useState<number | null>(null);
 
   // Helper function to find rating image path
   const getRatingImagePath = React.useCallback((regionName: string | null, ratingName: string | null): string | null => {
@@ -211,6 +212,24 @@ const Home = () => {
     getFilterConfigs: getFilterConfigs
   });
 
+  const handleProductUpdate = (product: ProductViewItem) => {
+    setSelectedProduct(product);
+    setUpdatedProductId(null);
+  };
+
+  const handleModalClose = () => {
+    setSelectedProduct(null);
+  };
+
+  const handleUpdateSuccess = (productId: number) => {
+    setSelectedProduct(null);
+    setUpdatedProductId(productId);
+    // Clear the animation after it plays
+    setTimeout(() => {
+      setUpdatedProductId(null);
+    }, 1500); // Increased to 1.5s to match animation duration
+  };
+
   return (
     <Page
       title="Products"
@@ -244,9 +263,8 @@ const Home = () => {
             sortDirection={tableState.sortDirection}
             onSort={tableState.onSort}
             pagination={tableState.pagination}
-            onRowClick={(item) => {
-              setSelectedProduct(item);
-            }}
+            onRowClick={handleProductUpdate}
+            updatedId={updatedProductId}
           />
         </Card.Body>
       </Card>
@@ -254,7 +272,8 @@ const Home = () => {
       <ProductModal
         product={selectedProduct}
         isOpen={selectedProduct !== null}
-        onClose={() => setSelectedProduct(null)}
+        onClose={handleModalClose}
+        onUpdateSuccess={handleUpdateSuccess}
       />
     </Page>
   );
