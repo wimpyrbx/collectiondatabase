@@ -1,16 +1,59 @@
 // src/pages/Home.tsx
 import React from 'react';
 import Page from '@/components/page/Page';
-import { useProducts } from '@/hooks/useProducts';
+import { useProductsCache } from '@/hooks/useProductsCache';
 import { ProductViewItem } from '@/types/product';
-import { FaListAlt, FaTag, FaBoxes, FaDollarSign, FaLayerGroup, FaCubes } from 'react-icons/fa';
+import { FaListAlt, FaTag, FaBoxes, FaDollarSign, FaLayerGroup, FaCubes, FaGlobe, FaStar } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
 import { Card } from '@/components/card';
+import { ProductModal } from '@/components/modal/ProductModal';
+import regionsData from '@/data/regions.json';
 
 const Home = () => {
-  const { data, isLoading, isError, error } = useProducts();
+  const { data, isLoading, isError, error } = useProductsCache();
+  const [selectedProduct, setSelectedProduct] = React.useState<ProductViewItem | null>(null);
+
+  // Helper function to find rating image path
+  const getRatingImagePath = React.useCallback((regionName: string | null, ratingName: string | null): string | null => {
+    if (!regionName || !ratingName) return null;
+    
+    const region = regionsData.regions.find(r => r.name === regionName);
+    if (!region) return null;
+
+    // Normalize rating name (e.g., "PEGI 16" -> "PEGI_16")
+    const normalizedRatingName = ratingName.replace(' ', '_');
+
+    for (const system of region.rating_systems) {
+      const rating = system.ratings.find(r => r.name === normalizedRatingName);
+      if (rating) {
+        return rating.image_path;
+      }
+    }
+    return null;
+  }, []);
+
+  const getRatingDisplayInfo = React.useCallback((regionName: string | null, ratingName: string | null): { displayName: string, imagePath: string | null } => {
+    if (!regionName || !ratingName) return { displayName: '', imagePath: null };
+    
+    const region = regionsData.regions.find(r => r.name === regionName);
+    if (!region) return { displayName: ratingName, imagePath: null };
+
+    // Normalize rating name (e.g., "PEGI 16" -> "PEGI_16")
+    const normalizedRatingName = ratingName.replace(' ', '_');
+
+    for (const system of region.rating_systems) {
+      const rating = system.ratings.find(r => r.name === normalizedRatingName);
+      if (rating) {
+        return {
+          displayName: rating.display_name,
+          imagePath: rating.image_path
+        };
+      }
+    }
+    return { displayName: ratingName, imagePath: null };
+  }, []);
 
   const columns: Column<ProductViewItem>[] = [
     {
@@ -30,6 +73,45 @@ const Home = () => {
       icon: <FaBoxes className="w-4 h-4" />,
       width: '200px',
       accessor: (item: ProductViewItem) => item.product_variant,
+      sortable: true
+    },
+    {
+      key: 'region_name',
+      header: 'Region',
+      icon: <FaGlobe className="w-4 h-4" />,
+      width: '100px',
+      accessor: (item: ProductViewItem) => {
+        const region = regionsData.regions.find(r => r.name === item.region_name);
+        return (
+          <div className="flex items-center space-x-2">
+            <span>{region?.display_name || item.region_name || ''}</span>
+          </div>
+        );
+      },
+      sortable: true
+    },
+    {
+      key: 'rating_name',
+      header: 'Rating',
+      icon: <FaStar className="w-4 h-4" />,
+      width: '150px',
+      accessor: (item: ProductViewItem) => {
+        const { displayName, imagePath } = getRatingDisplayInfo(item.region_name, item.rating_name);
+
+        return (
+          <div className="flex items-center space-x-2">
+            {imagePath && (
+              <img 
+                src={imagePath} 
+                alt={displayName} 
+                className="h-8 w-auto"
+                title={displayName}
+              />
+            )}
+            <span className="text-sm text-gray-300">{item.rating_name || ''}</span>
+          </div>
+        );
+      },
       sortable: true
     },
     {
@@ -143,13 +225,19 @@ const Home = () => {
             onSort={tableState.onSort}
             pagination={tableState.pagination}
             onRowClick={(item) => {
-              console.log('Clicked item:', item);
+              setSelectedProduct(item);
             }}
           />
         </Card.Body>
       </Card>
+
+      <ProductModal
+        product={selectedProduct}
+        isOpen={selectedProduct !== null}
+        onClose={() => setSelectedProduct(null)}
+      />
     </Page>
   );
-};
+}
 
 export default Home;

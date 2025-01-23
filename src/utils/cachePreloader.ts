@@ -1,8 +1,8 @@
 import { QueryClient } from '@tanstack/react-query';
-import { PRODUCTS_QUERY_KEY } from '@/hooks/useProducts';
-import { INVENTORY_QUERY_KEY } from '@/hooks/useInventory';
-import { SALES_QUERY_KEY } from '@/hooks/useSales';
-import { SALE_ITEMS_QUERY_KEY } from '@/hooks/useSaleItems';
+import { PRODUCTS_QUERY_KEY } from '@/hooks/useProductsCache';
+import { INVENTORY_QUERY_KEY } from '@/hooks/useInventoryCache';
+import { SALES_QUERY_KEY } from '@/hooks/useSalesCache';
+import { SALE_ITEMS_QUERY_KEY } from '@/hooks/useSaleItemsCache';
 import { supabase } from '@/supabaseClient';
 
 export const preloadQueries = async (queryClient: QueryClient) => {

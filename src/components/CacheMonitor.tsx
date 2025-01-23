@@ -16,7 +16,13 @@ export const CacheMonitor: React.FC<CacheMonitorProps> = ({ collapsed }) => {
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === '|') {
-        setIsEnabled(prev => !prev);
+        setIsEnabled(prev => {
+          if (prev) {
+            // Close any open modals when disabling
+            setSelectedEntry(null);
+          }
+          return !prev;
+        });
       }
     };
 
@@ -52,7 +58,10 @@ export const CacheMonitor: React.FC<CacheMonitorProps> = ({ collapsed }) => {
         'border border-cyan-600/30',
         'cursor-pointer'
       )}
-      onClick={() => setIsEnabled(false)}
+      onClick={() => {
+        setSelectedEntry(null);
+        setIsEnabled(false);
+      }}
       >
         <div className={clsx(
           'flex items-center gap-2',

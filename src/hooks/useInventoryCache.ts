@@ -16,7 +16,7 @@ const fetchInventory = async (): Promise<InventoryViewItem[]> => {
   return data;
 };
 
-export const useInventory = () => {
+export const useInventoryCache = () => {
   return useQuery({
     queryKey: INVENTORY_QUERY_KEY,
     queryFn: fetchInventory,
