@@ -16,7 +16,7 @@
             "ratings": [
               {
                 "id": 1,
-                "name": "PEGI_3",
+                "name": "PEGI 3",
                 "display_name": "PEGI 3",
                 "display_order": 1,
                 "description": "Content suitable for all ages",
@@ -24,7 +24,7 @@
               },
               {
                 "id": 2,
-                "name": "PEGI_7",
+                "name": "PEGI 7",
                 "display_name": "PEGI 7",
                 "display_order": 2,
                 "description": "Content suitable for ages 7 and older",
@@ -32,7 +32,7 @@
               },
               {
                 "id": 3,
-                "name": "PEGI_12",
+                "name": "PEGI 12",
                 "display_name": "PEGI 12",
                 "display_order": 3,
                 "description": "Content suitable for ages 12 and older",
@@ -40,7 +40,7 @@
               },
               {
                 "id": 4,
-                "name": "PEGI_16",
+                "name": "PEGI 16",
                 "display_name": "PEGI 16",
                 "display_order": 4,
                 "description": "Content suitable for ages 16 and older",
@@ -48,7 +48,7 @@
               },
               {
                 "id": 5,
-                "name": "PEGI_18",
+                "name": "PEGI 18",
                 "display_name": "PEGI 18",
                 "display_order": 5,
                 "description": "Content suitable only for adults",
@@ -65,7 +65,7 @@
             "ratings": [
               {
                 "id": 6,
-                "name": "USK_0",
+                "name": "USK 0",
                 "display_name": "USK 0",
                 "display_order": 6,
                 "description": "Approved without age restriction",
@@ -73,7 +73,7 @@
               },
               {
                 "id": 7,
-                "name": "USK_6",
+                "name": "USK 6",
                 "display_name": "USK 6",
                 "display_order": 7,
                 "description": "Approved for ages 6 and older",
@@ -81,7 +81,7 @@
               },
               {
                 "id": 8,
-                "name": "USK_12",
+                "name": "USK 12",
                 "display_name": "USK 12",
                 "display_order": 8,
                 "description": "Approved for ages 12 and older",
@@ -89,7 +89,7 @@
               },
               {
                 "id": 9,
-                "name": "USK_16",
+                "name": "USK 16",
                 "display_name": "USK 16",
                 "display_order": 9,
                 "description": "Approved for ages 16 and older",
@@ -97,7 +97,7 @@
               },
               {
                 "id": 10,
-                "name": "USK_18",
+                "name": "USK 18",
                 "display_name": "USK 18",
                 "display_order": 10,
                 "description": "Adults only",
@@ -114,7 +114,7 @@
             "ratings": [
               {
                 "id": 11,
-                "name": "ACB_G",
+                "name": "ACB G",
                 "display_name": "G (General)",
                 "display_order": 11,
                 "description": "Suitable for general audiences",
@@ -122,7 +122,7 @@
               },
               {
                 "id": 12,
-                "name": "ACB_PG",
+                "name": "ACB PG",
                 "display_name": "PG (Parental Guidance)",
                 "display_order": 12,
                 "description": "Parental guidance recommended",
@@ -130,7 +130,7 @@
               },
               {
                 "id": 13,
-                "name": "ACB_M",
+                "name": "ACB M",
                 "display_name": "M (Mature)",
                 "display_order": 13,
                 "description": "Recommended for mature audiences",
@@ -138,7 +138,7 @@
               },
               {
                 "id": 14,
-                "name": "ACB_MA15",
+                "name": "ACB MA15",
                 "display_name": "MA15+ (Mature Accompanied)",
                 "display_order": 14,
                 "description": "Not suitable for people under 15",
@@ -146,7 +146,7 @@
               },
               {
                 "id": 15,
-                "name": "ACB_R18",
+                "name": "ACB R18",
                 "display_name": "R18+ (Restricted)",
                 "display_order": 15,
                 "description": "Restricted to adults",
@@ -172,7 +172,7 @@
             "ratings": [
               {
                 "id": 16,
-                "name": "ESRB_EC",
+                "name": "ESRB EC",
                 "display_name": "Early Childhood",
                 "display_order": 16,
                 "description": "Content intended for early childhood",
@@ -180,7 +180,7 @@
               },
               {
                 "id": 17,
-                "name": "ESRB_E",
+                "name": "ESRB E",
                 "display_name": "Everyone",
                 "display_order": 17,
                 "description": "Content suitable for all ages",
@@ -188,7 +188,7 @@
               },
               {
                 "id": 18,
-                "name": "ESRB_E10",
+                "name": "ESRB E10",
                 "display_name": "Everyone 10+",
                 "display_order": 18,
                 "description": "Content suitable for ages 10 and older",
@@ -196,7 +196,7 @@
               },
               {
                 "id": 19,
-                "name": "ESRB_T",
+                "name": "ESRB T",
                 "display_name": "Teen",
                 "display_order": 19,
                 "description": "Content suitable for ages 13 and older",
@@ -204,7 +204,7 @@
               },
               {
                 "id": 20,
-                "name": "ESRB_M",
+                "name": "ESRB M",
                 "display_name": "Mature",
                 "display_order": 20,
                 "description": "Content suitable for ages 17 and older",
@@ -212,7 +212,7 @@
               },
               {
                 "id": 21,
-                "name": "ESRB_AO",
+                "name": "ESRB AO",
                 "display_name": "Adults Only",
                 "display_order": 21,
                 "description": "Content suitable only for adults ages 18 and older",

@@ -47,6 +47,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         const region = regionsData.regions.find(r => r.name === product.region_name);
         if (region) {
           foundRegion = region.name;
+          
           // Search through rating systems to find the one containing our rating
           for (const system of region.rating_systems) {
             const rating = system.ratings.find(r => r.name === product.rating_name);

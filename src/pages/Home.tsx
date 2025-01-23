@@ -22,11 +22,8 @@ const Home = () => {
     const region = regionsData.regions.find(r => r.name === regionName);
     if (!region) return null;
 
-    // Normalize rating name (e.g., "PEGI 16" -> "PEGI_16")
-    const normalizedRatingName = ratingName.replace(' ', '_');
-
     for (const system of region.rating_systems) {
-      const rating = system.ratings.find(r => r.name === normalizedRatingName);
+      const rating = system.ratings.find(r => r.name === ratingName);
       if (rating) {
         return rating.image_path;
       }
@@ -40,11 +37,8 @@ const Home = () => {
     const region = regionsData.regions.find(r => r.name === regionName);
     if (!region) return { displayName: ratingName, imagePath: null };
 
-    // Normalize rating name (e.g., "PEGI 16" -> "PEGI_16")
-    const normalizedRatingName = ratingName.replace(' ', '_');
-
     for (const system of region.rating_systems) {
-      const rating = system.ratings.find(r => r.name === normalizedRatingName);
+      const rating = system.ratings.find(r => r.name === ratingName);
       if (rating) {
         return {
           displayName: rating.display_name,
