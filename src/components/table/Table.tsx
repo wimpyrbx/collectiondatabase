@@ -8,6 +8,7 @@ import { TooltipProps } from '@/utils/tooltip';
 export interface Column<T> {
   key: string;
   header: string;
+  icon?: React.ReactNode;
   tooltip?: TooltipProps;
   width?: string;
   sortKey?: string;
@@ -287,21 +288,24 @@ export function Table<T>({
                       });
                     }}
                   >
-                    {column.header}
-                    {column.sortable && (
-                      <span className="ml-2 inline-block">
-                        {isColumnSorted && (
-                          sortDirection === 'asc' ? (
-                            <FiChevronUp className='w-3 h-3 text-gray-100' />
-                          ) : (
-                            <FiChevronDown className='w-3 h-3 text-gray-100' />
-                          )
-                        )} 
-                        {!isColumnSorted && (
-                          <FiChevronUp className='w-3 h-3 text-gray-500' />
-                        )}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {column.icon}
+                      <span>{column.header}</span>
+                      {column.sortable && (
+                        <span className="ml-1">
+                          {isColumnSorted && (
+                            sortDirection === 'asc' ? (
+                              <FiChevronUp className='w-3 h-3 text-gray-100' />
+                            ) : (
+                              <FiChevronDown className='w-3 h-3 text-gray-100' />
+                            )
+                          )} 
+                          {!isColumnSorted && (
+                            <FiChevronUp className='w-3 h-3 text-gray-500' />
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </th>
                 );
               })}

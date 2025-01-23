@@ -1,7 +1,6 @@
-// src/hooks/useInventory.ts
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabaseClient';
-import { InventoryViewItem } from '@/types/inventory'; // Updated import
+import { InventoryViewItem } from '@/types/inventory';
 
 const fetchInventory = async (): Promise<InventoryViewItem[]> => {
   const { data, error } = await supabase.from('view_inventory').select('*');

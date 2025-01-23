@@ -3,7 +3,8 @@ import { TooltipProps } from '@/utils/tooltip';
 
 export interface TableColumn<T> {
   key: string;
-  header: ReactNode;
+  header: string;
+  icon?: ReactNode;
   accessor: (item: T) => ReactNode;
   sortKey?: string;
   sortable?: boolean;
