@@ -1,0 +1,24 @@
+{
+  "types": [
+    {
+      "id": 1,
+      "name": "Game",
+      "display_name": "Game"
+    },
+    {
+      "id": 2,
+      "name": "Console",
+      "display_name": "Console"
+    },
+    {
+      "id": 3,
+      "name": "Peripheral",
+      "display_name": "Peripheral"
+    },
+    {
+      "id": 4,
+      "name": "Other",
+      "display_name": "Other"
+    }
+  ]
+} 

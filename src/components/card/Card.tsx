@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { cardStyles } from './styles';
+import React from 'react';
+import clsx from 'clsx';
 import CardHeader from './CardHeader';
 import CardBody from './CardBody';
 import CardFooter from './CardFooter';
-import type { CardCompositionProps } from './types';
-import clsx from 'clsx';
+
+interface CardCompositionProps {
+  children: React.ReactNode;
+  className?: string;
+  modal?: boolean;
+}
 
 interface CardCompoundComponents {
   Header: typeof CardHeader;
@@ -12,46 +16,47 @@ interface CardCompoundComponents {
   Footer: typeof CardFooter;
 }
 
+const cardStyles = {
+  container: 'bg-gray-800 rounded-md shadow-md shadow-black/20 overflow-hidden'
+};
+
 const Card: React.FC<CardCompositionProps> & CardCompoundComponents = ({ 
   children, 
-  className = '' 
+  className = '',
+  modal = false
 }) => {
   // Find the CardHeader child to get its startCollapsed prop
-  const headerChild = React.Children.toArray(children).find(
-    child => React.isValidElement(child) && child.type === CardHeader
+  const cardHeader = React.Children.toArray(children).find(
+    (child) => React.isValidElement(child) && child.type === CardHeader
   ) as React.ReactElement | undefined;
 
-  const startCollapsed = headerChild?.props?.startCollapsed ?? false;
-  const [isCollapsed, setIsCollapsed] = useState(startCollapsed);
+  const [isCollapsed, setIsCollapsed] = React.useState(cardHeader?.props.startCollapsed ?? false);
 
-  // Pass collapse state to children
-  const childrenWithProps = React.Children.map(children, child => {
+  // Clone children to pass isCollapsed state
+  const childrenWithProps = React.Children.map(children, (child) => {
     if (React.isValidElement(child)) {
-      // For CardHeader, pass setIsCollapsed and isCollapsed
       if (child.type === CardHeader) {
-        return React.cloneElement(child, {
-          ...child.props,
+        return React.cloneElement(child as React.ReactElement<any>, {
           isCollapsed,
-          onCollapseToggle: () => setIsCollapsed(!isCollapsed)
+          onCollapse: () => setIsCollapsed(!isCollapsed)
         });
       }
-      // For Body and Footer, pass isCollapsed
-      return React.cloneElement(child, {
-        ...child.props,
-        isCollapsed
-      });
+      if (child.type === CardBody || child.type === CardFooter) {
+        return React.cloneElement(child as React.ReactElement<any>, { 
+          isCollapsed 
+        });
+      }
     }
     return child;
   });
 
   return (
-    <div className={clsx(cardStyles.container, className)}>
+    <div className={clsx(cardStyles.container, !modal && 'mb-6', className)}>
       {childrenWithProps}
     </div>
   );
 };
 
-// Attach compound components
 Card.Header = CardHeader;
 Card.Body = CardBody;
 Card.Footer = CardFooter;

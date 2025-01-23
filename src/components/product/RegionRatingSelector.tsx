@@ -36,11 +36,11 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
   };
 
   const handleRegionChange = (newRegion: string) => {
-    // Clear rating system and rating when region changes
+    // Only update the region, let useEffect handle rating system selection
     onChange({
+      ...value,
       region: newRegion,
-      ratingSystem: '',
-      rating: ''
+      rating: undefined // Clear rating but keep rating system
     });
   };
 
@@ -49,7 +49,7 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
     onChange({
       ...value,
       ratingSystem: newRatingSystem,
-      rating: ''
+      rating: undefined
     });
   };
 
@@ -63,7 +63,7 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
     if (value.region && availableRatingSystems.length === 1 && !value.ratingSystem) {
       handleRatingSystemChange(availableRatingSystems[0].name);
     }
-  }, [value.region, availableRatingSystems]);
+  }, [value.region, availableRatingSystems, value.ratingSystem]);
 
   // Get available ratings for current rating system
   const availableRatings = React.useMemo(() => {

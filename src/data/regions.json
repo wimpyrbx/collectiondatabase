@@ -20,7 +20,7 @@
                 "display_name": "PEGI 3",
                 "display_order": 1,
                 "description": "Content suitable for all ages",
-                "image_path": "images/ratings/pal/pegi/pegi_3.webp"
+                "image_path": "images/ratings/pal/pegi/pegi 3.webp"
               },
               {
                 "id": 2,
@@ -28,7 +28,7 @@
                 "display_name": "PEGI 7",
                 "display_order": 2,
                 "description": "Content suitable for ages 7 and older",
-                "image_path": "images/ratings/pal/pegi/pegi_7.webp"
+                "image_path": "images/ratings/pal/pegi/pegi 7.webp"
               },
               {
                 "id": 3,
@@ -36,7 +36,7 @@
                 "display_name": "PEGI 12",
                 "display_order": 3,
                 "description": "Content suitable for ages 12 and older",
-                "image_path": "images/ratings/pal/pegi/pegi_12.webp"
+                "image_path": "images/ratings/pal/pegi/pegi 12.webp"
               },
               {
                 "id": 4,
@@ -44,7 +44,7 @@
                 "display_name": "PEGI 16",
                 "display_order": 4,
                 "description": "Content suitable for ages 16 and older",
-                "image_path": "images/ratings/pal/pegi/pegi_16.webp"
+                "image_path": "images/ratings/pal/pegi/pegi 16.webp"
               },
               {
                 "id": 5,
@@ -52,7 +52,7 @@
                 "display_name": "PEGI 18",
                 "display_order": 5,
                 "description": "Content suitable only for adults",
-                "image_path": "images/ratings/pal/pegi/pegi_18.webp"
+                "image_path": "images/ratings/pal/pegi/pegi 18.webp"
               }
             ]
           },
@@ -69,7 +69,7 @@
                 "display_name": "USK 0",
                 "display_order": 6,
                 "description": "Approved without age restriction",
-                "image_path": "images/ratings/pal/usk/usk_0.webp"
+                "image_path": "images/ratings/pal/usk/usk 0.webp"
               },
               {
                 "id": 7,
@@ -77,7 +77,7 @@
                 "display_name": "USK 6",
                 "display_order": 7,
                 "description": "Approved for ages 6 and older",
-                "image_path": "images/ratings/pal/usk/usk_6.webp"
+                "image_path": "images/ratings/pal/usk/usk 6.webp"
               },
               {
                 "id": 8,
@@ -85,7 +85,7 @@
                 "display_name": "USK 12",
                 "display_order": 8,
                 "description": "Approved for ages 12 and older",
-                "image_path": "images/ratings/pal/usk/usk_12.webp"
+                "image_path": "images/ratings/pal/usk/usk 12.webp"
               },
               {
                 "id": 9,
@@ -93,7 +93,7 @@
                 "display_name": "USK 16",
                 "display_order": 9,
                 "description": "Approved for ages 16 and older",
-                "image_path": "images/ratings/pal/usk/usk_16.webp"
+                "image_path": "images/ratings/pal/usk/usk 16.webp"
               },
               {
                 "id": 10,
@@ -101,7 +101,7 @@
                 "display_name": "USK 18",
                 "display_order": 10,
                 "description": "Adults only",
-                "image_path": "images/ratings/pal/usk/usk_18.webp"
+                "image_path": "images/ratings/pal/usk/usk 18.webp"
               }
             ]
           },
@@ -118,7 +118,7 @@
                 "display_name": "G (General)",
                 "display_order": 11,
                 "description": "Suitable for general audiences",
-                "image_path": "images/ratings/pal/acb/acb_g.webp"
+                "image_path": "images/ratings/pal/acb/acb g.webp"
               },
               {
                 "id": 12,
@@ -126,7 +126,7 @@
                 "display_name": "PG (Parental Guidance)",
                 "display_order": 12,
                 "description": "Parental guidance recommended",
-                "image_path": "images/ratings/pal/acb/acb_pg.webp"
+                "image_path": "images/ratings/pal/acb/acb pg.webp"
               },
               {
                 "id": 13,
@@ -134,7 +134,7 @@
                 "display_name": "M (Mature)",
                 "display_order": 13,
                 "description": "Recommended for mature audiences",
-                "image_path": "images/ratings/pal/acb/acb_m.webp"
+                "image_path": "images/ratings/pal/acb/acb m.webp"
               },
               {
                 "id": 14,
@@ -142,7 +142,7 @@
                 "display_name": "MA15+ (Mature Accompanied)",
                 "display_order": 14,
                 "description": "Not suitable for people under 15",
-                "image_path": "images/ratings/pal/acb/acb_ma.webp"
+                "image_path": "images/ratings/pal/acb/acb ma.webp"
               },
               {
                 "id": 15,
@@ -150,7 +150,7 @@
                 "display_name": "R18+ (Restricted)",
                 "display_order": 15,
                 "description": "Restricted to adults",
-                "image_path": "images/ratings/pal/acb/acb_r18.webp"
+                "image_path": "images/ratings/pal/acb/acb r18.webp"
               }
             ]
           }
@@ -176,7 +176,7 @@
                 "display_name": "Early Childhood",
                 "display_order": 16,
                 "description": "Content intended for early childhood",
-                "image_path": "images/ratings/ntsc/esrb/esrb_ec.webp"
+                "image_path": "images/ratings/ntsc/esrb/esrb ec.webp"
               },
               {
                 "id": 17,
@@ -184,7 +184,7 @@
                 "display_name": "Everyone",
                 "display_order": 17,
                 "description": "Content suitable for all ages",
-                "image_path": "images/ratings/ntsc/esrb/esrb_e.webp"
+                "image_path": "images/ratings/ntsc/esrb/esrb e.webp"
               },
               {
                 "id": 18,
@@ -192,7 +192,7 @@
                 "display_name": "Everyone 10+",
                 "display_order": 18,
                 "description": "Content suitable for ages 10 and older",
-                "image_path": "images/ratings/ntsc/esrb/esrb_e10.webp"
+                "image_path": "images/ratings/ntsc/esrb/esrb e10.webp"
               },
               {
                 "id": 19,
@@ -200,7 +200,7 @@
                 "display_name": "Teen",
                 "display_order": 19,
                 "description": "Content suitable for ages 13 and older",
-                "image_path": "images/ratings/ntsc/esrb/esrb_t.webp"
+                "image_path": "images/ratings/ntsc/esrb/esrb t.webp"
               },
               {
                 "id": 20,
@@ -208,7 +208,7 @@
                 "display_name": "Mature",
                 "display_order": 20,
                 "description": "Content suitable for ages 17 and older",
-                "image_path": "images/ratings/ntsc/esrb/esrb_m.webp"
+                "image_path": "images/ratings/ntsc/esrb/esrb m.webp"
               },
               {
                 "id": 21,
@@ -216,7 +216,7 @@
                 "display_name": "Adults Only",
                 "display_order": 21,
                 "description": "Content suitable only for adults ages 18 and older",
-                "image_path": "images/ratings/ntsc/esrb/esrb_ao.webp"
+                "image_path": "images/ratings/ntsc/esrb/esrb ao.webp"
               }
             ]
           }
@@ -242,7 +242,7 @@
                 "display_name": "A (All Ages)",
                 "display_order": 22,
                 "description": "Content suitable for all ages",
-                "image_path": "images/ratings/ntsc-j/cero/cero_a.webp"
+                "image_path": "images/ratings/ntsc-j/cero/cero a.webp"
               },
               {
                 "id": 23,
@@ -250,7 +250,7 @@
                 "display_name": "B (12+)",
                 "display_order": 23,
                 "description": "Content suitable for ages 12 and older",
-                "image_path": "images/ratings/ntsc-j/cero/cero_b.webp"
+                "image_path": "images/ratings/ntsc-j/cero/cero b.webp"
               },
               {
                 "id": 24,
@@ -258,7 +258,7 @@
                 "display_name": "C (15+)",
                 "display_order": 24,
                 "description": "Content suitable for ages 15 and older",
-                "image_path": "images/ratings/ntsc-j/cero/cero_c.webp"
+                "image_path": "images/ratings/ntsc-j/cero/cero c.webp"
               },
               {
                 "id": 25,
@@ -266,7 +266,7 @@
                 "display_name": "D (17+)",
                 "display_order": 25,
                 "description": "Content suitable for ages 17 and older",
-                "image_path": "images/ratings/ntsc-j/cero/cero_d.webp"
+                "image_path": "images/ratings/ntsc-j/cero/cero d.webp"
               },
               {
                 "id": 26,
@@ -274,7 +274,7 @@
                 "display_name": "Z (18+)",
                 "display_order": 26,
                 "description": "Content suitable only for ages 18 and older",
-                "image_path": "images/ratings/ntsc-j/cero/cero_z.webp"
+                "image_path": "images/ratings/ntsc-j/cero/cero z.webp"
               }
             ]
           }

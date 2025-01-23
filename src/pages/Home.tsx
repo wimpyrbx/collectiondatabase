@@ -2,8 +2,9 @@
 import React from 'react';
 import Page from '@/components/page/Page';
 import { useProductsCache } from '@/hooks/useProductsCache';
+import { useTagsCache } from '@/hooks/useTagsCache';
 import { ProductViewItem } from '@/types/product';
-import { FaListAlt, FaTag, FaBoxes, FaDollarSign, FaLayerGroup, FaCubes, FaGlobe, FaStar } from 'react-icons/fa';
+import { FaListAlt, FaTag, FaBoxes, FaDollarSign, FaLayerGroup, FaCubes, FaGlobe, FaStar, FaTags } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
@@ -13,6 +14,7 @@ import regionsData from '@/data/regions.json';
 
 const Home = () => {
   const { data, isLoading, isError, error } = useProductsCache();
+  const { getProductTags } = useTagsCache();
   const [selectedProduct, setSelectedProduct] = React.useState<ProductViewItem | null>(null);
 
   // Helper function to find rating image path
@@ -133,6 +135,30 @@ const Home = () => {
       width: '10px',
       accessor: (item: ProductViewItem) => item.product_group_name,
       sortable: true
+    },
+    {
+      key: 'tags',
+      header: 'Tags',
+      icon: <FaTags className="w-4 h-4" />,
+      width: '200px',
+      accessor: (item: ProductViewItem) => {
+        const tags = getProductTags(item.product_id);
+        if (!tags || tags.length === 0) return '';
+        
+        return (
+          <div className="flex flex-wrap gap-1">
+            {tags.map(tag => (
+              <span 
+                key={tag} 
+                className="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-300"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        );
+      },
+      sortable: false
     }
   ];
 

@@ -1,0 +1,29 @@
+{
+  "groups": [
+    {
+      "id": 1,
+      "name": "Xbox 360",
+      "display_name": "Xbox 360"
+    },
+    {
+      "id": 2,
+      "name": "Xbox",
+      "display_name": "Xbox"
+    },
+    {
+      "id": 3,
+      "name": "Playstation 3",
+      "display_name": "Playstation 3"
+    },
+    {
+      "id": 4,
+      "name": "Playstation 4",
+      "display_name": "Playstation 4"
+    },
+    {
+      "id": 5,
+      "name": "Other",
+      "display_name": "Other"
+    }
+  ]
+} 

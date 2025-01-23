@@ -1,10 +1,17 @@
 import React from 'react';
-import { Dialog } from '@headlessui/react';
+import { Modal } from './Modal';
+import { Card } from '@/components/card';
+import { useTagsCache } from '@/hooks/useTagsCache';
 import { ProductViewItem } from '@/types/product';
 import { useProductsTable } from '@/hooks/useProductsTable';
 import type { Product } from '@/types/tables';
 import RegionRatingSelector, { type RegionRatingValue } from '@/components/product/RegionRatingSelector';
 import regionsData from '@/data/regions.json';
+import productTypesData from '@/data/product_types.json';
+import productGroupsData from '@/data/product_groups.json';
+import FormElement from '@/components/formelement/FormElement';
+import { Button } from '@/components/ui/';
+import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck } from 'react-icons/fa';
 
 interface ProductModalProps {
   product: ProductViewItem | null;
@@ -18,15 +25,17 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   onClose
 }) => {
   const { updateProduct, isUpdating } = useProductsTable();
+  const { getProductTags } = useTagsCache();
   const [formData, setFormData] = React.useState<Partial<Product>>({});
+  const [error, setError] = React.useState<string | null>(null);
   const [regionRating, setRegionRating] = React.useState<RegionRatingValue>({
     region: '',
     ratingSystem: undefined,
     rating: undefined
   });
 
-  // Reset form when product changes
-  React.useEffect(() => {
+  // Function to reset form data from product
+  const resetFormData = React.useCallback((product: ProductViewItem | null) => {
     if (product) {
       setFormData({
         product_title: product.product_title,
@@ -67,11 +76,32 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         rating: foundRating
       });
     }
-  }, [product]);
+  }, []);
+
+  // Reset form when product changes or modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      resetFormData(product);
+      setError(null); // Clear any previous errors
+    }
+  }, [product, resetFormData, isOpen]);
+
+  // Handle modal close
+  const handleClose = () => {
+    resetFormData(product); // Reset form data to original values
+    setError(null); // Clear any errors
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product) return;
+
+    // Validate required fields
+    if (!formData.product_title?.trim()) {
+      setError('Product title is required');
+      return;
+    }
 
     // Include region and rating in the update
     const updates = {
@@ -82,13 +112,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
     try {
       await updateProduct({ id: product.product_id, updates });
+      setError(null);
       onClose();
     } catch (error) {
       console.error('Failed to update product:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update product');
     }
   };
 
   const handleInputChange = (field: keyof Product, value: any) => {
+    setError(null); // Clear error when user makes changes
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -97,63 +130,66 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   if (!product) return null;
 
+  const productTags = getProductTags(product.product_id);
+
+  // Convert product types and groups to options format
+  const productTypeOptions = productTypesData.types.map(type => ({
+    value: type.name,
+    label: type.display_name
+  }));
+
+  const productGroupOptions = productGroupsData.groups.map(group => ({
+    value: group.name,
+    label: group.display_name
+  }));
+
   return (
-    <Dialog
-      open={isOpen}
-      onClose={onClose}
-      className="relative z-50"
-    >
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+    <Modal isOpen={isOpen} onClose={handleClose}>
+      <Card modal>
+        <Card.Header
+          icon={<FaBox />}
+          iconColor="text-orange-500"
+          title="Edit Product"
+          bgColor="bg-orange-800/50"
+        />
+        <Card.Body>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 text-sm rounded bg-red-900/50 border border-red-700 text-red-200">
+                {error}
+              </div>
+            )}
 
-      {/* Full-screen container */}
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="mx-auto max-w-2xl w-full bg-gray-800 rounded-lg shadow-xl">
-          <div className="px-6 py-4 border-b border-gray-700">
-            <Dialog.Title className="text-lg font-medium text-gray-100">
-              Edit Product
-            </Dialog.Title>
-          </div>
-
-          <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
             {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300">
-                Title
-              </label>
-              <input
-                type="text"
-                value={formData.product_title || ''}
-                onChange={(e) => handleInputChange('product_title', e.target.value)}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
+            <FormElement
+              elementType="input"
+              label="Title"
+              labelIcon={<FaTag />}
+              initialValue={formData.product_title || ''}
+              onValueChange={(value) => handleInputChange('product_title', value)}
+              labelPosition="above"
+            />
 
             {/* Variant */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300">
-                Variant
-              </label>
-              <input
-                type="text"
-                value={formData.product_variant || ''}
-                onChange={(e) => handleInputChange('product_variant', e.target.value)}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
+            <FormElement
+              elementType="input"
+              label="Variant"
+              labelIcon={<FaBoxes />}
+              initialValue={formData.product_variant || ''}
+              onValueChange={(value) => handleInputChange('product_variant', value)}
+              labelPosition="above"
+            />
 
             {/* Release Year */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300">
-                Release Year
-              </label>
-              <input
-                type="number"
-                value={formData.release_year || ''}
-                onChange={(e) => handleInputChange('release_year', parseInt(e.target.value) || null)}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
+            <FormElement
+              elementType="input"
+              label="Release Year"
+              labelIcon={<FaCalendar />}
+              initialValue={formData.release_year || ''}
+              onValueChange={(value) => handleInputChange('release_year', value)}
+              labelPosition="above"
+              numericOnly
+            />
 
             {/* Region & Rating Selector */}
             <RegionRatingSelector
@@ -163,64 +199,84 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             />
 
             {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300">
-                Notes
-              </label>
-              <textarea
-                value={formData.product_notes || ''}
-                onChange={(e) => handleInputChange('product_notes', e.target.value)}
-                rows={3}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
+            <FormElement
+              elementType="textarea"
+              label="Notes"
+              labelIcon={<FaStickyNote />}
+              initialValue={formData.product_notes || ''}
+              onValueChange={(value) => handleInputChange('product_notes', value)}
+              labelPosition="above"
+              rows={3}
+            />
 
             {/* Product Group */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300">
-                Product Group
-              </label>
-              <input
-                type="text"
-                value={formData.product_group || ''}
-                onChange={(e) => handleInputChange('product_group', e.target.value)}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
+            <FormElement
+              elementType="listsingle"
+              label="Product Group"
+              labelIcon={<FaLayerGroup />}
+              options={productGroupOptions}
+              selectedOptions={formData.product_group || ''}
+              onValueChange={(value) => handleInputChange('product_group', value)}
+              labelPosition="above"
+            />
 
             {/* Product Type */}
+            <FormElement
+              elementType="listsingle"
+              label="Product Type"
+              labelIcon={<FaCubes />}
+              options={productTypeOptions}
+              selectedOptions={formData.product_type || ''}
+              onValueChange={(value) => handleInputChange('product_type', value)}
+              labelPosition="above"
+            />
+
+            {/* Tags Section */}
             <div>
               <label className="block text-sm font-medium text-gray-300">
-                Product Type
+                Tags
               </label>
-              <input
-                type="text"
-                value={formData.product_type || ''}
-                onChange={(e) => handleInputChange('product_type', e.target.value)}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              />
+              <div className="mt-2 flex flex-wrap gap-2">
+                {productTags && productTags.length > 0 ? (
+                  productTags.map(tag => (
+                    <span 
+                      key={tag}
+                      className="px-3 py-1 text-sm rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                    >
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-400 italic">No tags</span>
+                )}
+              </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isUpdating}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isUpdating ? 'Saving...' : 'Save Changes'}
-              </button>
+            <div className="flex grid grid-cols-2 gap-2 pt-4 border-t border-gray-700">
+              <div>
+                <Button
+                  onClick={handleClose}
+                  bgColor="bg-red-900"
+                  iconLeft={<FaTimes />}
+                >
+                  Cancel
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  disabled={isUpdating}
+                  bgColor="bg-green-900"
+                  iconLeft={<FaCheck />}
+                >
+                  {isUpdating ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
             </div>
           </form>
-        </Dialog.Panel>
-      </div>
-    </Dialog>
+        </Card.Body>
+      </Card>
+    </Modal>
   );
 }; 

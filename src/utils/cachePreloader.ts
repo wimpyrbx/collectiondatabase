@@ -3,6 +3,7 @@ import { PRODUCTS_QUERY_KEY } from '@/hooks/useProductsCache';
 import { INVENTORY_QUERY_KEY } from '@/hooks/useInventoryCache';
 import { SALES_QUERY_KEY } from '@/hooks/useSalesCache';
 import { SALE_ITEMS_QUERY_KEY } from '@/hooks/useSaleItemsCache';
+import { TAGS_QUERY_KEY } from '@/hooks/useTagsCache';
 import { supabase } from '@/supabaseClient';
 
 export const preloadQueries = async (queryClient: QueryClient) => {
@@ -48,6 +49,18 @@ export const preloadQueries = async (queryClient: QueryClient) => {
       queryKey: SALE_ITEMS_QUERY_KEY,
       queryFn: async () => {
         const { data, error } = await supabase.from('view_sale_items').select('*');
+        if (error) throw error;
+        return data;
+      },
+      staleTime: Infinity,
+      gcTime: Infinity,
+    }),
+
+    // Tags
+    queryClient.prefetchQuery({
+      queryKey: TAGS_QUERY_KEY,
+      queryFn: async () => {
+        const { data, error } = await supabase.from('view_tags_relationship').select('*').single();
         if (error) throw error;
         return data;
       },
