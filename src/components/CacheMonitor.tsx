@@ -24,13 +24,18 @@ const getEntryCount = (entry: ReturnType<typeof useCacheMonitor>[0]) => {
       return `${productsCount}/${inventoryCount}`;
     }
   }
+
+  // Handle null/undefined data
+  if (!entry.data) {
+    return '0';
+  }
   
-  return '0';
+  return '1';
 };
 
 const getEntryCountColor = (entry: ReturnType<typeof useCacheMonitor>[0]) => {
   if (Array.isArray(entry.data)) {
-    return 'text-green-500';
+    return entry.data.length > 0 ? 'text-green-500' : 'text-gray-500';
   }
   
   if (entry.queryKey[0] === 'tags' && entry.data) {
@@ -38,6 +43,11 @@ const getEntryCountColor = (entry: ReturnType<typeof useCacheMonitor>[0]) => {
     if (tagsData.combined_data) {
       return 'text-green-500';
     }
+  }
+
+  // For non-array data, green if data exists
+  if (entry.data) {
+    return 'text-green-500';
   }
   
   return 'text-gray-500';

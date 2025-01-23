@@ -4,7 +4,7 @@ import Page from '@/components/page/Page';
 import { useProductsCache } from '@/hooks/useProductsCache';
 import { useTagsCache } from '@/hooks/useTagsCache';
 import { ProductViewItem } from '@/types/product';
-import { FaListAlt, FaTag, FaBoxes, FaDollarSign, FaLayerGroup, FaCubes, FaGlobe, FaStar, FaTags } from 'react-icons/fa';
+import { FaListAlt, FaTag, FaBoxes, FaDollarSign, FaLayerGroup, FaCubes, FaGlobe, FaStar, FaTags, FaCalendar } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
@@ -54,6 +54,22 @@ const Home = () => {
 
   const columns: Column<ProductViewItem>[] = [
     {
+      key: 'product_group_name',
+      header: 'Group',
+      icon: <FaLayerGroup className="w-4 h-4" />,
+      width: '10px',
+      accessor: (item: ProductViewItem) => item.product_group_name,
+      sortable: true
+    },
+    {
+      key: 'product_type_name',
+      header: 'Type',
+      icon: <FaCubes className="w-4 h-4" />,
+      width: '10px',
+      accessor: (item: ProductViewItem) => item.product_type_name,
+      sortable: true
+    },
+    {
       key: 'product_title',
       header: 'Product Title',
       icon: <FaTag className="w-4 h-4" />,
@@ -63,6 +79,15 @@ const Home = () => {
         text: 'Click to sort by product title',
         style: 'minimal'        
       }
+    },
+    {
+      key: 'release_year',
+      header: 'Year',
+      icon: <FaCalendar className="w-4 h-4" />,
+      width: '80px',
+      accessor: (item: ProductViewItem) => item.release_year || '',
+      sortable: true,
+      align: 'center' as const
     },
     {
       key: 'product_variant',
@@ -101,7 +126,7 @@ const Home = () => {
               <img 
                 src={imagePath} 
                 alt={displayName} 
-                className="h-8 w-auto"
+                className="h-6 w-auto"
                 title={displayName}
               />
             )}
@@ -120,22 +145,6 @@ const Home = () => {
       sortable: true,
       sortKey: 'final_price',
       align: 'left' as const
-    },
-    {
-      key: 'product_type_name',
-      header: 'Type',
-      icon: <FaCubes className="w-4 h-4" />,
-      width: '10px',
-      accessor: (item: ProductViewItem) => item.product_type_name,
-      sortable: true
-    },
-    {
-      key: 'product_group_name',
-      header: 'Group',
-      icon: <FaLayerGroup className="w-4 h-4" />,
-      width: '10px',
-      accessor: (item: ProductViewItem) => item.product_group_name,
-      sortable: true
     },
     {
       key: 'tags',

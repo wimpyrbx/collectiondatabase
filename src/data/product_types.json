@@ -3,22 +3,26 @@
     {
       "id": 1,
       "name": "Game",
-      "display_name": "Game"
+      "display_name": "Game",
+      "image_path": "public/images/product_types/game.webp"
     },
     {
       "id": 2,
       "name": "Console",
-      "display_name": "Console"
+      "display_name": "Console",
+      "image_path": "public/images/product_types/console.webp"
     },
     {
       "id": 3,
       "name": "Peripheral",
-      "display_name": "Peripheral"
+      "display_name": "Peripheral",
+      "image_path": "public/images/product_types/peripheral.webp"
     },
     {
       "id": 4,
       "name": "Other",
-      "display_name": "Other"
+      "display_name": "Other",
+      "image_path": "public/images/product_types/other.webp"
     }
   ]
 } 

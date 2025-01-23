@@ -73,12 +73,19 @@ const FormElement: React.FC<FormElementProps> = ({
   numericOnly = false,
   selectedOptions = [],
 }) => {
+  const elementRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const baseClasses = `${bgColor} ${textColor} ${disabled ? 'opacity-50' : ''} text-${textSize} ${width} ${padding} ${margin} ${
     rounded === 'none' ? '' : `rounded-${rounded}`
   } border border-gray-700 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 placeholder-gray-500/50`;
 
   const handleChange = (value: SelectionValue) => {
     onValueChange?.(value);
+  };
+
+  const handleClear = () => {
+    handleChange('');
+    // Focus the input/textarea after clearing
+    elementRef.current?.focus();
   };
 
   const handleNumericInput = (value: string) => {
@@ -124,6 +131,7 @@ const FormElement: React.FC<FormElementProps> = ({
         return (
           <textarea
             {...commonProps}
+            ref={elementRef as React.RefObject<HTMLTextAreaElement>}
             value={initialValue}
             onChange={(e) => handleChange(e.target.value)}
             rows={rows}
@@ -134,6 +142,7 @@ const FormElement: React.FC<FormElementProps> = ({
         return (
           <input
             {...commonProps}
+            ref={elementRef as React.RefObject<HTMLInputElement>}
             type="text"
             value={initialValue}
             onChange={(e) => numericOnly ? handleNumericInput(e.target.value) : handleChange(e.target.value)}
@@ -160,8 +169,8 @@ const FormElement: React.FC<FormElementProps> = ({
       {showClearButton && ['input', 'textarea'].includes(elementType) && initialValue && !disabled && (
         <button
           type="button"
-          onClick={() => handleChange('')}
-          className="absolute text-sm -right-1 top-0.5 flex justify-center text-red-600 hover:text-red-300 bg-transparent"
+          onClick={handleClear}
+          className="absolute text-sm -right-1 mt-[17px] flex justify-center text-red-600/50 hover:text-red-500 bg-transparent"
         >
           X
         </button>
