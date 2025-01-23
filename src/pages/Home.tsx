@@ -37,7 +37,7 @@ const Home = () => {
       header: 'Price',
       icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
       width: '10px',
-      accessor: (item: ProductViewItem) => `NOK ${item.final_price.toFixed(0)},-`,
+      accessor: (item: ProductViewItem) => item.final_price ? `NOK ${item.final_price.toFixed(0)},-` : '',
       sortable: true,
       sortKey: 'final_price',
       align: 'left' as const
@@ -61,9 +61,9 @@ const Home = () => {
   ];
 
   const getFilterConfigs = React.useCallback((data: ProductViewItem[]) => {
-    const uniqueTypes = Array.from(new Set(data.map(item => item.product_type_name)));
-    const uniqueGroups = Array.from(new Set(data.map(item => item.product_group_name)));
-    const uniqueVariants = Array.from(new Set(data.map(item => item.product_variant))).filter(Boolean);
+    const uniqueTypes = Array.from(new Set(data.map(item => item.product_type_name ?? ''))).filter(Boolean) as string[];
+    const uniqueGroups = Array.from(new Set(data.map(item => item.product_group_name ?? ''))).filter(Boolean) as string[];
+    const uniqueVariants = Array.from(new Set(data.map(item => item.product_variant ?? ''))).filter(Boolean) as string[];
 
     return [
       {
@@ -89,7 +89,7 @@ const Home = () => {
         label: 'Variant',
         options: [
           {
-            value: '',
+            value: 'none',
             label: '(No Variant)',
             count: data.filter(item => !item.product_variant || item.product_variant.trim() === '').length
           },
@@ -106,7 +106,7 @@ const Home = () => {
   const tableState = useTableState({
     initialSort: 'product_title',
     data: data || [],
-    getFilterConfigs
+    getFilterConfigs: getFilterConfigs
   });
 
   return (
@@ -130,7 +130,7 @@ const Home = () => {
           <BaseFilterableTable<ProductViewItem>
             columns={columns}
             data={tableState.currentPageData}
-            keyExtractor={(item) => item.product_id}
+            keyExtractor={(item) => item.product_id.toString()}
             isLoading={isLoading}
             error={error}
             filters={tableState.filters}

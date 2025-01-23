@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabaseClient';
-import { ProductViewItem } from '@/types/product';
+import { SaleItemViewItem } from '@/types/sale';
 
-export const PRODUCTS_QUERY_KEY = ['products'] as const;
+export const SALE_ITEMS_QUERY_KEY = ['sale_items'] as const;
 
-const fetchProducts = async (): Promise<ProductViewItem[]> => {
+const fetchSaleItems = async (): Promise<SaleItemViewItem[]> => {
   const { data, error } = await supabase
-    .from('view_products')
+    .from('view_sale_items')
     .select('*');
 
   if (error) {
@@ -16,10 +16,10 @@ const fetchProducts = async (): Promise<ProductViewItem[]> => {
   return data;
 };
 
-export const useProducts = () => {
+export const useSaleItems = () => {
   return useQuery({
-    queryKey: PRODUCTS_QUERY_KEY,
-    queryFn: fetchProducts,
+    queryKey: SALE_ITEMS_QUERY_KEY,
+    queryFn: fetchSaleItems,
     gcTime: Infinity,
     staleTime: Infinity,
     refetchOnMount: false,

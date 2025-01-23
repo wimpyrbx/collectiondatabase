@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaHome, FaInfoCircle, FaEnvelope, FaWpforms, FaQuestionCircle, FaLayerGroup, FaSearch, FaChevronRight } from 'react-icons/fa';
 import clsx from 'clsx';
+import { CacheMonitor } from './CacheMonitor';
 
 // Add these types at the top after imports
 type MenuItem = {
@@ -215,6 +216,14 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onCollapse }) => {
             </div>
           ))}
         </nav>
+
+        {/* Cache Monitor */}
+        <div className={clsx(
+          'absolute bottom-20 transition-all duration-300',
+          collapsed ? 'left-2 right-2' : 'left-6 right-6'
+        )}>
+          <CacheMonitor collapsed={collapsed} />
+        </div>
 
         {/* Footer Area */}
         <div className={clsx(

@@ -1,0 +1,6 @@
+attr
+idna
+supabase
+supabase_client
+colorama
+python-dotenv
