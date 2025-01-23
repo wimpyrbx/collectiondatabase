@@ -162,6 +162,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
             {/* Title */}
             <FormElement
+              key={`title-${isOpen}-${product.product_id}`}
               elementType="input"
               label="Title"
               labelIcon={<FaTag />}
@@ -172,6 +173,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
             {/* Variant */}
             <FormElement
+              key={`variant-${isOpen}-${product.product_id}`}
               elementType="input"
               label="Variant"
               labelIcon={<FaBoxes />}
@@ -182,6 +184,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
             {/* Release Year */}
             <FormElement
+              key={`year-${isOpen}-${product.product_id}`}
               elementType="input"
               label="Release Year"
               labelIcon={<FaCalendar />}
@@ -200,6 +203,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
             {/* Notes */}
             <FormElement
+              key={`notes-${isOpen}-${product.product_id}`}
               elementType="textarea"
               label="Notes"
               labelIcon={<FaStickyNote />}
@@ -211,6 +215,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
             {/* Product Group */}
             <FormElement
+              key={`group-${isOpen}-${product.product_id}`}
               elementType="listsingle"
               label="Product Group"
               labelIcon={<FaLayerGroup />}
@@ -222,6 +227,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
             {/* Product Type */}
             <FormElement
+              key={`type-${isOpen}-${product.product_id}`}
               elementType="listsingle"
               label="Product Type"
               labelIcon={<FaCubes />}
