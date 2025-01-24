@@ -106,14 +106,25 @@ export function useTableState<T extends Record<string, any>>({
 
   // Sort data
   const sorted = React.useMemo(() => {
+    // Create a map of original indices to maintain order during animations
+    const indexMap = new Map(data.map((item, index) => [item[sortBy], index]));
+    
     return [...filtered].sort((a, b) => {
       let valA = a[sortBy] ?? '';
       let valB = b[sortBy] ?? '';
+      
+      // If values are equal, maintain original order
+      if (valA === valB) {
+        const indexA = indexMap.get(valA) ?? 0;
+        const indexB = indexMap.get(valB) ?? 0;
+        return indexA - indexB;
+      }
+      
       if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
       if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [filtered, sortBy, sortDirection]);
+  }, [filtered, sortBy, sortDirection, data]);
 
   // Calculate pagination
   const startIndex = (page - 1) * pageSize;

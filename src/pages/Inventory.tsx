@@ -1,52 +1,54 @@
-// src/pages/Home.tsx
 import React from 'react';
 import Page from '@/components/page/Page';
-import { useProductsCache } from '@/hooks/useProductsCache';
+import { useInventoryCache } from '@/hooks/useInventoryCache';
 import { useTagsCache } from '@/hooks/useTagsCache';
-import { ProductViewItem } from '@/types/product';
-import { FaListAlt, FaTag, FaBoxes, FaDollarSign, FaLayerGroup, FaCubes, FaGlobe, FaStar, FaTags, FaCalendar } from 'react-icons/fa';
+import { InventoryViewItem } from '@/types/inventory';
+import { FaTag, FaBoxes, FaDollarSign, FaLayerGroup, FaGlobe, FaStar, FaTags, FaCalendar, FaStore } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
 import { Card } from '@/components/card';
-import { ProductModal } from '@/components/modal/ProductModal';
 import regionsData from '@/data/regions.json';
 import productTypesData from '@/data/product_types.json';
+import { InventoryModal } from '@/components/modal/InventoryModal';
 import { getRatingDisplayInfo, getProductTypeInfo } from '@/utils/productUtils';
 
-const Home = () => {
-  const { data, isLoading, isError, error } = useProductsCache();
-  const { getProductTags } = useTagsCache();
-  const [selectedProduct, setSelectedProduct] = React.useState<ProductViewItem | null>(null);
-  const [updatedProductId, setUpdatedProductId] = React.useState<number | null>(null);
+const Inventory = () => {
+  const { data, isLoading, isError, error } = useInventoryCache();
+  const { getInventoryTags, getInventoryWithProductTags } = useTagsCache();
+  const [selectedInventory, setSelectedInventory] = React.useState<InventoryViewItem | null>(null);
+  const [updatedInventoryId, setUpdatedInventoryId] = React.useState<number | null>(null);
 
-  const columns: Column<ProductViewItem>[] = [
+  const columns: Column<InventoryViewItem>[] = [
     {
-      key: 'type',
+      key: 'product_type_and_group',
       header: 'Type/Group',
       icon: <FaLayerGroup className="w-4 h-4" />,
       width: '100px',
-      accessor: (item) => {
+      accessor: (item: InventoryViewItem) => {
         const typeInfo = getProductTypeInfo(item.product_type_name, productTypesData.types);
+        
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center space-x-2">
             {typeInfo.imagePath && (
-              <img
-                src={typeInfo.imagePath}
-                alt={typeInfo.displayName}
-                className="w-4 h-4"
+              <img 
+                src={typeInfo.imagePath} 
+                alt={typeInfo.displayName} 
+                className="h-4 w-auto"
+                title={typeInfo.displayName}
               />
             )}
             <span className="text-xs">{item.product_group_name}</span>
           </div>
         );
-      }
+      },
+      sortable: false
     },
     {
       key: 'product_title',
       header: 'Product Title',
       icon: <FaTag className="w-4 h-4" />,
-      accessor: (item: ProductViewItem) => (
+      accessor: (item: InventoryViewItem) => (
         <div className="flex flex-col">
           <span>{item.product_title} {item.product_variant && <span className="text-sm text-cyan-500/75">({item.product_variant})</span>}</span>
         </div>
@@ -62,7 +64,7 @@ const Home = () => {
       header: 'Year',
       icon: <FaCalendar className="w-4 h-4" />,
       width: '80px',
-      accessor: (item: ProductViewItem) => item.release_year || '',
+      accessor: (item: InventoryViewItem) => item.release_year || '',
       sortable: true,
       align: 'center' as const
     },
@@ -71,7 +73,7 @@ const Home = () => {
       header: 'Region',
       icon: <FaGlobe className="w-4 h-4" />,
       width: '100px',
-      accessor: (item: ProductViewItem) => {
+      accessor: (item: InventoryViewItem) => {
         const region = regionsData.regions.find(r => r.name === item.region_name);
         return (
           <div className="flex items-center space-x-2">
@@ -82,31 +84,51 @@ const Home = () => {
       sortable: true
     },
     {
-      key: 'rating',
+      key: 'rating_name',
       header: 'Rating',
-      width: '100px',
-      accessor: (item) => {
+      icon: <FaStar className="w-4 h-4" />,
+      width: '150px',
+      accessor: (item: InventoryViewItem) => {
         const ratingInfo = getRatingDisplayInfo(item.region_name, item.rating_name, regionsData.regions);
+
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center space-x-2">
             {ratingInfo.imagePath && (
-              <img
-                src={ratingInfo.imagePath}
-                alt={ratingInfo.displayName}
-                className="h-6"
+              <img 
+                src={ratingInfo.imagePath} 
+                alt={ratingInfo.displayName} 
+                className="h-6 w-auto"
+                title={ratingInfo.displayName}
               />
             )}
-            <span>{ratingInfo.displayName}</span>
+            <span className="text-sm text-gray-300">{item.rating_name || ''}</span>
           </div>
         );
-      }
+      },
+      sortable: true
+    },
+    {
+      key: 'inventory_status',
+      header: 'Status',
+      icon: <FaStore className="w-4 h-4" />,
+      width: '100px',
+      accessor: (item: InventoryViewItem) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs ${
+          item.inventory_status === 'FOR_SALE' ? 'bg-green-500/20 text-green-300' :
+          item.inventory_status === 'SOLD' ? 'bg-blue-500/20 text-blue-300' :
+          'bg-gray-500/20 text-gray-300'
+        }`}>
+          {item.inventory_status.replace('_', ' ')}
+        </span>
+      ),
+      sortable: true
     },
     {
       key: 'final_price',
       header: 'Price',
       icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
-      width: '10px',
-      accessor: (item: ProductViewItem) => item.final_price ? `NOK ${item.final_price.toFixed(0)},-` : '',
+      width: '100px',
+      accessor: (item: InventoryViewItem) => item.final_price ? `NOK ${item.final_price.toFixed(0)},-` : '',
       sortable: true,
       sortKey: 'final_price',
       align: 'left' as const
@@ -116,16 +138,26 @@ const Home = () => {
       header: 'Tags',
       icon: <FaTags className="w-4 h-4" />,
       width: '200px',
-      accessor: (item: ProductViewItem) => {
-        const tags = getProductTags(item.product_id);
-        if (!tags || tags.length === 0) return '';
+      accessor: (item: InventoryViewItem) => {
+        const { inventoryTags, productTags } = getInventoryWithProductTags(item.inventory_id, item.product_id);
+        if (!inventoryTags?.length && !productTags?.length) return '';
         
         return (
           <div className="flex flex-wrap gap-1">
-            {tags.map(tag => (
+            {inventoryTags?.map((tag: string) => (
               <span 
-                key={tag} 
-                className="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-300"
+                key={`inv-${tag}`} 
+                className="px-2 py-0.5 text-xs rounded-full bg-cyan-500/20 text-cyan-300"
+                title="Inventory Tag"
+              >
+                {tag}
+              </span>
+            ))}
+            {productTags?.map((tag: string) => (
+              <span 
+                key={`prod-${tag}`} 
+                className="px-2 py-0.5 text-xs rounded-full bg-orange-500/20 text-orange-300"
+                title="Product Tag"
               >
                 {tag}
               </span>
@@ -137,10 +169,10 @@ const Home = () => {
     }
   ];
 
-  const getFilterConfigs = React.useCallback((data: ProductViewItem[]) => {
+  const getFilterConfigs = React.useCallback((data: InventoryViewItem[]) => {
     const uniqueTypes = Array.from(new Set(data.map(item => item.product_type_name ?? ''))).filter(Boolean) as string[];
     const uniqueGroups = Array.from(new Set(data.map(item => item.product_group_name ?? ''))).filter(Boolean) as string[];
-    const uniqueVariants = Array.from(new Set(data.map(item => item.product_variant ?? ''))).filter(Boolean) as string[];
+    const uniqueStatuses = Array.from(new Set(data.map(item => item.inventory_status))).filter(Boolean) as string[];
 
     return [
       {
@@ -162,20 +194,13 @@ const Home = () => {
         }))
       },
       {
-        key: 'product_variant',
-        label: 'Variant',
-        options: [
-          {
-            value: 'none',
-            label: '(No Variant)',
-            count: data.filter(item => !item.product_variant || item.product_variant.trim() === '').length
-          },
-          ...uniqueVariants.map(variant => ({
-            value: variant,
-            label: variant,
-            count: data.filter(item => item.product_variant === variant).length
-          }))
-        ]
+        key: 'inventory_status',
+        label: 'Status',
+        options: uniqueStatuses.map(status => ({
+          value: status,
+          label: status.replace('_', ' '),
+          count: data.filter(item => item.inventory_status === status).length
+        }))
       }
     ];
   }, []);
@@ -186,46 +211,46 @@ const Home = () => {
     getFilterConfigs: getFilterConfigs
   });
 
-  const handleProductUpdate = (product: ProductViewItem) => {
-    setSelectedProduct(product);
-    setUpdatedProductId(null);
+  const handleInventoryUpdate = (inventory: InventoryViewItem) => {
+    setSelectedInventory(inventory);
+    setUpdatedInventoryId(null);
   };
 
   const handleModalClose = () => {
-    setSelectedProduct(null);
+    setSelectedInventory(null);
   };
 
-  const handleUpdateSuccess = (productId: number) => {
-    setSelectedProduct(null);
-    setUpdatedProductId(productId);
+  const handleUpdateSuccess = (inventoryId: number) => {
+    setSelectedInventory(null);
+    setUpdatedInventoryId(inventoryId);
     // Clear the animation after it plays
     setTimeout(() => {
-      setUpdatedProductId(null);
-    }, 1500); // Increased to 1.5s to match animation duration
+      setUpdatedInventoryId(null);
+    }, 1500); // 1.5s to match animation duration
   };
 
   return (
     <Page
-      title="Products"
-      icon={<FaListAlt />}
+      title="Inventory"
+      icon={<FaBoxes />}
       bgColor="bg-gray-800"
-      iconColor="text-orange-500"
-      subtitle="Manage your products"
+      iconColor="text-cyan-500"
+      subtitle="Manage your inventory items"
     >
       <Card
         className="w-full"
       >
         <Card.Header
-          title="Products"
-          icon={<FaListAlt />}
-          iconColor="text-orange-500"
+          title="Inventory"
+          icon={<FaBoxes />}
+          iconColor="text-cyan-500"
           collapsible={true}
         />
         <Card.Body>
-          <BaseFilterableTable<ProductViewItem>
+          <BaseFilterableTable<InventoryViewItem>
             columns={columns}
             data={tableState.currentPageData}
-            keyExtractor={(item) => item.product_id.toString()}
+            keyExtractor={(item) => item.inventory_id.toString()}
             isLoading={isLoading}
             error={error}
             filters={tableState.filters}
@@ -237,21 +262,20 @@ const Home = () => {
             sortDirection={tableState.sortDirection}
             onSort={tableState.onSort}
             pagination={tableState.pagination}
-            onRowClick={handleProductUpdate}
-            updatedId={updatedProductId}
-            isModalOpen={selectedProduct !== null}
+            onRowClick={handleInventoryUpdate}
+            updatedId={updatedInventoryId}
+            isModalOpen={selectedInventory !== null}
           />
         </Card.Body>
       </Card>
 
-      <ProductModal
-        product={selectedProduct}
-        isOpen={selectedProduct !== null}
+      <InventoryModal
+        inventory={selectedInventory}
+        isOpen={selectedInventory !== null}
         onClose={handleModalClose}
-        onUpdateSuccess={handleUpdateSuccess}
       />
     </Page>
   );
 }
 
-export default Home;
+export default Inventory; 

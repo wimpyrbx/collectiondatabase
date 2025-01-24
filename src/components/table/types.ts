@@ -38,4 +38,5 @@ export interface TableProps<T> {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   updatedId?: string | number | null;
+  isModalOpen?: boolean;
 } 

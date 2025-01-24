@@ -9,6 +9,7 @@ const Contact = lazy(() => import('@/pages/Contact'));
 const FormElementsShowcase = lazy(() => import('@/pages/FormElementsShowcase'));
 const TooltipShowcase = lazy(() => import('@/pages/TooltipShowcase'));
 const CardShowcase = lazy(() => import('@/pages/CardShowcase'));
+const Inventory = lazy(() => import('@/pages/Inventory'));
 
 const App = () => {
   return (
@@ -17,6 +18,7 @@ const App = () => {
         <Suspense fallback={<div>Loading...</div>}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/inventory" element={<Inventory />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/form-elements-showcase" element={<FormElementsShowcase />} />

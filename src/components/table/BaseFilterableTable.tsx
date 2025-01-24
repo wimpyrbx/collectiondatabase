@@ -50,6 +50,7 @@ export interface BaseFilterableTableProps<T> {
   };
 
   updatedId?: string | number | null;
+  isModalOpen?: boolean;
 }
 
 export const BaseFilterableTable = <T extends Record<string, any>>({
@@ -69,7 +70,8 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
   sortDirection,
   onSort,
   pagination,
-  updatedId
+  updatedId,
+  isModalOpen = false
 }: BaseFilterableTableProps<T>) => {
   const [isFiltersExpanded, setIsFiltersExpanded] = React.useState(false);
   const { className: animationClass } = useUpdateAnimation(updatedId || '');
@@ -169,8 +171,21 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
         onRowClick={onRowClick}
         sortBy={sortBy}
         sortDirection={sortDirection}
-        pagination={pagination}
+        pagination={{
+          ...pagination,
+          onPageChange: (page) => {
+            if (!isModalOpen) {
+              pagination.onPageChange(page);
+            }
+          },
+          onPageSizeChange: (size) => {
+            if (!isModalOpen) {
+              pagination.onPageSizeChange(size);
+            }
+          }
+        }}
         updatedId={updatedId}
+        isModalOpen={isModalOpen}
       />
     </div>
   );

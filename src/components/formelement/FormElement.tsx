@@ -36,6 +36,7 @@ export interface FormElementProps {
   showClearButton?: boolean;
   disabled?: boolean;
   numericOnly?: boolean;
+  maxLength?: number;
 }
 
 const defaultStyles = {
@@ -71,6 +72,7 @@ const FormElement: React.FC<FormElementProps> = ({
   showClearButton = true,
   disabled = false,
   numericOnly = false,
+  maxLength,
   selectedOptions = [],
 }) => {
   const elementRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
@@ -135,6 +137,7 @@ const FormElement: React.FC<FormElementProps> = ({
             value={initialValue}
             onChange={(e) => handleChange(e.target.value)}
             rows={rows}
+            maxLength={maxLength}
           />
         );
 
@@ -146,6 +149,7 @@ const FormElement: React.FC<FormElementProps> = ({
             type="text"
             value={initialValue}
             onChange={(e) => numericOnly ? handleNumericInput(e.target.value) : handleChange(e.target.value)}
+            maxLength={maxLength}
           />
         );
     }

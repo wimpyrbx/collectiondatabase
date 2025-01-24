@@ -1,18 +1,20 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { Card } from '@/components/card';
-import { useTagsCache } from '@/hooks/useTagsCache';
 import { ProductViewItem } from '@/types/product';
 import { useProductsTable } from '@/hooks/useProductsTable';
 import type { Product } from '@/types/tables';
 import RegionRatingSelector, { type RegionRatingValue } from '@/components/product/RegionRatingSelector';
+import { TagSelector, type TagSelectorRef } from '@/components/product/TagSelector';
 import regionsData from '@/data/regions.json';
 import productTypesData from '@/data/product_types.json';
 import productGroupsData from '@/data/product_groups.json';
 import FormElement from '@/components/formelement/FormElement';
 import { Button } from '@/components/ui/';
 import DisplayError from '@/components/ui/DisplayError';
-import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
+import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaUpload, FaImage } from 'react-icons/fa';
+import { getProductImageUrl, useImageUpload } from '@/utils/imageUtils';
+import clsx from 'clsx';
 
 interface ProductModalProps {
   product: ProductViewItem | null;
@@ -33,14 +35,63 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   onUpdateSuccess
 }) => {
   const { updateProduct, isUpdating } = useProductsTable();
-  const { getProductTags } = useTagsCache();
   const [formData, setFormData] = React.useState<ProductFormData>({});
   const [errors, setErrors] = React.useState<string[]>([]);
+  const tagSelectorRef = useRef<TagSelectorRef>(null);
+  const [imageSrc, setImageSrc] = useState<string>('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [regionRating, setRegionRating] = React.useState<RegionRatingValue>({
     region: '',
     ratingSystem: undefined,
     rating: undefined
   });
+
+  // Use the centralized image upload hook
+  const {
+    handleDragEnter: onDragEnter,
+    handleDragLeave: onDragLeave,
+    handleDragOver,
+    handleDrop: onDrop,
+    handleFileInputChange
+  } = useImageUpload(
+    'product',
+    product?.product_id || 0,
+    {
+      onUploadStart: () => {
+        setIsUploading(true);
+        setErrors([]);
+      },
+      onUploadSuccess: () => {
+        // Refresh the image with a cache-busting query parameter
+        if (product) {
+          setImageSrc(`${getProductImageUrl(product.product_id)}&t=${Date.now()}`);
+        }
+      },
+      onUploadError: (message) => {
+        setErrors(prev => [...prev, message]);
+      },
+      onUploadComplete: () => {
+        setIsUploading(false);
+      }
+    }
+  );
+
+  // Wrap the drag handlers to manage the isDragging state
+  const handleDragEnter = (e: React.DragEvent) => {
+    setIsDragging(true);
+    onDragEnter(e);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    setIsDragging(false);
+    onDragLeave(e);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    setIsDragging(false);
+    onDrop(e);
+  };
 
   // Function to reset form data from product
   const resetFormData = React.useCallback((product: ProductViewItem | null) => {
@@ -97,10 +148,25 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     }
   }, [product, resetFormData, isOpen]);
 
+  // Handle image loading when modal opens
+  useEffect(() => {
+    if (isOpen && product) {
+      setImageSrc(`${getProductImageUrl(product.product_id)}&t=${Date.now()}`);
+    }
+  }, [isOpen, product]);
+
+  // Clear state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setImageSrc(''); // Clear the image
+    }
+  }, [isOpen]);
+
   // Handle modal close
   const handleClose = () => {
     resetFormData(product); // Reset form data to original values
     setErrors([]); // Clear any errors
+    setImageSrc(''); // Clear the image immediately
     onClose();
   };
 
@@ -150,6 +216,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
     try {
       await updateProduct({ id: product.product_id, updates });
+      // Apply tag changes after successful product update
+      tagSelectorRef.current?.applyChanges();
       setErrors([]);
       if (onUpdateSuccess) {
         onUpdateSuccess(product.product_id);
@@ -181,8 +249,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   if (!product) return null;
 
-  const productTags = getProductTags(product.product_id);
-
   // Convert product types and groups to options format
   const productTypeOptions = productTypesData.types.map(type => ({
     value: type.name,
@@ -195,153 +261,226 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   }));
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={handleClose} size="xl">
       <Card modal>
         <Card.Header
           icon={<FaBox />}
-          iconColor="text-orange-500"
+          iconColor="text-yellow-500"
           title="Edit Product"
-          bgColor="bg-orange-800/50"
+          bgColor="bg-orange-600/50"
+          rightContent={`ID: ${product.product_id}`}
         />
         <Card.Body>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <DisplayError 
-              errors={errors}
-              header="Please correct the following issues:"
-              icon={FaExclamationTriangle}
-              iconColor="text-red-400"
-              bgColor="bg-red-900/50"
-              borderColor="border-red-700"
-              textColor="text-red-200"
-            />
+          <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-12 gap-4 h-full">
+              {/* Image Column */}
+              <div className="col-span-3 h-full">
+                <div 
+                  className={clsx(
+                    "relative w-full h-full rounded-lg overflow-hidden",
+                    "bg-gray-900/50 border border-gray-700",
+                    isDragging && "border-blue-500 border-2",
+                    "transition-all duration-200",
+                    "flex items-center justify-center" // Center content
+                  )}
+                  style={{ maxHeight: '400px' }} // Limit maximum height
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  {imageSrc ? (
+                    <img
+                      src={imageSrc}
+                      alt={product.product_title}
+                      className={clsx(
+                        "max-w-full max-h-full object-contain", // Show entire image
+                        isDragging && "opacity-50"
+                      )}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-gray-500">
+                      <FaImage className="w-12 h-12 mb-2" />
+                      <span className="text-sm">No image</span>
+                    </div>
+                  )}
 
-            {/* Title, Variant, and Year Row */}
-            <div className="grid grid-cols-12 gap-4">
-              <div className="col-span-5">
-                <FormElement
-                  key={`title-${isOpen}-${product.product_id}`}
-                  elementType="input"
-                  label="Title"
-                  labelIcon={<FaTag />}
-                  initialValue={formData.product_title || ''}
-                  onValueChange={(value) => handleInputChange('product_title', value)}
-                  labelPosition="above"
-                />
+                  {/* Upload Overlay */}
+                  <div 
+                    className={clsx(
+                      "absolute inset-0 flex flex-col items-center justify-center",
+                      "bg-black/50 backdrop-blur-sm",
+                      "transition-opacity duration-200",
+                      "items-center",
+                      isDragging || isUploading ? "opacity-100" : "opacity-0 hover:opacity-100"
+                    )}
+                  >
+                    {isUploading ? (
+                      <div className="text-blue-400">
+                        <FaUpload className="w-8 h-8 mb-2 animate-bounce" />
+                        <span>Uploading...</span>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer text-center flex flex-col items-center justify-center">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFileInputChange}
+                        />
+                        <FaUpload className="w-24 h-24 mb-6 text-gray-500" />
+                        <span className="text-sm text-gray-300">
+                          {isDragging ? 'Drop to upload' : 'Click or drag to upload'}
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="col-span-4">
-                <FormElement
-                  key={`variant-${isOpen}-${product.product_id}`}
-                  elementType="input"
-                  label="Variant"
-                  labelIcon={<FaBoxes />}
-                  initialValue={formData.product_variant || ''}
-                  onValueChange={(value) => handleInputChange('product_variant', value)}
-                  labelPosition="above"
+
+              {/* Form Column */}
+              <div className="col-span-6 space-y-4">
+                <DisplayError 
+                  errors={errors}
+                  header="Please correct the following issues:"
+                  icon={FaExclamationTriangle}
+                  iconColor="text-red-400"
+                  bgColor="bg-red-900/50"
+                  borderColor="border-red-700"
+                  textColor="text-red-200"
                 />
+
+                {/* Title, Variant, and Year Row */}
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-5">
+                    <FormElement
+                      key={`title-${isOpen}-${product.product_id}`}
+                      elementType="input"
+                      label="Title"
+                      labelIcon={<FaTag />}
+                      labelIconColor="text-blue-400"
+                      initialValue={formData.product_title || ''}
+                      onValueChange={(value) => handleInputChange('product_title', value)}
+                      labelPosition="above"
+                    />
+                  </div>
+                  <div className="col-span-4">
+                    <FormElement
+                      key={`variant-${isOpen}-${product.product_id}`}
+                      elementType="input"
+                      label="Variant"
+                      labelIcon={<FaBoxes />}
+                      labelIconColor="text-purple-400"
+                      initialValue={formData.product_variant || ''}
+                      onValueChange={(value) => handleInputChange('product_variant', value)}
+                      labelPosition="above"
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <FormElement
+                      key={`year-${isOpen}-${product.product_id}`}
+                      elementType="input"
+                      label="Year"
+                      labelIcon={<FaCalendar />}
+                      labelIconColor="text-yellow-400"
+                      maxLength={4}
+                      initialValue={formData.release_year || ''}
+                      onValueChange={(value) => handleInputChange('release_year', value)}
+                      labelPosition="above"
+                      numericOnly
+                    />
+                  </div>
+                </div>
+
+                {/* Region & Rating Selector */}
+                <RegionRatingSelector
+                  value={regionRating}
+                  onChange={setRegionRating}
+                  className="mt-4"
+                />
+
+                {/* Notes */}
+                <FormElement
+                  key={`notes-${isOpen}-${product.product_id}`}
+                  elementType="textarea"
+                  label="Notes"
+                  labelIcon={<FaStickyNote />}
+                  labelIconColor="text-green-400"
+                  initialValue={formData.product_notes || ''}
+                  onValueChange={(value) => handleInputChange('product_notes', value)}
+                  labelPosition="above"
+                  rows={3}
+                />
+
+                {/* Product Group and Type Row */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormElement
+                    key={`group-${isOpen}-${product.product_id}`}
+                    elementType="listsingle"
+                    label="Product Group"
+                    labelIcon={<FaLayerGroup />}
+                    labelIconColor="text-indigo-400"
+                    options={productGroupOptions}
+                    selectedOptions={formData.product_group || ''}
+                    onValueChange={(value) => handleInputChange('product_group', value)}
+                    labelPosition="above"
+                  />
+                  <FormElement
+                    key={`type-${isOpen}-${product.product_id}`}
+                    elementType="listsingle"
+                    label="Product Type"
+                    labelIcon={<FaCubes />}
+                    labelIconColor="text-pink-400"
+                    options={productTypeOptions}
+                    selectedOptions={formData.product_type || ''}
+                    onValueChange={(value) => handleInputChange('product_type', value)}
+                    labelPosition="above"
+                  />
+                </div>
               </div>
+
+              {/* Tags Column */}
               <div className="col-span-3">
-                <FormElement
-                  key={`year-${isOpen}-${product.product_id}`}
-                  elementType="input"
-                  label="Release Year"
-                  labelIcon={<FaCalendar />}
-                  initialValue={formData.release_year || ''}
-                  onValueChange={(value) => handleInputChange('release_year', value)}
-                  labelPosition="above"
-                  numericOnly
-                />
-              </div>
-            </div>
-
-            {/* Region & Rating Selector */}
-            <RegionRatingSelector
-              value={regionRating}
-              onChange={setRegionRating}
-              className="mt-4"
-            />
-
-            {/* Notes */}
-            <FormElement
-              key={`notes-${isOpen}-${product.product_id}`}
-              elementType="textarea"
-              label="Notes"
-              labelIcon={<FaStickyNote />}
-              initialValue={formData.product_notes || ''}
-              onValueChange={(value) => handleInputChange('product_notes', value)}
-              labelPosition="above"
-              rows={3}
-            />
-
-            {/* Product Group and Type Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormElement
-                key={`group-${isOpen}-${product.product_id}`}
-                elementType="listsingle"
-                label="Product Group"
-                labelIcon={<FaLayerGroup />}
-                options={productGroupOptions}
-                selectedOptions={formData.product_group || ''}
-                onValueChange={(value) => handleInputChange('product_group', value)}
-                labelPosition="above"
-              />
-              <FormElement
-                key={`type-${isOpen}-${product.product_id}`}
-                elementType="listsingle"
-                label="Product Type"
-                labelIcon={<FaCubes />}
-                options={productTypeOptions}
-                selectedOptions={formData.product_type || ''}
-                onValueChange={(value) => handleInputChange('product_type', value)}
-                labelPosition="above"
-              />
-            </div>
-
-            {/* Tags Section */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300">
-                Tags
-              </label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {productTags && productTags.length > 0 ? (
-                  productTags.map(tag => (
-                    <span 
-                      key={tag}
-                      className="px-3 py-1 text-sm rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                    >
-                      {tag}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-sm text-gray-400 italic">No tags</span>
-                )}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex grid grid-cols-2 gap-2 pt-4 border-t border-gray-700">
-              <div>
-                <Button
-                  onClick={handleClose}
-                  bgColor="bg-red-900"
-                  iconLeft={<FaTimes />}
-                  type="button"
-                >
-                  Cancel
-                </Button>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={isUpdating}
-                  bgColor="bg-green-900"
-                  iconLeft={<FaCheck />}
-                >
-                  {isUpdating ? 'Saving...' : 'Save Changes'}
-                </Button>
+                <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-4">
+                  {product && (
+                    <TagSelector
+                      key={`tags-${isOpen}-${product.product_id}`}
+                      ref={tagSelectorRef}
+                      productId={product.product_id}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </form>
         </Card.Body>
+        <Card.Footer>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex justify-start">
+              <Button
+                onClick={handleClose}
+                bgColor="bg-red-900"
+                iconLeft={<FaTimes />}
+                type="button"
+                className="w-32"
+              >
+                Cancel
+              </Button>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSubmit}
+                form="product-form"
+                disabled={isUpdating || isUploading}
+                bgColor="bg-green-900"
+                iconLeft={<FaCheck />}
+                className="w-32"
+              >
+                {isUpdating ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </Card.Footer>
       </Card>
     </Modal>
   );

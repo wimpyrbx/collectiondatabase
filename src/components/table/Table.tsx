@@ -42,7 +42,8 @@ export function Table<T>({
   pagination,
   sortBy,
   sortDirection,
-  updatedId
+  updatedId,
+  isModalOpen = false
 }: TableProps<T>) {
   const { className: animationClass } = useUpdateAnimation(updatedId || '');
 
@@ -131,7 +132,7 @@ export function Table<T>({
 
   // Handle keyboard navigation for pagination
   React.useEffect(() => {
-    if (!pagination) return;
+    if (!pagination || isModalOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Skip if we're in an input element, select, or textarea
@@ -169,7 +170,7 @@ export function Table<T>({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pagination]);
+  }, [pagination, isModalOpen]);
 
   if (isLoading) {
     return <div className="text-gray-500">Loading...</div>;
@@ -192,9 +193,13 @@ export function Table<T>({
           </span>
           <select
             value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded focus:ring-blue-500 focus:border-blue-500 p-1 text-center
-              [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] [appearance:none] [&::-ms-expand]:hidden !overflow-auto bg-[length:0] !bg-none"
+            onChange={(e) => !isModalOpen && onPageSizeChange(Number(e.target.value))}
+            disabled={isModalOpen}
+            className={clsx(
+              "bg-gray-700 border border-gray-600 text-gray-300 text-sm rounded focus:ring-blue-500 focus:border-blue-500 p-1 text-center",
+              "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] [appearance:none] [&::-ms-expand]:hidden !overflow-auto bg-[length:0] !bg-none",
+              isModalOpen && "opacity-50 cursor-not-allowed"
+            )}
           >
             {[10, 25, 50, 100].map((size) => (
               <option key={size} value={size}>
@@ -217,9 +222,12 @@ export function Table<T>({
 
           <div className="flex items-center space-x-1">
             <button
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="p-1 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => !isModalOpen && onPageChange(currentPage - 1)}
+              disabled={currentPage === 1 || isModalOpen}
+              className={clsx(
+                "p-1 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed",
+                isModalOpen && "opacity-50 cursor-not-allowed"
+              )}
             >
               <FiChevronLeft className="w-5 h-5 text-gray-400" />
             </button>
@@ -227,9 +235,12 @@ export function Table<T>({
               Page {currentPage} of {totalPages}
             </span>
             <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="p-1 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => !isModalOpen && onPageChange(currentPage + 1)}
+              disabled={currentPage === totalPages || isModalOpen}
+              className={clsx(
+                "p-1 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed",
+                isModalOpen && "opacity-50 cursor-not-allowed"
+              )}
             >
               <FiChevronRight className="w-5 h-5 text-gray-400" />
             </button>

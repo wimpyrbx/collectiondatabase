@@ -32,4 +32,5 @@ export interface CardHeaderProps {
   icon?: React.ReactNode;
   iconColor?: string;
   textColor?: string;
+  rightContent?: React.ReactNode;
 } 

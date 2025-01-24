@@ -38,7 +38,7 @@ const Card: React.FC<CardCompositionProps> & CardCompoundComponents = ({
       if (child.type === CardHeader) {
         return React.cloneElement(child as React.ReactElement<any>, {
           isCollapsed,
-          onCollapse: () => setIsCollapsed(!isCollapsed)
+          onCollapseToggle: () => setIsCollapsed(!isCollapsed)
         });
       }
       if (child.type === CardBody || child.type === CardFooter) {

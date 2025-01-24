@@ -27,14 +27,16 @@ export const Modal: React.FC<ModalProps> = ({
       onClose={onClose}
       className="relative z-50"
     >
-      {/* Backdrop */}
+      {/* The backdrop */}
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
 
-      {/* Full-screen container */}
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className={`mx-auto w-full ${sizeClasses[size]} bg-gray-800 rounded-lg shadow-md shadow-black/30`}>
-          {children}
-        </Dialog.Panel>
+      {/* Full-screen scrollable container */}
+      <div className="fixed inset-0 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <Dialog.Panel className={`mx-auto w-full ${sizeClasses[size]} bg-gray-800 rounded-lg shadow-md shadow-black/30`}>
+            {children}
+          </Dialog.Panel>
+        </div>
       </div>
     </Dialog>
   );
