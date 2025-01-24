@@ -37,6 +37,7 @@ export interface FormElementProps {
   disabled?: boolean;
   numericOnly?: boolean;
   maxLength?: number;
+  truncate?: boolean;
 }
 
 const defaultStyles = {
@@ -74,6 +75,7 @@ const FormElement: React.FC<FormElementProps> = ({
   numericOnly = false,
   maxLength,
   selectedOptions = [],
+  truncate = false,
 }) => {
   const elementRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const baseClasses = `${bgColor} ${textColor} ${disabled ? 'opacity-50' : ''} text-${textSize} ${width} ${padding} ${margin} ${
@@ -110,8 +112,8 @@ const FormElement: React.FC<FormElementProps> = ({
           <select
             {...commonProps}
             multiple={elementType === 'listmultiple'}
-            size={options.length}
-            className={`${commonProps.className} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] [appearance:none] [&::-ms-expand]:hidden !overflow-auto bg-[length:0] !bg-none`}
+            size={4}
+            className={`${commonProps.className} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] [appearance:none] [&::-ms-expand]:hidden !overflow-auto bg-[length:0] !bg-none ${truncate ? 'truncate' : ''} [&>option[data-selected]]:bg-blue-900 [&>option[data-selected]]:text-white`}
             onChange={(e) => handleChange(elementType === 'listmultiple' 
               ? Array.from(e.target.selectedOptions, option => option.value)
               : e.target.value
@@ -120,12 +122,26 @@ const FormElement: React.FC<FormElementProps> = ({
               ? selectedOptions.map(String) 
               : selectedOptions ? String(selectedOptions) 
               : ''}
+            style={{ height: '6rem' }} /* Force consistent height */
           >
-            {options.map(item => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
+            {options.length === 0 && (
+              <option value="" disabled>{placeholder || 'No options available'}</option>
+            )}
+            {options.map(item => {
+              const isSelected = Array.isArray(selectedOptions) 
+                ? selectedOptions.includes(item.value)
+                : selectedOptions === item.value;
+              return (
+                <option 
+                  key={item.value} 
+                  value={item.value} 
+                  className={truncate ? 'truncate' : ''}
+                  data-selected={isSelected || undefined}
+                >
+                  {item.label}
+                </option>
+              );
+            })}
           </select>
         );
 
@@ -158,11 +174,9 @@ const FormElement: React.FC<FormElementProps> = ({
   return (
     <div className={`relative ${labelPosition === 'above' ? 'flex flex-col' : 'flex items-center'}`}>
       {label && (
-        <label className={`flex items-center text-${textSize} ${disabled ? 'text-gray-500' : 'text-gray-400'} ${
-          labelPosition === 'above' ? 'mb-1' : 'mr-2'
-        }`}>
+        <label className={`flex items-center text-${textSize} ${disabled ? 'text-gray-600' : 'text-gray-300'}`}>
           {labelIcon && (
-            <span className={`mr-1 ${disabled ? 'opacity-50' : ''} ${labelIconColor}`}>
+            <span className={`mr-2 mb-0.5 ${disabled ? 'opacity-50' : ''} ${labelIconColor}`}>
               {labelIcon}
             </span>
           )}
@@ -174,7 +188,7 @@ const FormElement: React.FC<FormElementProps> = ({
         <button
           type="button"
           onClick={handleClear}
-          className="absolute text-sm -right-1 mt-[17px] flex justify-center text-red-600/50 hover:text-red-500 bg-transparent"
+          className="absolute text-sm -right-2 mt-[14px] flex justify-center text-red-600/50 hover:text-red-500 bg-transparent"
         >
           X
         </button>

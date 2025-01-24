@@ -15,6 +15,7 @@ import DisplayError from '@/components/ui/DisplayError';
 import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaUpload, FaImage } from 'react-icons/fa';
 import { getProductImageUrl, useImageUpload } from '@/utils/imageUtils';
 import clsx from 'clsx';
+import { getRatingDisplayInfo } from '@/utils/productUtils';
 
 interface ProductModalProps {
   product: ProductViewItem | null;
@@ -352,7 +353,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
                 {/* Title, Variant, and Year Row */}
                 <div className="grid grid-cols-12 gap-4">
-                  <div className="col-span-5">
+                  <div className="col-span-6">
                     <FormElement
                       key={`title-${isOpen}-${product.product_id}`}
                       elementType="input"
@@ -376,7 +377,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       labelPosition="above"
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2">
                     <FormElement
                       key={`year-${isOpen}-${product.product_id}`}
                       elementType="input"
@@ -399,21 +400,26 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   className="mt-4"
                 />
 
-                {/* Notes */}
-                <FormElement
-                  key={`notes-${isOpen}-${product.product_id}`}
-                  elementType="textarea"
-                  label="Notes"
-                  labelIcon={<FaStickyNote />}
-                  labelIconColor="text-green-400"
-                  initialValue={formData.product_notes || ''}
-                  onValueChange={(value) => handleInputChange('product_notes', value)}
-                  labelPosition="above"
-                  rows={3}
-                />
+                {/* Rating Image using getRatingDisplayInfo */}
+                <div className="col-span-3">
+                  <div className="aspect-square p-2 w-16 h-16 bg-gray-900/50 border border-gray-700 flex items-center justify-center">
+                    {regionRating.rating ? (() => {
+                      const ratingInfo = getRatingDisplayInfo(regionRating.region, regionRating.rating, regionsData.regions);
+                      return ratingInfo && ratingInfo.imagePath ? (
+                        <img 
+                          src={ratingInfo.imagePath} 
+                          alt={regionRating.rating} 
+                          className="max-w-full max-h-full object-contain" 
+                        />
+                      ) : null;
+                    })() : (
+                      <span className="text-gray-600 text-xs">No Rating</span>
+                    )}
+                  </div>
+                </div>
 
                 {/* Product Group and Type Row */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-[1fr_1fr_2fr] gap-4">
                   <FormElement
                     key={`group-${isOpen}-${product.product_id}`}
                     elementType="listsingle"
@@ -436,7 +442,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     onValueChange={(value) => handleInputChange('product_type', value)}
                     labelPosition="above"
                   />
+                  {/* Notes */}
+                  <FormElement
+                    key={`notes-${isOpen}-${product.product_id}`}
+                    elementType="textarea"
+                    label="Notes"
+                    labelIcon={<FaStickyNote />}
+                    labelIconColor="text-green-400"
+                    initialValue={formData.product_notes || ''}
+                    onValueChange={(value) => handleInputChange('product_notes', value)}
+                    labelPosition="above"
+                    rows={3}
+                  />
                 </div>
+
               </div>
 
               {/* Tags Column */}

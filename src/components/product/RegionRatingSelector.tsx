@@ -1,5 +1,7 @@
 import React from 'react';
 import regionsData from '@/data/regions.json'; // Import the JSON file
+import FormElement from '@/components/formelement/FormElement';
+import { FaGlobe } from 'react-icons/fa';
 
 export interface RegionRatingValue {
   region: string;
@@ -36,16 +38,37 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
   };
 
   const handleRegionChange = (newRegion: string) => {
-    // Only update the region, let useEffect handle rating system selection
+    // If None is selected or empty value, clear everything
+    if (!newRegion) {
+      onChange({
+        region: '',
+        ratingSystem: undefined,
+        rating: undefined
+      });
+      return;
+    }
+
+    // Otherwise update region and clear dependent fields
     onChange({
       ...value,
       region: newRegion,
-      rating: undefined // Clear rating but keep rating system
+      ratingSystem: undefined,
+      rating: undefined
     });
   };
 
   const handleRatingSystemChange = (newRatingSystem: string) => {
-    // Clear rating when rating system changes
+    // If None is selected or empty value, clear rating
+    if (!newRatingSystem) {
+      onChange({
+        ...value,
+        ratingSystem: undefined,
+        rating: undefined
+      });
+      return;
+    }
+
+    // Otherwise update rating system and clear rating
     onChange({
       ...value,
       ratingSystem: newRatingSystem,
@@ -58,67 +81,76 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
     return value.region ? getRatingSystemsForRegion(value.region) : [];
   }, [value.region]);
 
-  // If there's only one rating system for the region, auto-select it
-  React.useEffect(() => {
-    if (value.region && availableRatingSystems.length === 1 && !value.ratingSystem) {
-      handleRatingSystemChange(availableRatingSystems[0].name);
-    }
-  }, [value.region, availableRatingSystems, value.ratingSystem]);
-
   // Get available ratings for current rating system
   const availableRatings = React.useMemo(() => {
     return value.ratingSystem ? getRatingsForSystem(value.ratingSystem) : [];
   }, [value.ratingSystem]);
 
+  // Auto-select first rating when rating system changes and there are available ratings
+  React.useEffect(() => {
+    if (value.ratingSystem && availableRatings.length > 0 && !value.rating) {
+      onChange({
+        ...value,
+        rating: availableRatings[0].name
+      });
+    }
+  }, [value.ratingSystem, availableRatings, value.rating]);
+
+  // Convert data to options format
+  const regionOptions = [
+    { value: '', label: 'None' },
+    ...regionsData.regions.map(region => ({
+      value: region.name,
+      label: region.display_name
+    }))
+  ];
+
+  const ratingSystemOptions = [
+    { value: '', label: 'None' },
+    ...availableRatingSystems.map(system => ({
+      value: system.name,
+      label: system.display_name
+    }))
+  ];
+
+  const ratingOptions = availableRatings.map(rating => ({
+    value: rating.name,
+    label: rating.display_name
+  }));
+
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-gray-400 mb-2">
-        Region & Rating
-      </label>
-      <div className="grid grid-cols-3 gap-2">
-        {/* Region Selector */}
-        <select
-          value={value.region}
-          onChange={(e) => handleRegionChange(e.target.value)}
-          className="w-full p-2 text-sm border border-gray-700 rounded-lg bg-gray-900 text-gray-300"
-        >
-          <option value="">Select ...</option>
-          {regionsData.regions.map((region) => (
-            <option key={region.id} value={region.name}>
-              {region.display_name}
-            </option>
-          ))}
-        </select>
-
-        {/* Rating System Selector */}
-        <select
-          value={value.ratingSystem || ''}
-          onChange={(e) => handleRatingSystemChange(e.target.value)}
+      <div className="flex items-center gap-2 text-xs font-medium text-gray-300 mb-0.5">
+        <FaGlobe className="text-cyan-400" />
+        <span>Region & Rating</span>
+      </div>
+      <div className="grid grid-cols-[2fr_4fr_1fr] gap-2 items-start">
+        <FormElement
+          elementType="listsingle"
+          options={regionOptions}
+          selectedOptions={value.region}
+          truncate={true}
+          onValueChange={(val) => handleRegionChange(val.toString())}
+          placeholder="Select Region..."
+        />
+        <FormElement
+          elementType="listsingle"
+          options={ratingSystemOptions}
+          selectedOptions={value.ratingSystem || ''}
+          truncate={true}
+          onValueChange={(val) => handleRatingSystemChange(val.toString())}
+          placeholder="Select System..."
           disabled={!value.region}
-          className="w-full p-2 text-sm border border-gray-700 rounded-lg bg-gray-900 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <option value="">Select ...</option>
-          {availableRatingSystems.map((system) => (
-            <option key={system.id} value={system.name}>
-              {system.display_name}
-            </option>
-          ))}
-        </select>
-
-        {/* Rating Selector */}
-        <select
-          value={value.rating || ''}
-          onChange={(e) => onChange({ ...value, rating: e.target.value })}
+        />
+        <FormElement
+          elementType="listsingle"
+          options={ratingOptions}
+          selectedOptions={value.rating || ''}
+          truncate={true}
+          onValueChange={(val) => onChange({ ...value, rating: val.toString() })}
+          placeholder="None"
           disabled={!value.ratingSystem}
-          className="w-full p-2 text-sm border border-gray-700 rounded-lg bg-gray-900 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <option value="">Select ...</option>
-          {availableRatings.map((rating) => (
-            <option key={rating.id} value={rating.name}>
-              {rating.display_name}
-            </option>
-          ))}
-        </select>
+        />
       </div>
     </div>
   );
