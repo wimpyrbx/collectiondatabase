@@ -9,24 +9,21 @@ import { TagSelector, type TagSelectorRef } from '@/components/product/TagSelect
 import regionsData from '@/data/regions.json';
 import productTypesData from '@/data/product_types.json';
 import productGroupsData from '@/data/product_groups.json';
-import FormElement from '@/components/formelement/FormElement';
+import { FormElement, FormElementLabel } from '@/components/formelement';
+import type { TextValue } from '@/components/formelement/FormElement';
 import { Button } from '@/components/ui/';
 import DisplayError from '@/components/ui/DisplayError';
-import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaUpload, FaImage } from 'react-icons/fa';
+import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaUpload, FaImage, FaTags } from 'react-icons/fa';
 import { getProductImageUrl, useImageUpload } from '@/utils/imageUtils';
 import clsx from 'clsx';
 import { getRatingDisplayInfo } from '@/utils/productUtils';
+import { useProductModal } from '@/hooks/useProductModal';
 
 interface ProductModalProps {
   product: ProductViewItem | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdateSuccess?: (productId: number) => void;
-}
-
-// Add form data type that allows string for release_year
-interface ProductFormData extends Omit<Partial<Product>, 'release_year'> {
-  release_year?: string | number | null;
 }
 
 export const ProductModal: React.FC<ProductModalProps> = ({
@@ -36,17 +33,26 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   onUpdateSuccess
 }) => {
   const { updateProduct, isUpdating } = useProductsTable();
-  const [formData, setFormData] = React.useState<ProductFormData>({});
-  const [errors, setErrors] = React.useState<string[]>([]);
-  const tagSelectorRef = useRef<TagSelectorRef>(null);
+  const {
+    formData,
+    errors,
+    tagSelectorRef,
+    regionRating,
+    setRegionRating,
+    handleInputChange,
+    handleClose,
+    handleSubmit,
+    isUpdating: useProductModalUpdating,
+    setErrors
+  } = useProductModal({
+    product,
+    isOpen,
+    onClose,
+    onUpdateSuccess
+  });
   const [imageSrc, setImageSrc] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [regionRating, setRegionRating] = React.useState<RegionRatingValue>({
-    region: '',
-    ratingSystem: undefined,
-    rating: undefined
-  });
 
   // Use the centralized image upload hook
   const {
@@ -69,7 +75,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           setImageSrc(`${getProductImageUrl(product.product_id)}&t=${Date.now()}`);
         }
       },
-      onUploadError: (message) => {
+      onUploadError: (message: string) => {
         setErrors(prev => [...prev, message]);
       },
       onUploadComplete: () => {
@@ -94,60 +100,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     onDrop(e);
   };
 
-  // Function to reset form data from product
-  const resetFormData = React.useCallback((product: ProductViewItem | null) => {
-    if (product) {
-      // Convert release_year to string for the form input
-      setFormData({
-        product_title: product.product_title,
-        product_variant: product.product_variant,
-        release_year: product.release_year?.toString() || '',
-        product_notes: product.product_notes,
-        product_group: product.product_group_name,
-        product_type: product.product_type_name,
-      });
-
-      // Find the rating system for the given rating
-      let foundRegion = '';
-      let foundRatingSystem = undefined;
-      let foundRating = undefined;
-
-      // Always set region if it exists, regardless of rating
-      if (product.region_name) {
-        const region = regionsData.regions.find(r => r.name === product.region_name);
-        if (region) {
-          foundRegion = region.name;
-          
-          // Only look for rating system and rating if rating_name exists
-          if (product.rating_name) {
-            for (const system of region.rating_systems) {
-              const rating = system.ratings.find(r => r.name === product.rating_name);
-              if (rating) {
-                foundRatingSystem = system.name;
-                foundRating = rating.name;
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      // Set initial region and rating with the found values
-      setRegionRating({
-        region: foundRegion,
-        ratingSystem: foundRatingSystem,
-        rating: foundRating
-      });
-    }
-  }, []);
-
   // Reset form when product changes or modal opens
   React.useEffect(() => {
     if (isOpen) {
-      resetFormData(product);
-      setErrors([]); // Clear any previous errors
+      setImageSrc(''); // Clear any previous image
     }
-  }, [product, resetFormData, isOpen]);
+  }, [isOpen]);
 
   // Handle image loading when modal opens
   useEffect(() => {
@@ -163,93 +121,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     }
   }, [isOpen]);
 
-  // Handle modal close
-  const handleClose = () => {
-    resetFormData(product); // Reset form data to original values
-    setErrors([]); // Clear any errors
-    setImageSrc(''); // Clear the image immediately
-    onClose();
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!product) return;
-
-    // Validate required fields
-    const validationErrors: string[] = [];
-    
-    // Title validation
-    if (!formData.product_title?.trim()) {
-      validationErrors.push('Product title is required');
-    }
-
-    // Region/Rating validation
-    if (regionRating.rating && !regionRating.region) {
-      validationErrors.push('Region must be selected when a rating is specified');
-    }
-
-    // Validate that if rating system is selected, a rating must be selected
-    if (regionRating.ratingSystem && !regionRating.rating) {
-      validationErrors.push('Please select a rating when a rating system is chosen');
-    }
-
-    // Release year validation (from 1970 to current year)
-    if (formData.release_year) {
-      const year = Number(formData.release_year);
-      if (isNaN(year) || year < 1970 || year > new Date().getFullYear()) {
-        validationErrors.push('Release year must be a valid year between 1970 and ' + (new Date().getFullYear()));
-      }
-    }
-
-    if (validationErrors.length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-
-    // Include region and rating in the update
-    const updates = {
-      ...formData,
-      // Convert release_year to number or null
-      release_year: formData.release_year ? Number(formData.release_year) : null,
-      region: regionRating.region || null,
-      rating: regionRating.rating || null
-    };
-
-    try {
-      await updateProduct({ id: product.product_id, updates });
-      // Apply tag changes after successful product update
-      tagSelectorRef.current?.applyChanges();
-      setErrors([]);
-      if (onUpdateSuccess) {
-        onUpdateSuccess(product.product_id);
-      }
-    } catch (error) {
-      console.error('Failed to update product:', error);
-      // Handle database constraint errors
-      if (error instanceof Error) {
-        if (error.message.includes('release_year')) {
-          setErrors(['Release year must be a valid year number']);
-        } else if (error.message.includes('violates foreign key constraint')) {
-          setErrors(['One or more selected values are invalid. Please check your selections.']);
-        } else {
-          setErrors([error.message]);
-        }
-      } else {
-        setErrors(['Failed to update product']);
-      }
-    }
-  };
-
-  const handleInputChange = (field: keyof Product, value: any) => {
-    setErrors([]); // Clear errors when user makes changes
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  if (!product) return null;
-
   // Convert product types and groups to options format
   const productTypeOptions = productTypesData.types.map(type => ({
     value: type.name,
@@ -260,6 +131,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     value: group.name,
     label: group.display_name
   }));
+
+  if (!product) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} size="xl">
@@ -273,7 +146,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         />
         <Card.Body>
           <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-12 gap-4 h-full">
+            <div className="grid grid-cols-12 gap-2 h-full">
               {/* Image Column */}
               <div className="col-span-3 h-full">
                 <div 
@@ -352,7 +225,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 />
 
                 {/* Title, Variant, and Year Row */}
-                <div className="grid grid-cols-12 gap-4">
+                <div className="grid grid-cols-12 gap-2">
                   <div className="col-span-6">
                     <FormElement
                       key={`title-${isOpen}-${product.product_id}`}
@@ -361,7 +234,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       labelIcon={<FaTag />}
                       labelIconColor="text-blue-400"
                       initialValue={formData.product_title || ''}
-                      onValueChange={(value) => handleInputChange('product_title', value)}
+                      onValueChange={(value) => handleInputChange('product_title', String(value))}
                       labelPosition="above"
                     />
                   </div>
@@ -373,7 +246,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       labelIcon={<FaBoxes />}
                       labelIconColor="text-purple-400"
                       initialValue={formData.product_variant || ''}
-                      onValueChange={(value) => handleInputChange('product_variant', value)}
+                      onValueChange={(value) => handleInputChange('product_variant', String(value))}
                       labelPosition="above"
                     />
                   </div>
@@ -386,40 +259,43 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       labelIconColor="text-yellow-400"
                       maxLength={4}
                       initialValue={formData.release_year || ''}
-                      onValueChange={(value) => handleInputChange('release_year', value)}
+                      onValueChange={(value) => handleInputChange('release_year', value ? Number(value) : null)}
                       labelPosition="above"
                       numericOnly
                     />
                   </div>
                 </div>
 
-                {/* Region & Rating Selector */}
-                <RegionRatingSelector
-                  value={regionRating}
-                  onChange={setRegionRating}
-                  className="mt-4"
-                />
-
-                {/* Rating Image using getRatingDisplayInfo */}
-                <div className="col-span-3">
-                  <div className="aspect-square p-2 w-16 h-16 bg-gray-900/50 border border-gray-700 flex items-center justify-center">
-                    {regionRating.rating ? (() => {
-                      const ratingInfo = getRatingDisplayInfo(regionRating.region, regionRating.rating, regionsData.regions);
-                      return ratingInfo && ratingInfo.imagePath ? (
-                        <img 
-                          src={ratingInfo.imagePath} 
-                          alt={regionRating.rating} 
-                          className="max-w-full max-h-full object-contain" 
+                <div className="grid grid-cols-[5fr_1fr] gap-2">
+                    {/* Region & Rating Selector */}
+                    <div className="col-span-1">
+                        <RegionRatingSelector
+                            value={regionRating}
+                            onChange={setRegionRating}
                         />
-                      ) : null;
-                    })() : (
-                      <span className="text-gray-600 text-xs">No Rating</span>
-                    )}
-                  </div>
+                    </div>
+
+                    {/* Rating Image */}
+                    <div className="col-span-1">
+                        <div className="aspect-square p-2 mt-[16px] w-full h-[73px] rounded-md bg-gray-900 border border-gray-700 flex items-center justify-center">
+                            {regionRating.rating ? (() => {
+                                const ratingInfo = getRatingDisplayInfo(regionRating.region, regionRating.rating, regionsData.regions);
+                                    return ratingInfo && ratingInfo.imagePath ? (
+                                    <img 
+                                        src={ratingInfo.imagePath} 
+                                        alt={regionRating.rating} 
+                                        className="max-w-full max-h-full object-contain" 
+                                    />
+                                    ) : null;
+                                })() : (
+                                <span className="text-gray-600 text-xs">No Rating</span>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Product Group and Type Row */}
-                <div className="grid grid-cols-[1fr_1fr_2fr] gap-4">
+                <div className="grid grid-cols-[1fr_1fr_2fr] gap-2">
                   <FormElement
                     key={`group-${isOpen}-${product.product_id}`}
                     elementType="listsingle"
@@ -427,8 +303,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     labelIcon={<FaLayerGroup />}
                     labelIconColor="text-indigo-400"
                     options={productGroupOptions}
-                    selectedOptions={formData.product_group || ''}
-                    onValueChange={(value) => handleInputChange('product_group', value)}
+                    selectedOptions={formData.product_group_name || ''}
+                    onValueChange={(value) => handleInputChange('product_group_name', String(value))}
                     labelPosition="above"
                   />
                   <FormElement
@@ -438,8 +314,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     labelIcon={<FaCubes />}
                     labelIconColor="text-pink-400"
                     options={productTypeOptions}
-                    selectedOptions={formData.product_type || ''}
-                    onValueChange={(value) => handleInputChange('product_type', value)}
+                    selectedOptions={formData.product_type_name || ''}
+                    onValueChange={(value) => handleInputChange('product_type_name', String(value))}
                     labelPosition="above"
                   />
                   {/* Notes */}
@@ -450,7 +326,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     labelIcon={<FaStickyNote />}
                     labelIconColor="text-green-400"
                     initialValue={formData.product_notes || ''}
-                    onValueChange={(value) => handleInputChange('product_notes', value)}
+                    onValueChange={(value) => handleInputChange('product_notes', String(value))}
                     labelPosition="above"
                     rows={3}
                   />
@@ -460,7 +336,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
               {/* Tags Column */}
               <div className="col-span-3">
-                <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-4">
+                <FormElementLabel
+                    label="Product Tags"
+                    labelIcon={<FaTags />}
+                    labelIconColor="text-orange-500"
+                />
+                <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-3 mt-[3px]">
                   {product && (
                     <TagSelector
                       key={`tags-${isOpen}-${product.product_id}`}
@@ -474,7 +355,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           </form>
         </Card.Body>
         <Card.Footer>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-2">
             <div className="flex justify-start">
               <Button
                 onClick={handleClose}
@@ -490,12 +371,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               <Button
                 onClick={handleSubmit}
                 form="product-form"
-                disabled={isUpdating || isUploading}
+                disabled={useProductModalUpdating || isUploading}
                 bgColor="bg-green-900"
                 iconLeft={<FaCheck />}
                 className="w-32"
               >
-                {isUpdating ? 'Saving...' : 'Save Changes'}
+                {useProductModalUpdating ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </div>

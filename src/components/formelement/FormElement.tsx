@@ -1,8 +1,10 @@
 import React from 'react';
+import FormElementLabel from './FormElementLabel';
+import clsx from 'clsx';
 
 export type TextSize = 'xs' | 'sm' | 'md';
 export type RoundedSize = 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-export type LabelPosition = 'left' | 'above';
+export type LabelPosition = 'left' | 'above' | 'below';
 export type ElementType = 'input' | 'select' | 'textarea' | 'listsingle' | 'listmultiple';
 
 export type SelectItem = {
@@ -38,6 +40,7 @@ export interface FormElementProps {
   numericOnly?: boolean;
   maxLength?: number;
   truncate?: boolean;
+  className?: string;
 }
 
 const defaultStyles = {
@@ -51,7 +54,7 @@ const defaultStyles = {
   labelPosition: 'left' as LabelPosition,
 };
 
-const FormElement: React.FC<FormElementProps> = ({
+export const FormElement: React.FC<FormElementProps> = ({
   elementType,
   initialValue = '',
   onValueChange,
@@ -76,6 +79,7 @@ const FormElement: React.FC<FormElementProps> = ({
   maxLength,
   selectedOptions = [],
   truncate = false,
+  className,
 }) => {
   const elementRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const baseClasses = `${bgColor} ${textColor} ${disabled ? 'opacity-50' : ''} text-${textSize} ${width} ${padding} ${margin} ${
@@ -96,6 +100,19 @@ const FormElement: React.FC<FormElementProps> = ({
     if (value === '' || (/^-?\d*\.?\d*$/.test(value) && !isNaN(Number(value)))) {
       handleChange(value === '' ? '' : Number(value));
     }
+  };
+
+  const renderLabel = () => {
+    if (!label) return null;
+    return (
+      <FormElementLabel
+        label={label}
+        labelIcon={labelIcon}
+        labelIconColor={labelIconColor}
+        textSize={textSize}
+        disabled={disabled}
+      />
+    );
   };
 
   const renderElement = () => {
@@ -172,27 +189,25 @@ const FormElement: React.FC<FormElementProps> = ({
   };
 
   return (
-    <div className={`relative ${labelPosition === 'above' ? 'flex flex-col' : 'flex items-center'}`}>
-      {label && (
-        <label className={`flex items-center text-${textSize} ${disabled ? 'text-gray-600' : 'text-gray-300'}`}>
-          {labelIcon && (
-            <span className={`mr-2 mb-0.5 ${disabled ? 'opacity-50' : ''} ${labelIconColor}`}>
-              {labelIcon}
-            </span>
-          )}
-          {label}
-        </label>
-      )}
-      {renderElement()}
-      {showClearButton && ['input', 'textarea'].includes(elementType) && initialValue && !disabled && (
-        <button
-          type="button"
-          onClick={handleClear}
-          className="absolute text-sm -right-2 mt-[14px] flex justify-center text-red-600/50 hover:text-red-500 bg-transparent"
-        >
-          X
-        </button>
-      )}
+    <div className={clsx('flex flex-col', className)}>
+      {labelPosition === 'above' && renderLabel()}
+      <div className={clsx(
+        'flex relative',
+        labelPosition === 'left' ? 'flex-row items-center gap-3' : 'flex-col gap-2'
+      )}>
+        {labelPosition === 'left' && renderLabel()}
+        {renderElement()}
+        {showClearButton && ['input', 'textarea'].includes(elementType) && initialValue && !disabled && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute text-sm right-[-6px] -translate-y-[-1px] flex justify-center text-red-600 hover:text-red-500 bg-transparent"
+          >
+            X
+          </button>
+        )}
+      </div>
+      {labelPosition === 'below' && renderLabel()}
     </div>
   );
 };

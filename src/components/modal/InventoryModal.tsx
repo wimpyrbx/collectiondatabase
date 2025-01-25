@@ -5,13 +5,14 @@ import { InventoryViewItem } from '@/types/inventory';
 import { InventoryTagSelector, type InventoryTagSelectorRef } from '@/components/inventory/InventoryTagSelector';
 import { FaBox, FaTimes, FaStore, FaShoppingCart, FaArchive, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
 import { getInventoryWithFallbackUrl } from '@/utils/imageUtils';
-import { Button, DisplayError } from '@/components/ui';
+import { Button } from '@/components/ui';
 import regionsData from '@/data/regions.json';
 import productTypesData from '@/data/product_types.json';
 import { getRatingDisplayInfo, getProductTypeInfo } from '@/utils/productUtils';
 import { useInventoryTable } from '@/hooks/useInventoryTable';
 import { useInventoryStatusTransitionsCache } from '@/hooks/useInventoryStatusTransitionsCache';
 import clsx from 'clsx';
+import DisplayError from '@/components/ui/DisplayError';
 
 interface InventoryModalProps {
   inventory: InventoryViewItem | null;
@@ -30,7 +31,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
   const [imageSrc, setImageSrc] = useState<string>('');
   const { updateInventory, isUpdating } = useInventoryTable();
   const { isTransitionAllowed } = useInventoryStatusTransitionsCache();
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
 
@@ -47,11 +48,11 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       ];
       setAvailableStatuses(statuses);
       setPendingStatus(null);
-      setError(null);
+      setErrors([]);
     } else {
       setImageSrc('');
       setPendingStatus(null);
-      setError(null);
+      setErrors([]);
       setAvailableStatuses([]);
     }
   }, [isOpen, inventory]);
@@ -90,7 +91,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
   // Handle save changes
   const handleSave = async () => {
     if (!inventory || isUpdating) return;
-    setError(null);
+    setErrors([]);
 
     try {
       // Update status if changed
@@ -112,7 +113,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       handleClose();
     } catch (error) {
       console.error('Failed to save changes:', error);
-      setError('Failed to save changes');
+      setErrors(['Failed to save changes']);
     }
   };
 
@@ -120,7 +121,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
   const handleClose = () => {
     setImageSrc('');
     setPendingStatus(null);
-    setError(null);
+    setErrors([]);
     onClose();
   };
 
@@ -188,15 +189,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
         <Card.Body>
           <div className="space-y-6">
             {/* Error Display */}
-            {error && (
-              <DisplayError
-                errors={[error]}
-                icon={FaExclamationTriangle}
-                header="Error"
-                bgColor="bg-red-900/30"
-                borderColor="border-red-900/50"
-                textColor="text-red-200"
-              />
+            {errors.length > 0 && (
+              <DisplayError errors={errors} />
             )}
 
             <div className="grid grid-cols-12 gap-6">

@@ -30,10 +30,19 @@ export const Modal: React.FC<ModalProps> = ({
       {/* The backdrop */}
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
 
-      {/* Full-screen scrollable container */}
-      <div className="fixed inset-0 overflow-y-auto">
+      {/* Full-screen container */}
+      <div className="fixed inset-0">
+        {/* Center content vertically and horizontally */}
         <div className="flex min-h-full items-center justify-center p-4">
-          <Dialog.Panel className={`mx-auto w-full ${sizeClasses[size]} bg-gray-800 rounded-lg shadow-md shadow-black/30`}>
+          {/* Modal panel with max-height and internal scrolling if needed */}
+          <Dialog.Panel 
+            className={`
+              mx-auto w-full ${sizeClasses[size]} 
+              bg-gray-800 rounded-lg shadow-md shadow-black/30
+              max-h-[calc(100vh-2rem)] 
+              flex flex-col
+            `}
+          >
             {children}
           </Dialog.Panel>
         </div>

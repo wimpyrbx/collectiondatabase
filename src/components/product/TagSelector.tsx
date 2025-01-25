@@ -3,7 +3,6 @@ import { useProductTagsCache } from '@/hooks/useProductTagsCache';
 import { useTagsCache } from '@/hooks/useTagsCache';
 import { useProductTagsRelationship } from '@/hooks/useProductTagsRelationship';
 import { Switch } from '@/components/ui';
-import { FaTags } from 'react-icons/fa';
 import { useQueryClient } from '@tanstack/react-query';
 import { TAGS_QUERY_KEY } from '@/hooks/useTagsCache';
 import type { TagsRelationshipView } from '@/types/tags';
@@ -15,7 +14,8 @@ interface TagSelectorProps {
 }
 
 export interface TagSelectorRef {
-  applyChanges: () => void;
+  applyChanges: () => Promise<void>;
+  hasChanges: () => boolean;
 }
 
 export const TagSelector = forwardRef<TagSelectorRef, TagSelectorProps>(({
@@ -51,64 +51,85 @@ export const TagSelector = forwardRef<TagSelectorRef, TagSelectorProps>(({
 
   // Function to apply changes to the cache and database
   const applyChanges = React.useCallback(async () => {
-    const oldData = queryClient.getQueryData<TagsRelationshipView>(TAGS_QUERY_KEY);
-    if (!oldData) return;
+    // Get the current tags from the cache
+    const currentTags = new Set(initialTags);
+    const selectedSet = new Set(selectedTags);
 
-    // Calculate tag differences
-    const tagsToAdd = selectedTags.filter(tag => !initialTags.includes(tag));
-    const tagsToRemove = initialTags.filter(tag => !selectedTags.includes(tag));
+    // Find tags to add and remove
+    const tagsToAdd = selectedTags.filter(tag => !currentTags.has(tag));
+    const tagsToRemove = initialTags.filter(tag => !selectedSet.has(tag));
 
-    // Update database
+    // Prepare optimistic updates
+    const oldData = queryClient.getQueryData(['tags']);
+
     try {
-      // Add new tag relationships
-      for (const tagName of tagsToAdd) {
-        const tagToAdd = availableTags.find(t => t.tag_name === tagName);
-        if (tagToAdd) {
-          await createRelationship({
-            productId,
-            tagId: tagToAdd.id
-          });
-        }
-      }
+      // Apply optimistic update
+      queryClient.setQueryData(['tags'], (old: any) => {
+        if (!old?.combined_data?.products) return old;
 
-      // Remove tag relationships
-      for (const tagName of tagsToRemove) {
-        const tagToRemove = availableTags.find(t => t.tag_name === tagName);
-        if (tagToRemove) {
-          await deleteRelationship({
-            productId,
-            tagId: tagToRemove.id
-          });
-        }
-      }
-
-      // Update cache after successful database updates
-      const newData: TagsRelationshipView = {
-        combined_data: {
-          ...oldData.combined_data,
-          products: {
-            ...oldData.combined_data.products,
-            [productId.toString()]: selectedTags
+        const newData = {
+          ...old,
+          combined_data: {
+            ...old.combined_data,
+            products: {
+              ...old.combined_data.products,
+              [productId.toString()]: selectedTags
+            }
           }
-        }
-      };
+        };
+        return newData;
+      });
 
-      queryClient.setQueryData(TAGS_QUERY_KEY, newData);
-      if (onSave) onSave();
+      // Create new relationships
+      for (const tag of tagsToAdd) {
+        const tagInfo = availableTags.find(t => t.tag_name === tag);
+        if (tagInfo) {
+          await createRelationship({
+            productId: productId,
+            tagId: tagInfo.id
+          });
+        }
+      }
+
+      // Remove old relationships
+      for (const tag of tagsToRemove) {
+        const tagInfo = availableTags.find(t => t.tag_name === tag);
+        if (tagInfo) {
+          await deleteRelationship({
+            productId: productId,
+            tagId: tagInfo.id
+          });
+        }
+      }
+
+      // Call onSave if provided
+      onSave?.();
     } catch (error) {
-      console.error('Failed to update tags:', error);
-      // Revert selected tags to initial state on error
-      setSelectedTags(initialTags);
+      // Rollback on error
+      queryClient.setQueryData(['tags'], oldData);
+      throw error;
     }
   }, [queryClient, productId, selectedTags, initialTags, availableTags, createRelationship, deleteRelationship, onSave]);
+
+  // Function to check if there are unsaved changes
+  const hasChanges = React.useCallback(() => {
+    const initialSet = new Set(initialTags);
+    const selectedSet = new Set(selectedTags);
+    
+    // Check if any tags were added or removed
+    return initialTags.length !== selectedTags.length ||
+      selectedTags.some(tag => !initialSet.has(tag)) ||
+      initialTags.some(tag => !selectedSet.has(tag));
+  }, [initialTags, selectedTags]);
 
   // Expose applyChanges to parent
   React.useImperativeHandle(
     ref,
     () => ({
-      applyChanges
+      applyChanges,
+      hasChanges
     }),
-    [applyChanges]
+    [applyChanges, hasChanges]
   );
 
   if (isTagsLoading) {
@@ -116,18 +137,14 @@ export const TagSelector = forwardRef<TagSelectorRef, TagSelectorProps>(({
   }
 
   return (
-    <div className={className}>
-      <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-        <FaTags className="text-blue-400" />
-        <span>Tags</span>
-      </label>
-      <div className="flex flex-col gap-4">
+    <div className={`${className}`}>
+      <div className="flex flex-col gap-2">
         {availableTags.map(tag => (
           <Switch
             key={tag.id}
             checked={selectedTags.includes(tag.tag_name || '')}
             onChange={(checked) => handleTagToggle(tag.tag_name || '', checked)}
-            size="sm"
+            size="xs"
             shape="boxed"
             label={
               <div className="flex flex-col">

@@ -27,7 +27,7 @@ const Switch: React.FC<Props> = ({
       spacing: 'left-0.5 top-0.5',
       label: 'text-xs',
       boxed: 'px-2 py-1',
-      icon: 'w-3 h-3'
+      icon: 'w-5 h-5'
     },
     sm: {
       container: 'w-10 h-6',
@@ -36,7 +36,7 @@ const Switch: React.FC<Props> = ({
       spacing: 'left-1 top-1',
       label: 'text-sm',
       boxed: 'px-3 py-2',
-      icon: 'w-4 h-4'
+      icon: 'w-6 h-6'
     },
     md: {
       container: 'w-14 h-8',
@@ -45,7 +45,7 @@ const Switch: React.FC<Props> = ({
       spacing: 'left-1 top-1',
       label: 'text-sm',
       boxed: 'px-4 py-3',
-      icon: 'w-5 h-5'
+      icon: 'w-7 h-7'
     }
   };
 
