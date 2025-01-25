@@ -121,10 +121,21 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
         // Update products cache
         {
           queryKey: ['products'],
-          update: (oldData: Product[]) => {
+          update: (oldData: ProductViewItem[]) => {
             return oldData.map(product => 
-              product.id === id 
-                ? { ...product, ...data }
+              product.product_id === id 
+                ? {
+                    ...product,
+                    product_title: data.product_title ?? product.product_title,
+                    product_variant: data.product_variant ?? product.product_variant,
+                    release_year: data.release_year ?? product.release_year,
+                    product_notes: data.product_notes ?? product.product_notes,
+                    product_group_name: data.product_group ?? product.product_group_name,
+                    product_type_name: data.product_type ?? product.product_type_name,
+                    rating_name: data.rating ?? product.rating_name,
+                    region_name: data.region ?? product.region_name,
+                    product_updated_at: new Date().toISOString()
+                  }
                 : product
             );
           }
@@ -137,11 +148,11 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
               item.product_id === id
                 ? {
                     ...item,
-                    product_title: data.product_title || item.product_title,
-                    product_variant: data.product_variant || item.product_variant,
-                    product_type: data.product_type || item.product_type,
-                    region: data.region || item.region,
-                    rating: data.rating || item.rating
+                    product_title: data.product_title ?? item.product_title,
+                    product_variant: data.product_variant ?? item.product_variant,
+                    product_type_name: data.product_type ?? item.product_type_name,
+                    region_name: data.region ?? item.region_name,
+                    rating_name: data.rating ?? item.rating_name
                   }
                 : item
             );

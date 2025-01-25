@@ -50,10 +50,42 @@ export const useProductTagsRelationship = () => {
     }
   });
 
+  // Update all relationships mutation
+  const updateAllRelationshipsMutation = useMutation({
+    mutationFn: async ({ productId, tagIds }: { productId: number; tagIds: number[] }) => {
+      // First delete all existing relationships
+      const { error: deleteError } = await supabase
+        .from('products_tags_relationship')
+        .delete()
+        .eq('product_id', productId);
+
+      if (deleteError) throw deleteError;
+
+      // Then create new relationships for all selected tags
+      if (tagIds.length > 0) {
+        const { error: insertError } = await supabase
+          .from('products_tags_relationship')
+          .insert(
+            tagIds.map(tagId => ({
+              product_id: productId,
+              tag_id: tagId
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TAGS_QUERY_KEY });
+    }
+  });
+
   return {
     createRelationship: createRelationshipMutation.mutate,
     deleteRelationship: deleteRelationshipMutation.mutate,
     isCreating: createRelationshipMutation.isPending,
-    isDeleting: deleteRelationshipMutation.isPending
+    isDeleting: deleteRelationshipMutation.isPending,
+    updateAllRelationships: updateAllRelationshipsMutation.mutate,
+    isUpdating: updateAllRelationshipsMutation.isPending
   };
 }; 

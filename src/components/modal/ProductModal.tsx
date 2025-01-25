@@ -3,14 +3,12 @@ import { Modal } from './Modal';
 import { Card } from '@/components/card';
 import { ProductViewItem } from '@/types/product';
 import { useProductsTable } from '@/hooks/useProductsTable';
-import type { Product } from '@/types/tables';
 import RegionRatingSelector, { type RegionRatingValue } from '@/components/product/RegionRatingSelector';
 import { TagSelector, type TagSelectorRef } from '@/components/product/TagSelector';
 import regionsData from '@/data/regions.json';
 import productTypesData from '@/data/product_types.json';
 import productGroupsData from '@/data/product_groups.json';
 import { FormElement, FormElementLabel } from '@/components/formelement';
-import type { TextValue } from '@/components/formelement/FormElement';
 import { Button } from '@/components/ui/';
 import DisplayError from '@/components/ui/DisplayError';
 import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaUpload, FaImage, FaTags } from 'react-icons/fa';
@@ -138,10 +136,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     <Modal isOpen={isOpen} onClose={handleClose} size="xl">
       <Card modal>
         <Card.Header
-          icon={<FaBox />}
-          iconColor="text-yellow-500"
-          title="Edit Product"
-          bgColor="bg-orange-600/50"
+          icon={<FaLayerGroup />}
+          iconColor="text-cyan-500"
+          title={`Product: ${product.product_title}`}
+          bgColor="bg-blue-500/50"
           rightContent={`ID: ${product.product_id}`}
         />
         <Card.Body>
@@ -214,16 +212,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
               {/* Form Column */}
               <div className="col-span-6 space-y-4">
-                <DisplayError 
-                  errors={errors}
-                  header="Please correct the following issues:"
-                  icon={FaExclamationTriangle}
-                  iconColor="text-red-400"
-                  bgColor="bg-red-900/50"
-                  borderColor="border-red-700"
-                  textColor="text-red-200"
-                />
-
                 {/* Title, Variant, and Year Row */}
                 <div className="grid grid-cols-12 gap-2">
                   <div className="col-span-6">
@@ -382,6 +370,19 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           </div>
         </Card.Footer>
       </Card>
+      {errors.length > 0 && (
+        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50">
+          <DisplayError 
+            errors={errors}
+            header="Please correct the following issues:"
+            icon={FaExclamationTriangle}
+            iconColor="text-red-400"
+            bgColor="bg-red-900/50"
+            borderColor="border-red-700"
+            textColor="text-red-200"
+          />
+        </div>
+      )}
     </Modal>
   );
 }; 
