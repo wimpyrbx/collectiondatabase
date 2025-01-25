@@ -4,7 +4,7 @@ import Page from '@/components/page/Page';
 import { useProductsCache } from '@/hooks/useProductsCache';
 import { useTagsCache } from '@/hooks/useTagsCache';
 import { ProductViewItem } from '@/types/product';
-import { FaListAlt, FaTag, FaBoxes, FaDollarSign, FaLayerGroup, FaCubes, FaGlobe, FaStar, FaTags, FaCalendar } from 'react-icons/fa';
+import { FaListAlt, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaTags, FaCalendar } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';

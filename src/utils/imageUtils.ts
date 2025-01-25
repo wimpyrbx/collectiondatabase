@@ -219,3 +219,88 @@ export function useImageUpload(
     handleFileInputChange
   };
 } 
+
+export interface DeleteImageResult {
+  success: boolean;
+  message: string;
+}
+
+export async function deleteImage(type: 'product' | 'inventory', id: number): Promise<DeleteImageResult> {
+  const formData = new FormData();
+  formData.append('type', type);
+  formData.append('id', id.toString());
+
+  try {
+    console.log('Deleting image:', { type, id });
+    
+    const response = await fetch(`${BASE_URL}/api/delete.php${DEV_MODE ? '?devmode=true' : ''}`, {
+      method: 'POST',
+      body: formData
+    });
+
+    let result;
+    try {
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+      
+      try {
+        result = JSON.parse(responseText);
+      } catch (error) {
+        console.error('Failed to parse response:', responseText);
+        return {
+          success: false,
+          message: `Server returned invalid JSON response: ${responseText.substring(0, 100)}...`
+        };
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Failed to read response:', error);
+      return {
+        success: false,
+        message: `Failed to read server response: ${message}`
+      };
+    }
+
+    if (!response.ok || !result.success) {
+      console.error('Delete failed:', { result, status: response.status });
+      return {
+        success: false,
+        message: result.message || `Delete failed with status ${response.status}`
+      };
+    }
+
+    console.log('Delete successful:', result);
+    return {
+      success: true,
+      message: result.message
+    };
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Delete error:', error);
+    return {
+      success: false,
+      message: `Network or system error: ${message}`
+    };
+  }
+} 
+
+/**
+ * Checks if a real image exists (not a placeholder) for the given product
+ * @param productId - The ID of the product
+ * @returns Promise<boolean> - true if a real image exists, false if it's a placeholder
+ */
+export async function checkProductImageExists(productId: number): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/api/image.php?mode=products&id=${productId}&check=true${DEV_MODE ? '&devmode=true' : ''}`,
+      { method: 'HEAD' }
+    );
+    
+    // 200 means real image exists, 204 means placeholder
+    return response.status === 200;
+  } catch (error) {
+    console.error('Failed to check image existence:', error);
+    return false;
+  }
+} 

@@ -11,8 +11,8 @@ import productGroupsData from '@/data/product_groups.json';
 import { FormElement, FormElementLabel } from '@/components/formelement';
 import { Button } from '@/components/ui/';
 import DisplayError from '@/components/ui/DisplayError';
-import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaUpload, FaImage, FaTags } from 'react-icons/fa';
-import { getProductImageUrl, useImageUpload } from '@/utils/imageUtils';
+import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaUpload, FaImage, FaTags, FaTrash } from 'react-icons/fa';
+import { getProductImageUrl, useImageUpload, deleteImage, checkProductImageExists } from '@/utils/imageUtils';
 import clsx from 'clsx';
 import { getRatingDisplayInfo } from '@/utils/productUtils';
 import { useProductModal } from '@/hooks/useProductModal';
@@ -51,6 +51,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [imageSrc, setImageSrc] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [hasRealImage, setHasRealImage] = useState(false);
 
   // Use the centralized image upload hook
   const {
@@ -109,6 +111,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   useEffect(() => {
     if (isOpen && product) {
       setImageSrc(`${getProductImageUrl(product.product_id)}&t=${Date.now()}`);
+      
+      // Check if a real image exists
+      checkProductImageExists(product.product_id).then(exists => {
+        setHasRealImage(exists);
+      });
     }
   }, [isOpen, product]);
 
@@ -116,6 +123,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setImageSrc(''); // Clear the image
+      setHasRealImage(false);
     }
   }, [isOpen]);
 
@@ -129,6 +137,34 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     value: group.name,
     label: group.display_name
   }));
+
+  const handleDeleteImage = async () => {
+    if (!product || isDeleting) return;
+    
+    if (!confirm('Are you sure you want to delete this image?')) return;
+
+    setIsDeleting(true);
+    setErrors([]);
+
+    try {
+      const result = await deleteImage('product', product.product_id);
+      
+      if (result.success) {
+        // Clear the current image and force a reload
+        setImageSrc('');
+        // Add a small delay before reloading to ensure the old image is cleared
+        setTimeout(() => {
+          setImageSrc(`${getProductImageUrl(product.product_id)}&t=${Date.now()}`);
+        }, 100);
+      } else {
+        setErrors(prev => [...prev, result.message]);
+      }
+    } catch (error) {
+      setErrors(prev => [...prev, 'Failed to delete image']);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (!product) return null;
 
@@ -153,23 +189,47 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     "bg-gray-900/50 border border-gray-700",
                     isDragging && "border-blue-500 border-2",
                     "transition-all duration-200",
-                    "flex items-center justify-center" // Center content
+                    "flex items-center justify-center"
                   )}
-                  style={{ maxHeight: '400px' }} // Limit maximum height
+                  style={{ maxHeight: '400px' }}
                   onDragEnter={handleDragEnter}
                   onDragLeave={handleDragLeave}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
                 >
                   {imageSrc ? (
-                    <img
-                      src={imageSrc}
-                      alt={product.product_title}
-                      className={clsx(
-                        "max-w-full max-h-full object-contain", // Show entire image
-                        isDragging && "opacity-50"
+                    <>
+                      <img
+                        src={imageSrc}
+                        alt={product.product_title}
+                        className={clsx(
+                          "max-w-full max-h-full object-contain",
+                          isDragging && "opacity-50"
+                        )}
+                        onError={() => setImageSrc('')}
+                      />
+                      {/* Only show delete button if we have a real image */}
+                      {hasRealImage && (
+                        <button
+                          type="button"
+                          onClick={handleDeleteImage}
+                          disabled={isDeleting}
+                          className={clsx(
+                            "absolute bottom-2 left-2",
+                            "p-2 rounded-full",
+                            "bg-red-900/80 hover:bg-red-800",
+                            "text-red-100 hover:text-white",
+                            "transition-colors duration-200",
+                            "flex items-center justify-center",
+                            "z-[60]",
+                            isDeleting && "opacity-50 cursor-not-allowed"
+                          )}
+                          title="Delete image"
+                        >
+                          <FaTrash className="w-4 h-4" />
+                        </button>
                       )}
-                    />
+                    </>
                   ) : (
                     <div className="flex flex-col items-center justify-center text-gray-500">
                       <FaImage className="w-12 h-12 mb-2" />
@@ -184,6 +244,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       "bg-black/50 backdrop-blur-sm",
                       "transition-opacity duration-200",
                       "items-center",
+                      "z-50",
                       isDragging || isUploading ? "opacity-100" : "opacity-0 hover:opacity-100"
                     )}
                   >
