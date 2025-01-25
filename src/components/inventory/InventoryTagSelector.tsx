@@ -18,6 +18,7 @@ interface InventoryTagSelectorProps {
 
 export interface InventoryTagSelectorRef {
   applyChanges: () => void;
+  hasChanges: () => boolean;
 }
 
 export const InventoryTagSelector = forwardRef<InventoryTagSelectorRef, InventoryTagSelectorProps>(({
@@ -127,13 +128,25 @@ export const InventoryTagSelector = forwardRef<InventoryTagSelectorRef, Inventor
     onSave
   ]);
 
-  // Expose applyChanges to parent
+  // Check if there are any pending changes
+  const hasChanges = React.useCallback(() => {
+    const currentInventoryTags = new Set(selectedInventoryTags);
+    const initialInventoryTags = new Set(initialTags.inventoryTags);
+
+    // Check if any tags were added or removed
+    return selectedInventoryTags.length !== initialTags.inventoryTags.length ||
+      selectedInventoryTags.some(tag => !initialInventoryTags.has(tag)) ||
+      initialTags.inventoryTags.some(tag => !currentInventoryTags.has(tag));
+  }, [selectedInventoryTags, initialTags.inventoryTags]);
+
+  // Expose methods to parent
   React.useImperativeHandle(
     ref,
     () => ({
-      applyChanges
+      applyChanges,
+      hasChanges
     }),
-    [applyChanges]
+    [applyChanges, hasChanges]
   );
 
   if (isInventoryTagsLoading || isProductTagsLoading) {
