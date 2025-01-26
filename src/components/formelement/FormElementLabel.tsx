@@ -26,6 +26,7 @@ export const FormElementLabel: React.FC<FormElementLabelProps> = ({
   textSize = 'xs',
   disabled = false
 }) => {
+
   if (!label) return null;
 
   return (

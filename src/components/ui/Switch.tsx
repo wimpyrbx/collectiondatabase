@@ -8,6 +8,8 @@ interface Props {
   label?: string | React.ReactNode;
   shape?: 'round' | 'square' | 'boxed';
   size?: 'xs' | 'sm' | 'md';
+  labelIcon?: React.ReactNode | string;
+  labelIconColor?: string;
 }
 
 const Switch: React.FC<Props> = ({ 
@@ -16,7 +18,9 @@ const Switch: React.FC<Props> = ({
   disabled = false, 
   label,
   shape = 'round',
-  size = 'md'
+  size = 'md',
+  labelIconColor = 'text-gray-500',
+  labelIcon = null
 }) => {
   // Size mappings
   const sizeClasses = {
@@ -66,9 +70,16 @@ const Switch: React.FC<Props> = ({
         <div className="flex items-center justify-between">
           <div className="flex-grow">
             {label && (
-              <span className={`font-medium ${disabled ? 'text-gray-600' : 'text-gray-300'} ${currentSize.label}`}>
-                {label}
-              </span>
+              <div className="flex items-center">
+                {labelIcon && (
+                  <span className={`mr-2 ${disabled ? 'text-gray-600' : `text-${labelIconColor}-300`}`}>
+                    {labelIcon}
+                  </span>
+                )}
+                <span className={`font-medium ${disabled ? 'text-gray-600' : 'text-gray-300'} ${currentSize.label}`}>
+                  {label}
+                </span>
+              </div>
             )}
           </div>
           <FaCheck 

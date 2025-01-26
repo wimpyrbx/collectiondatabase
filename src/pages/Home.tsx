@@ -14,10 +14,16 @@ import regionsData from '@/data/regions.json';
 import productTypesData from '@/data/product_types.json';
 import { getRatingDisplayInfo, getProductTypeInfo } from '@/utils/productUtils';
 import { ImageDisplay } from '@/components/image/ImageDisplay';
+import Pill from '@/components/ui/Pill';
+import { BaseTag } from '@/types/tags';
+import { useProductTagsCache } from '@/hooks/useProductTagsCache';
+import { DisplayError } from '@/components/ui';
+import DisplayTags from '@/components/tag/DisplayTags';
 
 const Home = () => {
   const { data, isLoading, isError, error } = useProductsCache();
-  const { getProductTags } = useTagsCache();
+  const { getTags } = useTagsCache();
+  const { data: availableTags = [] } = useProductTagsCache();
   const [selectedProduct, setSelectedProduct] = React.useState<ProductViewItem | null>(null);
   const [updatedProductId, setUpdatedProductId] = React.useState<number | null>(null);
 
@@ -134,21 +140,9 @@ const Home = () => {
       icon: <FaTags className="w-4 h-4" />,
       width: '200px',
       accessor: (item: ProductViewItem) => {
-        const tags = getProductTags(item.product_id);
+        const tags = getTags(item.product_id, 'products');
         if (!tags || tags.length === 0) return '';
-        
-        return (
-          <div className="flex flex-wrap gap-1">
-            {tags.map(tag => (
-              <span 
-                key={tag} 
-                className="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-300"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        );
+        return <DisplayTags id={item.product_id} tagScope="products" />;
       },
       sortable: false
     }

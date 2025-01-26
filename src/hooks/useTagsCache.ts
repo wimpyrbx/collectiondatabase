@@ -33,45 +33,17 @@ export const useTagsCache = () => {
     refetchOnReconnect: false
   });
 
-  // Helper functions to get tags by ID
-  const getProductTags: TagsByIdGetter = (productId) => {
-    if (!data?.combined_data.products) return [];
-    const tags = data.combined_data.products[productId.toString()];
+  // Helper function to get tags by ID and scope
+  const getTags = (id: number, scope: 'products' | 'inventory'): string[] => {
+    if (!data?.combined_data[scope]) return [];
+    const tags = data.combined_data[scope][id.toString()];
     if (!tags) return [];
-    return tags.map(tag => {
-      const [name] = tag.split('=');
-      return name;
-    });
-  };
-
-  const getInventoryTags: TagsByIdGetter = (inventoryId) => {
-    if (!data?.combined_data.inventory) return [];
-    const tags = data.combined_data.inventory[inventoryId.toString()];
-    if (!tags) return [];
-    return tags.map(tag => {
-      const [name] = tag.split('=');
-      return name;
-    });
-  };
-
-  // Helper to get both inventory and product tags for an inventory item
-  const getInventoryWithProductTags = (inventoryId: number, productId: number | null) => {
-    const inventoryTags = getInventoryTags(inventoryId);
-    const productTags = productId ? getProductTags(productId) : undefined;
-
-    return {
-      inventoryTags,
-      productTags,
-      // Combine both sets of tags, removing duplicates
-      allTags: [...new Set([...(inventoryTags || []), ...(productTags || [])])]
-    };
+    return tags;
   };
 
   return {
     data,
-    getProductTags,
-    getInventoryTags,
-    getInventoryWithProductTags,
+    getTags,
     ...rest
   };
 }; 

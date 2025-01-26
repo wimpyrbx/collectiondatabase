@@ -5,6 +5,8 @@ import { useProductTagsRelationship } from '@/hooks/useProductTagsRelationship';
 import { Switch } from '@/components/ui';
 import { FormElement } from '@/components/formelement';
 import { BaseTag } from '@/types/tags';
+import { useProductsCache } from '@/hooks/useProductsCache';
+import { FaQuestionCircle, FaTags } from 'react-icons/fa';
 
 interface TypedTagSelectorProps {
   productId: number;
@@ -25,6 +27,34 @@ export const TypedTagSelector = forwardRef<TypedTagSelectorRef, TypedTagSelector
   const { data: availableTags = [], isLoading: isTagsLoading } = useProductTagsCache();
   const { data: relationshipData } = useTagsCache();
   const { updateAllRelationships } = useProductTagsRelationship();
+  const { data: products } = useProductsCache();
+  
+  // Get product type and group
+  const product = React.useMemo(() => {
+    return products?.find(p => p.product_id === productId);
+  }, [products, productId]);
+
+  // Filter tags based on product type and group
+  const filteredTags = React.useMemo(() => {
+    if (!availableTags || !product) return [];
+    
+    return availableTags.filter(tag => {
+      // If tag has no type/group restrictions, allow it
+      if (!tag.tag_product_types?.length && !tag.tag_product_groups?.length) {
+        return true;
+      }
+      
+      // Check product type match
+      const typeMatches = !tag.tag_product_types?.length || 
+        (product.product_type_name && tag.tag_product_types.includes(product.product_type_name));
+      
+      // Check product group match
+      const groupMatches = !tag.tag_product_groups?.length || 
+        (product.product_group_name && tag.tag_product_groups.includes(product.product_group_name));
+      
+      return typeMatches && groupMatches;
+    });
+  }, [availableTags, product]);
   
   // Get initial tags and values directly from the cache
   const initialTags = React.useMemo(() => {
@@ -82,6 +112,16 @@ export const TypedTagSelector = forwardRef<TypedTagSelectorRef, TypedTagSelector
     setTagValues(newValues);
   }, [productId, relationshipData, availableTags]);
 
+  // Add debug logging
+  React.useEffect(() => {
+    console.log('Available tags:', availableTags);
+    availableTags.forEach(tag => {
+      if (tag.tag_icon_color) {
+        console.log(`Tag ${tag.tag_name} has color: ${tag.tag_icon_color}, resulting class: text-${tag.tag_icon_color}-500`);
+      }
+    });
+  }, [availableTags]);
+
   const handleTagToggle = (tag: BaseTag, checked: boolean) => {
     setSelectedTags(prev => {
       if (checked) {
@@ -106,16 +146,28 @@ export const TypedTagSelector = forwardRef<TypedTagSelectorRef, TypedTagSelector
   // Function to apply changes to the database
   const applyChanges = React.useCallback(async () => {
     try {
-      // Get tag IDs for selected tags
-      const tagIds = selectedTags
-        .map(tag => availableTags.find(t => t.tag_name === tag)?.id)
-        .filter((id): id is number => id !== undefined);
+      // Get tag IDs and prepare tag values for selected tags
+      const tagIds: number[] = [];
+      const updatedTagValues: Record<number, string> = {};
+
+      selectedTags.forEach(tagName => {
+        const tag = availableTags.find(t => t.tag_name === tagName);
+        if (tag) {
+          tagIds.push(tag.id);
+          // For boolean tags, set value to 'true'
+          if (tag.tag_type === 'boolean') {
+            updatedTagValues[tag.id] = 'true';
+          } else if (tagValues[tag.id]) {
+            updatedTagValues[tag.id] = tagValues[tag.id];
+          }
+        }
+      });
 
       // Update all relationships in a single operation
       await updateAllRelationships({
         productId,
         tagIds,
-        tagValues
+        tagValues: updatedTagValues
       });
 
       onSave?.();
@@ -152,7 +204,7 @@ export const TypedTagSelector = forwardRef<TypedTagSelectorRef, TypedTagSelector
   }
 
   // Group tags by type
-  const groupedTags = availableTags.reduce<Record<string, BaseTag[]>>((acc, tag) => {
+  const groupedTags = filteredTags.reduce<Record<string, BaseTag[]>>((acc, tag) => {
     if (!tag.tag_type) return acc;
     if (!acc[tag.tag_type]) acc[tag.tag_type] = [];
     acc[tag.tag_type].push(tag);
@@ -160,112 +212,107 @@ export const TypedTagSelector = forwardRef<TypedTagSelectorRef, TypedTagSelector
   }, {});
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`${className}`}>
       {/* Toggle Tags (Boolean) */}
       {groupedTags.boolean && groupedTags.boolean.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-300">Toggle Tags</h3>
-          <div className="space-y-2">
-            {groupedTags.boolean.map(tag => (
-              <div
-                key={tag.id}
-                className="flex items-center justify-between p-2 rounded-lg bg-gray-800/50 border border-gray-700"
-              >
-                <div>
-                  <div className="text-sm text-gray-300">{tag.tag_name}</div>
+        <div className="pt-3">
+          {groupedTags.boolean.map(tag => (
+            <Switch
+              key={tag.id}
+              checked={selectedTags.includes(tag.tag_name || '')}
+              onChange={checked => handleTagToggle(tag, checked)}
+              shape="boxed"
+              size="xs"
+              labelIcon={tag.tag_icon || <FaQuestionCircle />}
+              labelIconColor={tag.tag_icon_color ? `text-${tag.tag_icon_color}-500` : 'text-gray-500'}
+              label={
+                <div className="flex flex-col">
+                  <span className="text-xs text-gray-300">{tag.tag_name}</span>
                   {tag.tag_description && (
-                    <div className="text-xs text-gray-500">{tag.tag_description}</div>
+                    <span className="text-xs text-gray-500">{tag.tag_description}</span>
                   )}
                 </div>
-                <Switch
-                  checked={selectedTags.includes(tag.tag_name || '')}
-                  onChange={checked => handleTagToggle(tag, checked)}
-                />
-              </div>
-            ))}
-          </div>
+              }
+            />
+          ))}
         </div>
       )}
 
       {/* Selection Tags (Set) */}
       {groupedTags.set && groupedTags.set.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-300">Selection Tags</h3>
-          <div className="space-y-2">
-            {groupedTags.set.map(tag => {
-              const isSelected = selectedTags.includes(tag.tag_name || '');
-              const value = tagValues[tag.id];
-              return (
-                <div
-                  key={tag.id}
-                  className={`p-2 rounded-lg border ${
-                    isSelected && value ? 'bg-green-900/20 border-green-700' : 'bg-gray-800/50 border-gray-700'
-                  }`}
-                >
-                  <div className="text-sm text-gray-300">{tag.tag_name}</div>
-                  {tag.tag_description && (
-                    <div className="text-xs text-gray-500">{tag.tag_description}</div>
-                  )}
-                  <FormElement
-                    elementType="listsingle"
-                    options={[
-                      { value: '', label: '-' },
-                      ...(tag.tag_values?.map(value => ({ value, label: value })) || [])
-                    ]}
-                    selectedOptions={value || ''}
-                    onValueChange={newValue => {
-                      if (newValue) {
-                        handleTagToggle(tag, true);
-                        handleTagValueChange(tag.id, String(newValue));
-                      } else {
-                        handleTagToggle(tag, false);
-                      }
-                    }}
-                    className="mt-2"
-                  />
-                </div>
-              );
-            })}
-          </div>
+        <div className="pt-3">
+          {groupedTags.set.map(tag => {
+            const isSelected = selectedTags.includes(tag.tag_name || '');
+            const value = tagValues[tag.id];
+            return (
+              <div
+                key={tag.id}
+                className={`p-2 rounded-lg border ${
+                  isSelected && value ? 'bg-green-600/20 border-green-600' : 'bg-gray-600/20 border-gray-600'
+                }`}
+              >
+                <FormElement
+                  elementType="listsingle"
+                  labelIcon={tag.tag_icon || <FaQuestionCircle />}
+                  labelIconColor={tag.tag_icon_color ? `text-${tag.tag_icon_color}-500` : 'text-gray-500'}
+                  labelPosition="above"
+                  label={tag.tag_name || ''}
+                  options={[
+                    { value: '', label: '-' },
+                    ...(tag.tag_values?.map(value => ({ value, label: value })) || [])
+                  ]}
+                  selectedOptions={value || ''}
+                  onValueChange={newValue => {
+                    const stringValue = newValue ? String(newValue) : '';
+                    if (stringValue) {
+                      handleTagToggle(tag, true);
+                      handleTagValueChange(tag.id, stringValue);
+                    } else {
+                      handleTagToggle(tag, false);
+                    }
+                  }}
+                  className=""
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Text Tags */}
       {groupedTags.text && groupedTags.text.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-300">Text Tags</h3>
-          <div className="space-y-2">
-            {groupedTags.text.map(tag => {
-              const isSelected = selectedTags.includes(tag.tag_name || '');
-              const value = tagValues[tag.id];
-              return (
-                <div
-                  key={tag.id}
-                  className={`p-2 rounded-lg border ${
-                    isSelected && value ? 'bg-green-900/20 border-green-700' : 'bg-gray-800/50 border-gray-700'
-                  }`}
-                >
-                  <div className="text-sm text-gray-300">{tag.tag_name}</div>
-                  {tag.tag_description && (
-                    <div className="text-xs text-gray-500">{tag.tag_description}</div>
-                  )}
-                  <FormElement
-                    elementType="input"
-                    initialValue={value || ''}
-                    onValueChange={newValue => {
-                      if (newValue) {
-                        handleTagToggle(tag, true);
-                        handleTagValueChange(tag.id, String(newValue));
-                      } else {
-                        handleTagToggle(tag, false);
-                      }
-                    }}
-                    className="mt-2"
-                  />
-                </div>
-              );
-            })}
-          </div>
+        <div className=" pt-3">
+          {groupedTags.text.map(tag => {
+            const isSelected = selectedTags.includes(tag.tag_name || '');
+            const value = tagValues[tag.id];
+            return (
+              <div
+                key={tag.id}
+                className={`p-1 pt-1 pb-2 pr-2 rounded-lg border ${
+                  isSelected && value ? 'bg-green-600/20 border-green-600' : 'bg-gray-600/20 border-gray-600'
+                }`}
+              >
+                <FormElement
+                  elementType="input"
+                  textSize='xs'
+                  labelIcon={tag.tag_icon || <FaQuestionCircle />}
+                  labelIconColor={tag.tag_icon_color ? `text-${tag.tag_icon_color}-500` : 'text-gray-500'}
+                  label={tag.tag_name || ''}
+                  initialValue={value || ''}
+                  onValueChange={newValue => {
+                    const stringValue = String(newValue);
+                    const trimmedValue = stringValue.trim();
+                    if (trimmedValue) {
+                      handleTagToggle(tag, true);
+                      handleTagValueChange(tag.id, trimmedValue);
+                    } else {
+                      handleTagToggle(tag, false);
+                    }
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

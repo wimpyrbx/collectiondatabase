@@ -214,7 +214,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   labelIcon={<FaTags />}
                   labelIconColor="text-orange-500"
                 />
-                <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-3 mt-[3px]">
+                <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-3 pt-0 mt-[3px]">
                   {product && (
                     <TypedTagSelector
                       key={`tags-${isOpen}-${product.product_id}`}

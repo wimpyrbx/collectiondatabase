@@ -1,8 +1,10 @@
 import React from 'react';
 import BaseStyledContainer, { BaseStyledContainerProps } from './BaseStyledContainer';
+import * as FaIcons from 'react-icons/fa';
 
 type PillProps = Omit<BaseStyledContainerProps<'span'>, 'as' | 'elementProps' | 'iconRight'> & {
-  icon?: React.ReactNode;
+  icon?: React.ReactNode | string;
+  iconColor?: string;
   onClick?: () => void;
 };
 
@@ -10,8 +12,21 @@ const Pill: React.FC<PillProps> = ({
   children,
   onClick,
   icon,
+  iconColor,
+  bgColor = 'bg-gray-700',
   ...baseProps
 }) => {
+  // Convert string icon to component if needed
+  const iconElement = React.useMemo(() => {
+    if (!icon) return null;
+    if (typeof icon === 'string') {
+      // @ts-ignore - FaIcons will have the icon as a property
+      const IconComponent = FaIcons[icon];
+      return IconComponent ? <IconComponent /> : null;
+    }
+    return icon;
+  }, [icon]);
+
   return (
     <BaseStyledContainer<'span'>
       {...baseProps}
@@ -19,7 +34,9 @@ const Pill: React.FC<PillProps> = ({
       elementProps={{
         onClick
       }}
-      iconLeft={icon}
+      iconLeft={iconElement}
+      iconColor={iconColor}
+      bgColor={bgColor}
     >
       {children}
     </BaseStyledContainer>

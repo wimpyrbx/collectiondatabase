@@ -29,10 +29,7 @@ export const useBaseTagsTable = ({ tableName, queryKey }: UseBaseTagsTableProps)
         .from(tableName)
         .insert({
           ...newTag,
-          tag_values: newTag.tag_type === 'set' ? newTag.tag_values : null,
-          tag_default_value: newTag.tag_type === 'boolean' || newTag.tag_type === 'set' 
-            ? newTag.tag_default_value 
-            : null
+          tag_values: newTag.tag_type === 'set' ? newTag.tag_values : null
         })
         .select()
         .single();
@@ -48,12 +45,6 @@ export const useBaseTagsTable = ({ tableName, queryKey }: UseBaseTagsTableProps)
   // Update mutation
   const updateTagMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number, updates: Partial<Omit<BaseTag, 'id' | 'created_at'>> }) => {
-      // Check if tag is in use before allowing any changes
-      const inUse = await checkTagInUse(id);
-      if (inUse) {
-        throw new Error('Cannot modify tag settings while it is in use');
-      }
-
       // If updating tag_type, ensure tag_values are consistent
       const finalUpdates = { ...updates };
       if ('tag_type' in updates) {

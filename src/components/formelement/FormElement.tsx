@@ -1,4 +1,5 @@
 import React from 'react';
+import * as FaIcons from 'react-icons/fa';
 import FormElementLabel from './FormElementLabel';
 import clsx from 'clsx';
 
@@ -33,7 +34,7 @@ export interface FormElementProps {
   multiple?: boolean;
   label?: string;
   labelPosition?: LabelPosition;
-  labelIcon?: React.ReactNode;
+  labelIcon?: React.ReactNode | string;
   labelIconColor?: string;
   showClearButton?: boolean;
   disabled?: boolean;
@@ -102,12 +103,22 @@ export const FormElement: React.FC<FormElementProps> = ({
     }
   };
 
+  const icon = React.useMemo(() => {
+    if (!labelIcon) return null;
+    if (typeof labelIcon === 'string') {
+      // @ts-ignore - FaIcons will have the icon as a property
+      const IconComponent = FaIcons[labelIcon];
+      return IconComponent ? <IconComponent /> : null;
+    }
+    return labelIcon;
+  }, [labelIcon]);
+
   const renderLabel = () => {
     if (!label) return null;
     return (
       <FormElementLabel
         label={label}
-        labelIcon={labelIcon}
+        labelIcon={icon}
         labelIconColor={labelIconColor}
         textSize={textSize}
         disabled={disabled}

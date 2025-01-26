@@ -25,6 +25,9 @@ export interface BaseTag {
   tag_values: string[] | null;
   tag_product_types: string[] | null;
   tag_product_groups: string[] | null;
+  tag_icon: string | null;
+  tag_icon_color: string | null;
+  tag_display_as: 'only_value' | 'images' | null;
 }
 
 export interface ProductTag extends BaseTag {}
