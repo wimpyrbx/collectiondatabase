@@ -13,6 +13,7 @@ import { ProductModal } from '@/components/modal/ProductModal';
 import regionsData from '@/data/regions.json';
 import productTypesData from '@/data/product_types.json';
 import { getRatingDisplayInfo, getProductTypeInfo } from '@/utils/productUtils';
+import { ImageDisplay } from '@/components/image/ImageDisplay';
 
 const Home = () => {
   const { data, isLoading, isError, error } = useProductsCache();
@@ -47,8 +48,24 @@ const Home = () => {
       header: 'Product Title',
       icon: <FaTag className="w-4 h-4" />,
       accessor: (item: ProductViewItem) => (
-        <div className="flex flex-col">
-          <span>{item.product_title} {item.product_variant && <span className="text-sm text-cyan-500/75">({item.product_variant})</span>}</span>
+        <div className="grid grid-cols-[40px_1fr] gap-2 items-center">
+          <div className="w-[40px] flex items-center justify-center">
+            <ImageDisplay
+              type="product"
+              id={item.product_id}
+              title={item.product_title}
+              className="max-h-[40px] object-contain p-0"
+              showTooltip={true}
+            />
+          </div>
+          <div>
+            <span>{item.product_title}</span>
+            {item.product_variant && (
+              <span className="text-sm text-cyan-500/75">
+                ({item.product_variant})
+              </span>
+            )}
+          </div>
         </div>
       ),
       sortable: true,

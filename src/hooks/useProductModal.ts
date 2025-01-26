@@ -2,7 +2,7 @@ import { useRef, useCallback, useState } from 'react';
 import { useModalForm } from './useModalForm';
 import { useProductService } from './useProductService';
 import type { ProductViewItem } from '@/types/product';
-import type { TagSelectorRef } from '@/components/product/TagSelector';
+import type { TypedTagSelectorRef } from '@/components/product/TypedTagSelector';
 import type { RegionRatingValue } from '@/components/product/RegionRatingSelector';
 import type { ProductUpdateDTO } from '@/services/ProductService';
 import regionsData from '@/data/regions.json';
@@ -22,7 +22,7 @@ export function useProductModal({
   onUpdateSuccess
 }: UseProductModalOptions) {
   const productService = useProductService();
-  const tagSelectorRef = useRef<TagSelectorRef>(null);
+  const tagSelectorRef = useRef<TypedTagSelectorRef>(null);
   const [regionRating, setRegionRating] = useState<RegionRatingValue>({
     region: '',
     ratingSystem: undefined,

@@ -107,8 +107,7 @@ add_debug_log('Base path configuration', [
 ]);
 
 // Get file path
-$idPadded = str_pad($id, 6, '0', STR_PAD_LEFT);
-$folder = substr($idPadded, 0, 3);
+$folder = substr($id, 0, 3);
 $targetFile = "{$basePath}/images/{$type}s/{$folder}/{$id}.webp";
 
 add_debug_log('File details', [

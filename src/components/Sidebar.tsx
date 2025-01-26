@@ -1,7 +1,7 @@
 // src/components/Sidebar.tsx
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaHome, FaInfoCircle, FaEnvelope, FaWpforms, FaQuestionCircle, FaLayerGroup, FaSearch, FaChevronRight, FaBoxes } from 'react-icons/fa';
+import { FaHome, FaInfoCircle, FaEnvelope, FaWpforms, FaQuestionCircle, FaLayerGroup, FaSearch, FaChevronRight, FaBoxes, FaTags } from 'react-icons/fa';
 import clsx from 'clsx';
 import { CacheMonitor } from './CacheMonitor';
 
@@ -40,6 +40,13 @@ const menuCategories: MenuCategories = {
         icon: <FaBoxes />, 
         iconColor: 'text-cyan-400',
         hoverColor: 'hover:text-cyan-300'
+      },
+      { 
+        path: '/tag-display-settings', 
+        label: 'Tag Settings', 
+        icon: <FaTags />, 
+        iconColor: 'text-orange-400',
+        hoverColor: 'hover:text-orange-300'
       },
       { 
         path: '/about', 

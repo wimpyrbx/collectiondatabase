@@ -137,8 +137,7 @@ add_debug_log('Base path configuration', [
 ]);
 
 // Create folder structure
-$idPadded = str_pad($id, 6, '0', STR_PAD_LEFT);
-$folder = substr($idPadded, 0, 3);
+$folder = substr($id, 0, 3);
 $targetDir = "{$basePath}/images/{$type}s/{$folder}";
 
 // Ensure target directory exists

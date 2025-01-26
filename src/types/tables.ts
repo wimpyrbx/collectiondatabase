@@ -17,6 +17,7 @@ export interface Product {
   price_new_nok_fixed: number | null;
   rating: string | null;
   product_group: string | null;
+  pricecharting_id: string | null;
 }
 
 export interface Sale {

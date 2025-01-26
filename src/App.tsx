@@ -10,6 +10,7 @@ const FormElementsShowcase = lazy(() => import('@/pages/FormElementsShowcase'));
 const TooltipShowcase = lazy(() => import('@/pages/TooltipShowcase'));
 const CardShowcase = lazy(() => import('@/pages/CardShowcase'));
 const Inventory = lazy(() => import('@/pages/Inventory'));
+const TagDisplaySettings = lazy(() => import('@/pages/TagDisplaySettings'));
 
 const App = () => {
   return (
@@ -24,6 +25,7 @@ const App = () => {
             <Route path="/form-elements-showcase" element={<FormElementsShowcase />} />
             <Route path="/tooltip-showcase" element={<TooltipShowcase />} />
             <Route path="/card-showcase" element={<CardShowcase />} />
+            <Route path="/tag-display-settings" element={<TagDisplaySettings />} />
           </Routes>
         </Suspense>
       </Layout>

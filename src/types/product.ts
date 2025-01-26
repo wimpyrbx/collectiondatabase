@@ -28,4 +28,5 @@ export interface ProductViewItem {
   avg_sale_price: number | null;
   max_sale_price: number | null;
   min_sale_price: number | null;
+  pricecharting_id: string | null;
 } 

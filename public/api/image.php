@@ -131,8 +131,8 @@ function serveImage($path, $placeholder_path, $check = false) {
         exit;
     } else {
         if ($check) {
-            http_response_code(404);
-            die('Image not found');
+            http_response_code(204);
+            exit;
         }
         header('Content-Type: image/webp');
         readfile($placeholder_path);

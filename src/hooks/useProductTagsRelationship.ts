@@ -6,6 +6,7 @@ interface ProductTagRelationship {
   id: number;
   product_id: number;
   tag_id: number;
+  tag_value: string | null;
   created_at: string;
 }
 
@@ -14,12 +15,21 @@ export const useProductTagsRelationship = () => {
 
   // Create relationship mutation
   const createRelationshipMutation = useMutation({
-    mutationFn: async ({ productId, tagId }: { productId: number; tagId: number }) => {
+    mutationFn: async ({ 
+      productId, 
+      tagId,
+      tagValue 
+    }: { 
+      productId: number; 
+      tagId: number;
+      tagValue?: string;
+    }) => {
       const { data, error } = await supabase
         .from('products_tags_relationship')
         .insert({
           product_id: productId,
-          tag_id: tagId
+          tag_id: tagId,
+          tag_value: tagValue || null
         })
         .select()
         .single();
@@ -52,7 +62,15 @@ export const useProductTagsRelationship = () => {
 
   // Update all relationships mutation
   const updateAllRelationshipsMutation = useMutation({
-    mutationFn: async ({ productId, tagIds }: { productId: number; tagIds: number[] }) => {
+    mutationFn: async ({ 
+      productId, 
+      tagIds,
+      tagValues = {}
+    }: { 
+      productId: number; 
+      tagIds: number[];
+      tagValues?: Record<number, string>;
+    }) => {
       // First delete all existing relationships
       const { error: deleteError } = await supabase
         .from('products_tags_relationship')
@@ -68,7 +86,8 @@ export const useProductTagsRelationship = () => {
           .insert(
             tagIds.map(tagId => ({
               product_id: productId,
-              tag_id: tagId
+              tag_id: tagId,
+              tag_value: tagValues[tagId] || null
             }))
           );
 

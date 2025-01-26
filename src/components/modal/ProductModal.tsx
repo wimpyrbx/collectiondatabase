@@ -1,21 +1,20 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { Modal } from './Modal';
 import { Card } from '@/components/card';
 import { ProductViewItem } from '@/types/product';
 import { useProductsTable } from '@/hooks/useProductsTable';
 import RegionRatingSelector, { type RegionRatingValue } from '@/components/product/RegionRatingSelector';
-import { TagSelector, type TagSelectorRef } from '@/components/product/TagSelector';
+import { TypedTagSelector, type TypedTagSelectorRef } from '@/components/product/TypedTagSelector';
 import regionsData from '@/data/regions.json';
 import productTypesData from '@/data/product_types.json';
 import productGroupsData from '@/data/product_groups.json';
 import { FormElement, FormElementLabel } from '@/components/formelement';
 import { Button } from '@/components/ui/';
 import DisplayError from '@/components/ui/DisplayError';
-import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaUpload, FaImage, FaTags, FaTrash } from 'react-icons/fa';
-import { getProductImageUrl, useImageUpload, deleteImage, checkProductImageExists } from '@/utils/imageUtils';
-import clsx from 'clsx';
+import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaTags, FaDollarSign } from 'react-icons/fa';
 import { getRatingDisplayInfo } from '@/utils/productUtils';
 import { useProductModal } from '@/hooks/useProductModal';
+import { ImageContainer } from '@/components/image/ImageContainer';
 
 interface ProductModalProps {
   product: ProductViewItem | null;
@@ -48,84 +47,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     onClose,
     onUpdateSuccess
   });
-  const [imageSrc, setImageSrc] = useState<string>('');
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [hasRealImage, setHasRealImage] = useState(false);
-
-  // Use the centralized image upload hook
-  const {
-    handleDragEnter: onDragEnter,
-    handleDragLeave: onDragLeave,
-    handleDragOver,
-    handleDrop: onDrop,
-    handleFileInputChange
-  } = useImageUpload(
-    'product',
-    product?.product_id || 0,
-    {
-      onUploadStart: () => {
-        setIsUploading(true);
-        setErrors([]);
-      },
-      onUploadSuccess: () => {
-        // Refresh the image with a cache-busting query parameter
-        if (product) {
-          setImageSrc(`${getProductImageUrl(product.product_id)}&t=${Date.now()}`);
-        }
-      },
-      onUploadError: (message: string) => {
-        setErrors(prev => [...prev, message]);
-      },
-      onUploadComplete: () => {
-        setIsUploading(false);
-      }
-    }
-  );
-
-  // Wrap the drag handlers to manage the isDragging state
-  const handleDragEnter = (e: React.DragEvent) => {
-    setIsDragging(true);
-    onDragEnter(e);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    setIsDragging(false);
-    onDragLeave(e);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    setIsDragging(false);
-    onDrop(e);
-  };
-
-  // Reset form when product changes or modal opens
-  React.useEffect(() => {
-    if (isOpen) {
-      setImageSrc(''); // Clear any previous image
-    }
-  }, [isOpen]);
-
-  // Handle image loading when modal opens
-  useEffect(() => {
-    if (isOpen && product) {
-      setImageSrc(`${getProductImageUrl(product.product_id)}&t=${Date.now()}`);
-      
-      // Check if a real image exists
-      checkProductImageExists(product.product_id).then(exists => {
-        setHasRealImage(exists);
-      });
-    }
-  }, [isOpen, product]);
-
-  // Clear state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setImageSrc(''); // Clear the image
-      setHasRealImage(false);
-    }
-  }, [isOpen]);
 
   // Convert product types and groups to options format
   const productTypeOptions = productTypesData.types.map(type => ({
@@ -137,34 +58,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     value: group.name,
     label: group.display_name
   }));
-
-  const handleDeleteImage = async () => {
-    if (!product || isDeleting) return;
-    
-    if (!confirm('Are you sure you want to delete this image?')) return;
-
-    setIsDeleting(true);
-    setErrors([]);
-
-    try {
-      const result = await deleteImage('product', product.product_id);
-      
-      if (result.success) {
-        // Clear the current image and force a reload
-        setImageSrc('');
-        // Add a small delay before reloading to ensure the old image is cleared
-        setTimeout(() => {
-          setImageSrc(`${getProductImageUrl(product.product_id)}&t=${Date.now()}`);
-        }, 100);
-      } else {
-        setErrors(prev => [...prev, result.message]);
-      }
-    } catch (error) {
-      setErrors(prev => [...prev, 'Failed to delete image']);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   if (!product) return null;
 
@@ -183,92 +76,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             <div className="grid grid-cols-12 gap-2 h-full">
               {/* Image Column */}
               <div className="col-span-3 h-full">
-                <div 
-                  className={clsx(
-                    "relative w-full h-full rounded-lg overflow-hidden",
-                    "bg-gray-900/50 border border-gray-700",
-                    isDragging && "border-blue-500 border-2",
-                    "transition-all duration-200",
-                    "flex items-center justify-center"
-                  )}
-                  style={{ maxHeight: '400px' }}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                >
-                  {imageSrc ? (
-                    <>
-                      <img
-                        src={imageSrc}
-                        alt={product.product_title}
-                        className={clsx(
-                          "max-w-full max-h-full object-contain",
-                          isDragging && "opacity-50"
-                        )}
-                        onError={() => setImageSrc('')}
-                      />
-                      {/* Only show delete button if we have a real image */}
-                      {hasRealImage && (
-                        <button
-                          type="button"
-                          onClick={handleDeleteImage}
-                          disabled={isDeleting}
-                          className={clsx(
-                            "absolute bottom-2 left-2",
-                            "p-2 rounded-full",
-                            "bg-red-900/80 hover:bg-red-800",
-                            "text-red-100 hover:text-white",
-                            "transition-colors duration-200",
-                            "flex items-center justify-center",
-                            "z-[60]",
-                            isDeleting && "opacity-50 cursor-not-allowed"
-                          )}
-                          title="Delete image"
-                        >
-                          <FaTrash className="w-4 h-4" />
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-gray-500">
-                      <FaImage className="w-12 h-12 mb-2" />
-                      <span className="text-sm">No image</span>
-                    </div>
-                  )}
-
-                  {/* Upload Overlay */}
-                  <div 
-                    className={clsx(
-                      "absolute inset-0 flex flex-col items-center justify-center",
-                      "bg-black/50 backdrop-blur-sm",
-                      "transition-opacity duration-200",
-                      "items-center",
-                      "z-50",
-                      isDragging || isUploading ? "opacity-100" : "opacity-0 hover:opacity-100"
-                    )}
-                  >
-                    {isUploading ? (
-                      <div className="text-blue-400">
-                        <FaUpload className="w-8 h-8 mb-2 animate-bounce" />
-                        <span>Uploading...</span>
-                      </div>
-                    ) : (
-                      <label className="cursor-pointer text-center flex flex-col items-center justify-center">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleFileInputChange}
-                        />
-                        <FaUpload className="w-24 h-24 mb-6 text-gray-500" />
-                        <span className="text-sm text-gray-300">
-                          {isDragging ? 'Drop to upload' : 'Click or drag to upload'}
-                        </span>
-                      </label>
-                    )}
-                  </div>
-                </div>
+                <ImageContainer
+                  type="product"
+                  id={product.product_id}
+                  title={product.product_title}
+                  onError={(message) => setErrors(prev => [...prev, message])}
+                  className="max-h-[400px]"
+                />
               </div>
 
               {/* Form Column */}
@@ -306,11 +120,21 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       label="Year"
                       labelIcon={<FaCalendar />}
                       labelIconColor="text-yellow-400"
-                      maxLength={4}
-                      initialValue={formData.release_year || ''}
+                      initialValue={formData.release_year?.toString() || ''}
                       onValueChange={(value) => handleInputChange('release_year', value ? Number(value) : null)}
                       labelPosition="above"
-                      numericOnly
+                    />
+                  </div>
+                  <div className="col-span-4">
+                    <FormElement
+                      key={`pricecharting-${isOpen}-${product.product_id}`}
+                      elementType="input"
+                      label="PriceCharting ID"
+                      labelIcon={<FaDollarSign />}
+                      labelIconColor="text-green-400"
+                      initialValue={formData.pricecharting_id || ''}
+                      onValueChange={(value) => handleInputChange('pricecharting_id', String(value) || null)}
+                      labelPosition="above"
                     />
                   </div>
                 </div>
@@ -386,13 +210,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               {/* Tags Column */}
               <div className="col-span-3">
                 <FormElementLabel
-                    label="Product Tags"
-                    labelIcon={<FaTags />}
-                    labelIconColor="text-orange-500"
+                  label="Product Tags"
+                  labelIcon={<FaTags />}
+                  labelIconColor="text-orange-500"
                 />
                 <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-3 mt-[3px]">
                   {product && (
-                    <TagSelector
+                    <TypedTagSelector
                       key={`tags-${isOpen}-${product.product_id}`}
                       ref={tagSelectorRef}
                       productId={product.product_id}
@@ -420,7 +244,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               <Button
                 onClick={handleSubmit}
                 form="product-form"
-                disabled={useProductModalUpdating || isUploading}
+                disabled={useProductModalUpdating}
                 bgColor="bg-green-900"
                 iconLeft={<FaCheck />}
                 className="w-32"

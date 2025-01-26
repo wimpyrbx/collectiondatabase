@@ -117,6 +117,7 @@ export const useProductsTable = () => {
         avg_sale_price: null,
         max_sale_price: null,
         min_sale_price: null,
+        pricecharting_id: newProduct.pricecharting_id ?? null,
       };
 
       queryClient.setQueryData<ProductViewItem[]>(PRODUCTS_QUERY_KEY, old => {

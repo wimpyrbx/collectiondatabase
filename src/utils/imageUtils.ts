@@ -16,13 +16,36 @@ const BASE_URL = DEV_MODE ? 'http://localhost' : '';
 
 type ImageType = 'inventory' | 'products';
 
+// Centralized image version cache
+const imageVersions = new Map<string, number>();
+
+export const getImageCacheKey = (type: 'product' | 'inventory', id: number) => `${type}-${id}`;
+
+export const invalidateImage = (type: 'product' | 'inventory', id: number) => {
+  const key = getImageCacheKey(type, id);
+  imageVersions.set(key, Date.now());
+  // Force a re-render of all components using this image
+  window.dispatchEvent(new CustomEvent('image-cache-invalidated', { 
+    detail: { key }
+  }));
+};
+
+export const getImageVersion = (type: 'product' | 'inventory', id: number) => {
+  const key = getImageCacheKey(type, id);
+  if (!imageVersions.has(key)) {
+    imageVersions.set(key, Date.now());
+  }
+  return imageVersions.get(key);
+};
+
 /**
  * Gets the URL for a product image only
  * Will return 404 if the product image doesn't exist
  * @param productId - The ID of the product
  */
 export const getProductImageUrl = (productId: number): string => {
-  return `${BASE_URL}/api/image.php?mode=products&id=${productId}${DEV_MODE ? '&devmode=true' : ''}`;
+  const version = getImageVersion('product', productId);
+  return `${BASE_URL}/api/image.php?mode=products&id=${productId}&t=${version}${DEV_MODE ? '&devmode=true' : ''}`;
 };
 
 /**
@@ -31,7 +54,8 @@ export const getProductImageUrl = (productId: number): string => {
  * @param inventoryId - The ID of the inventory item
  */
 export const getInventoryImageUrl = (inventoryId: number): string => {
-  return `${BASE_URL}/api/image.php?mode=inventory&id=${inventoryId}${DEV_MODE ? '&devmode=true' : ''}`;
+  const version = getImageVersion('inventory', inventoryId);
+  return `${BASE_URL}/api/image.php?mode=inventory&id=${inventoryId}&t=${version}${DEV_MODE ? '&devmode=true' : ''}`;
 };
 
 /**
@@ -114,6 +138,8 @@ export async function uploadImage(file: File, type: 'product' | 'inventory', id:
     }
 
     console.log('Upload successful:', result);
+    // Invalidate the image cache after successful upload
+    invalidateImage(type, id);
     return {
       success: true,
       message: result.message,
@@ -270,6 +296,7 @@ export async function deleteImage(type: 'product' | 'inventory', id: number): Pr
     }
 
     console.log('Delete successful:', result);
+    invalidateImage(type, id);
     return {
       success: true,
       message: result.message
@@ -300,7 +327,7 @@ export async function checkProductImageExists(productId: number): Promise<boolea
     // 200 means real image exists, 204 means placeholder
     return response.status === 200;
   } catch (error) {
-    console.error('Failed to check image existence:', error);
+    // Don't log errors for image checks as they are expected when no image exists
     return false;
   }
 } 

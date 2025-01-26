@@ -4,6 +4,11 @@ import type { TagsRelationshipView, TagsByIdGetter } from '@/types/tags';
 
 export const TAGS_QUERY_KEY = ['tags'] as const;
 
+interface TagWithValue {
+  name: string;
+  value: string | null;
+}
+
 const fetchTags = async (): Promise<TagsRelationshipView> => {
   const { data, error } = await supabase
     .from('view_tags_relationship')
@@ -30,13 +35,23 @@ export const useTagsCache = () => {
 
   // Helper functions to get tags by ID
   const getProductTags: TagsByIdGetter = (productId) => {
-    if (!data?.combined_data.products) return undefined;
-    return data.combined_data.products[productId.toString()];
+    if (!data?.combined_data.products) return [];
+    const tags = data.combined_data.products[productId.toString()];
+    if (!tags) return [];
+    return tags.map(tag => {
+      const [name] = tag.split('=');
+      return name;
+    });
   };
 
   const getInventoryTags: TagsByIdGetter = (inventoryId) => {
-    if (!data?.combined_data.inventory) return undefined;
-    return data.combined_data.inventory[inventoryId.toString()];
+    if (!data?.combined_data.inventory) return [];
+    const tags = data.combined_data.inventory[inventoryId.toString()];
+    if (!tags) return [];
+    return tags.map(tag => {
+      const [name] = tag.split('=');
+      return name;
+    });
   };
 
   // Helper to get both inventory and product tags for an inventory item
