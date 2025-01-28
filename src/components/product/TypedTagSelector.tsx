@@ -112,16 +112,6 @@ export const TypedTagSelector = forwardRef<TypedTagSelectorRef, TypedTagSelector
     setTagValues(newValues);
   }, [productId, relationshipData, availableTags]);
 
-  // Add debug logging
-  React.useEffect(() => {
-    console.log('Available tags:', availableTags);
-    availableTags.forEach(tag => {
-      if (tag.tag_icon_color) {
-        console.log(`Tag ${tag.tag_name} has color: ${tag.tag_icon_color}, resulting class: text-${tag.tag_icon_color}-500`);
-      }
-    });
-  }, [availableTags]);
-
   const handleTagToggle = (tag: BaseTag, checked: boolean) => {
     setSelectedTags(prev => {
       if (checked) {

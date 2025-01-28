@@ -70,6 +70,7 @@ export function useProductModal({
       product_notes: product.product_notes,
       product_group: product.product_group_name,
       product_type: product.product_type_name,
+      pricecharting_id: product.pricecharting_id
     };
   }, []);
 

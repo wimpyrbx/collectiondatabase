@@ -106,7 +106,8 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
               price_new_nok: null,
               price_new_nok_fixed: null,
               rating: data.rating || null,
-              product_group: data.product_group || null
+              product_group: data.product_group || null,
+              pricecharting_id: data.pricecharting_id || null
             };
             return [...oldData, optimisticProduct];
           }
@@ -134,7 +135,8 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
                     product_type_name: data.product_type ?? product.product_type_name,
                     rating_name: data.rating ?? product.rating_name,
                     region_name: data.region ?? product.region_name,
-                    product_updated_at: new Date().toISOString()
+                    product_updated_at: new Date().toISOString(),
+                    pricecharting_id: data.pricecharting_id ?? product.pricecharting_id
                   }
                 : product
             );

@@ -21,13 +21,13 @@ export const TagSelector = forwardRef<TagSelectorRef, TagSelectorProps>(({
   onSave
 }, ref) => {
   const { data: availableTags = [], isLoading: isTagsLoading } = useProductTagsCache();
-  const { getProductTags } = useTagsCache();
+  const { getTags } = useTagsCache();
   const { updateAllRelationships } = useProductTagsRelationship();
   
   // Get initial tags directly from the cache
   const initialTags = React.useMemo(() => 
-    getProductTags(productId) ?? [], 
-    [getProductTags, productId]
+    getTags(productId, 'products') ?? [], 
+    [getTags, productId]
   );
 
   // Initialize selected tags state with initial tags
