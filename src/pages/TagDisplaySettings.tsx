@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Page from '@/components/page/Page';
 import { Card } from '@/components/card';
 import { FaTags, FaEdit } from 'react-icons/fa';
@@ -12,6 +12,8 @@ import type { BaseTag, TagType } from '@/types/tags';
 import FormElement, { SelectionValue, TextValue } from '@/components/formelement/FormElement';
 import { Button } from '@/components/ui';
 import * as FaIcons from 'react-icons/fa';
+import clsx from 'clsx';
+import { Table } from '@/components/table/Table';
 
 interface TagDisplayOrderManagerProps {
   tags: BaseTag[];
@@ -49,18 +51,20 @@ const TagEditForm: React.FC<TagEditFormProps> = ({
   const [selectedProductTypes, setSelectedProductTypes] = React.useState<string[]>(tag.tag_product_types || []);
   const [selectedProductGroups, setSelectedProductGroups] = React.useState<string[]>(tag.tag_product_groups || []);
   const [error, setError] = React.useState<string | null>(null);
+  const [tagInUse, setTagInUse] = React.useState(false);
 
   // Check if tag is in use before allowing type change
-  const checkTagInUse = async () => {
-    try {
-      const response = await fetch(`/api/check_tag_usage.php?id=${tag.id}`);
-      const data = await response.json();
-      return data.in_use;
-    } catch (error) {
-      console.error('Failed to check tag usage:', error);
-      return true; // Assume in use if check fails
+  React.useEffect(() => {
+    if (tag.id) {
+      fetch(`/api/check_tag_usage.php?id=${tag.id}`)
+        .then(response => response.json())
+        .then(data => setTagInUse(data.in_use))
+        .catch(error => {
+          console.error('Failed to check tag usage:', error);
+          setTagInUse(true); // Assume in use if check fails
+        });
     }
-  };
+  }, [tag.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,13 +76,10 @@ const TagEditForm: React.FC<TagEditFormProps> = ({
       return;
     }
 
-    // If changing tag type, check if tag is in use
-    if (tagType !== tag.tag_type) {
-      const inUse = await checkTagInUse();
-      if (inUse) {
-        setError('Cannot change type of tag that is in use');
-        return;
-      }
+    // If changing tag type and tag is in use, prevent the change
+    if (tagType !== tag.tag_type && tagInUse) {
+      setError('Cannot change type of tag that is in use');
+      return;
     }
 
     // Prepare updates
@@ -125,151 +126,188 @@ const TagEditForm: React.FC<TagEditFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="text-red-500 text-sm">{error}</div>
-      )}
-
-      {/* Tag Name */}
-      <FormElement
-        elementType="input"
-        label="Tag Name"
-        labelIcon={<FaTags />}
-        labelIconColor="text-cyan-500"
-        initialValue={tagName}
-        onValueChange={handleTagNameChange}
-        disabled={isUpdating}
+    <Card>
+      <Card.Header
+        title={tag.id ? `Edit Tag: ${tag.tag_name}` : 'Create New Tag'}
+        icon={<FaTags />}
+        iconColor="text-cyan-500"
       />
+      <Card.Body>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="text-red-500 text-sm">{error}</div>
+          )}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Left Column */}
+            <div className="space-y-4">
+              {/* Tag Name */}
+              <FormElement
+                elementType="input"
+                label="Tag Name"
+                labelIcon={<FaTags />}
+                labelIconColor="text-cyan-500"
+                initialValue={tagName}
+                onValueChange={handleTagNameChange}
+                disabled={isUpdating}
+              />
 
-      {/* Tag Description */}
-      <FormElement
-        elementType="textarea"
-        label="Description"
-        initialValue={tagDescription}
-        onValueChange={handleTagDescriptionChange}
-        disabled={isUpdating}
-      />
+              {/* Tag Description */}
+              <FormElement
+                elementType="textarea"
+                label="Description"
+                initialValue={tagDescription}
+                onValueChange={handleTagDescriptionChange}
+                disabled={isUpdating}
+              />
 
-      {/* Tag Type */}
-      <FormElement
-        elementType="listsingle"
-        label="Tag Type"
-        options={[
-          { value: 'boolean', label: 'Boolean' },
-          { value: 'set', label: 'Set' },
-          { value: 'text', label: 'Text' }
-        ]}
-        selectedOptions={tagType}
-        onValueChange={handleTagTypeChange}
-        disabled={isUpdating}
-      />
+              {/* Tag Type */}
+              <FormElement
+                elementType="listsingle"
+                label="Tag Type"
+                options={[
+                  { value: 'boolean', label: 'Boolean' },
+                  { value: 'set', label: 'Set' },
+                  { value: 'text', label: 'Text' }
+                ]}
+                selectedOptions={tagType}
+                onValueChange={handleTagTypeChange}
+                disabled={isUpdating || tagInUse}
+              />
 
-      {/* Tag Values (only for set type) */}
-      {tagType === 'set' && (
-        <FormElement
-          elementType="textarea"
-          label="Possible Values"
-          initialValue={tagValues.join('\n')}
-          onValueChange={handleTagValuesChange}
-          disabled={isUpdating}
-          placeholder="Enter one value per line"
-        />
-      )}
+              {/* Tag Values (only for set type) */}
+              {tagType === 'set' && (
+                <FormElement
+                  elementType="textarea"
+                  label="Possible Values"
+                  initialValue={tagValues.join('\n')}
+                  onValueChange={handleTagValuesChange}
+                  disabled={isUpdating}
+                  placeholder="Enter one value per line"
+                />
+              )}
 
-      {/* Display Mode (only for set type) */}
-      {tagType === 'set' && (
-        <FormElement
-          elementType="listsingle"
-          label="Display Mode"
-          options={[
-            { value: '', label: 'Default' },
-            { value: 'only_value', label: 'Only Value' },
-            { value: 'images', label: 'Images' }
-          ]}
-          selectedOptions={tagDisplayAs || ''}
-          onValueChange={handleDisplayModeChange}
-          disabled={isUpdating}
-        />
-      )}
+              {/* Display Mode (only for set type) */}
+              {tagType === 'set' && (
+                <FormElement
+                  elementType="listsingle"
+                  label="Display Mode"
+                  options={[
+                    { value: '', label: 'Default' },
+                    { value: 'only_value', label: 'Only Value' },
+                    { value: 'images', label: 'Images' }
+                  ]}
+                  selectedOptions={tagDisplayAs || ''}
+                  onValueChange={handleDisplayModeChange}
+                  disabled={isUpdating}
+                />
+              )}
+            </div>
 
-      {/* Tag Icon */}
-      <FormElement
-        elementType="listsingle"
-        label="Icon"
-        options={Object.keys(FaIcons)
-          .filter(name => name.startsWith('Fa'))
-          .map(name => ({ value: name, label: name.replace('Fa', '') }))}
-        selectedOptions={tagIcon}
-        onValueChange={handleTagIconChange}
-        disabled={isUpdating}
-      />
+            {/* Right Column */}
+            <div className="space-y-4">
+              {/* Tag Icon */}
+              <div>
+                <FormElement
+                  elementType="listsingle"
+                  label="Icon"
+                  options={Object.keys(FaIcons)
+                    .filter(name => name.startsWith('Fa'))
+                    .map(name => ({ value: name, label: name.replace('Fa', '') }))}
+                  selectedOptions={tagIcon}
+                  onValueChange={handleTagIconChange}
+                  disabled={isUpdating}
+                />
+                <div className="mt-2 grid grid-cols-8 gap-2 p-2 bg-gray-800 rounded-lg">
+                  {Object.entries(FaIcons)
+                    .filter(([name]) => name.startsWith('Fa'))
+                    .slice(0, 24)
+                    .map(([name, Icon]) => (
+                      <div
+                        key={name}
+                        className={clsx(
+                          'p-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors flex items-center justify-center',
+                          tagIcon === name && 'bg-blue-900/50 ring-1 ring-blue-500'
+                        )}
+                        onClick={() => setTagIcon(name)}
+                      >
+                        <Icon className="text-lg" />
+                      </div>
+                    ))}
+                </div>
+              </div>
 
-      {/* Tag Color */}
-      <FormElement
-        elementType="listsingle"
-        label="Color"
-        options={[
-          { value: '', label: 'Default' },
-          { value: 'red', label: 'Red' },
-          { value: 'orange', label: 'Orange' },
-          { value: 'amber', label: 'Amber' },
-          { value: 'yellow', label: 'Yellow' },
-          { value: 'lime', label: 'Lime' },
-          { value: 'green', label: 'Green' },
-          { value: 'emerald', label: 'Emerald' },
-          { value: 'teal', label: 'Teal' },
-          { value: 'cyan', label: 'Cyan' },
-          { value: 'sky', label: 'Sky' },
-          { value: 'blue', label: 'Blue' },
-          { value: 'indigo', label: 'Indigo' },
-          { value: 'violet', label: 'Violet' },
-          { value: 'purple', label: 'Purple' },
-          { value: 'fuchsia', label: 'Fuchsia' },
-          { value: 'pink', label: 'Pink' },
-          { value: 'rose', label: 'Rose' }
-        ]}
-        selectedOptions={tagColor}
-        onValueChange={handleTagColorChange}
-        disabled={isUpdating}
-      />
+              {/* Tag Color */}
+              <FormElement
+                elementType="listsingle"
+                label="Color"
+                options={[
+                  { value: '', label: 'Default' },
+                  { value: 'red', label: 'Red' },
+                  { value: 'orange', label: 'Orange' },
+                  { value: 'amber', label: 'Amber' },
+                  { value: 'yellow', label: 'Yellow' },
+                  { value: 'lime', label: 'Lime' },
+                  { value: 'green', label: 'Green' },
+                  { value: 'emerald', label: 'Emerald' },
+                  { value: 'teal', label: 'Teal' },
+                  { value: 'cyan', label: 'Cyan' },
+                  { value: 'sky', label: 'Sky' },
+                  { value: 'blue', label: 'Blue' },
+                  { value: 'indigo', label: 'Indigo' },
+                  { value: 'violet', label: 'Violet' },
+                  { value: 'purple', label: 'Purple' },
+                  { value: 'fuchsia', label: 'Fuchsia' },
+                  { value: 'pink', label: 'Pink' },
+                  { value: 'rose', label: 'Rose' }
+                ]}
+                selectedOptions={tagColor}
+                onValueChange={handleTagColorChange}
+                disabled={isUpdating}
+              />
 
-      {/* Product Types */}
-      <FormElement
-        elementType="listmultiple"
-        label="Product Types"
-        options={productTypes.map(type => ({ value: type, label: type }))}
-        selectedOptions={selectedProductTypes}
-        onValueChange={handleProductTypesChange}
-        disabled={isUpdating}
-      />
+              {/* Product Types and Groups */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormElement
+                  elementType="listmultiple"
+                  label="Product Types"
+                  options={productTypes.map(type => ({ value: type, label: type }))}
+                  selectedOptions={selectedProductTypes}
+                  onValueChange={handleProductTypesChange}
+                  disabled={isUpdating}
+                />
 
-      {/* Product Groups */}
-      <FormElement
-        elementType="listmultiple"
-        label="Product Groups"
-        options={productGroups.map(group => ({ value: group, label: group }))}
-        selectedOptions={selectedProductGroups}
-        onValueChange={handleProductGroupsChange}
-        disabled={isUpdating}
-      />
-
-      <div className="flex justify-end gap-2">
-        <Button
-          onClick={onClose}
-          disabled={isUpdating}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={isUpdating}
-          className="bg-blue-600 hover:bg-blue-500"
-        >
-          Save Changes
-        </Button>
-      </div>
-    </form>
+                <FormElement
+                  elementType="listmultiple"
+                  label="Product Groups"
+                  options={productGroups.map(group => ({ value: group, label: group }))}
+                  selectedOptions={selectedProductGroups}
+                  onValueChange={handleProductGroupsChange}
+                  disabled={isUpdating}
+                />
+              </div>
+            </div>
+          </div>
+        </form>
+      </Card.Body>
+      <Card.Footer>
+        <div className="flex justify-end gap-2">
+          <Button
+            onClick={onClose}
+            className="bg-gray-700 hover:bg-gray-600"
+            disabled={isUpdating}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            className="bg-cyan-700 hover:bg-cyan-600"
+            disabled={isUpdating}
+          >
+            {isUpdating ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      </Card.Footer>
+    </Card>
   );
 };
 
@@ -489,6 +527,8 @@ export const TagDisplayOrderManager: React.FC<TagDisplayOrderManagerProps> = ({
 };
 
 const TagDisplaySettings = () => {
+  const [editingTag, setEditingTag] = React.useState<BaseTag | null>(null);
+  
   // Load product metadata
   const { productTypeNames, productGroupNames } = useProductMetadata();
 
@@ -510,21 +550,91 @@ const TagDisplaySettings = () => {
     isUpdating: isUpdatingInventory 
   } = useInventoryTagsTable();
 
-  // Wrap mutations to match expected function signature
-  const handleUpdateProductTagOrder = (id: number, order: number | null) => {
-    updateProductTagOrderMutation({ id, order });
+  const productTagsColumns = React.useMemo(() => [
+    {
+      key: 'name',
+      header: 'Name',
+      accessor: (tag: BaseTag) => (
+        <div className="flex items-center gap-2">
+          {getTagTypeIcon(tag.tag_type)}
+          <span>{tag.tag_name}</span>
+        </div>
+      ),
+      width: '30%'
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      accessor: (tag: BaseTag) => tag.tag_description || '-',
+      width: '40%'
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      accessor: (tag: BaseTag) => tag.tag_type,
+      width: '15%'
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      accessor: (tag: BaseTag) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            size="xs"
+            onClick={() => handleMoveTagUp(tag)}
+            disabled={isUpdatingProductOrder}
+            className="bg-blue-600 hover:bg-blue-500"
+          >
+            ↑
+          </Button>
+          <Button
+            size="xs"
+            onClick={() => handleMoveTagDown(tag)}
+            disabled={isUpdatingProductOrder}
+            className="bg-blue-600 hover:bg-blue-500"
+          >
+            ↓
+          </Button>
+          <Button
+            size="xs"
+            onClick={() => handleRemoveTag(tag.id)}
+            disabled={isUpdatingProductOrder}
+            className="bg-red-600 hover:bg-red-500"
+          >
+            ×
+          </Button>
+        </div>
+      ),
+      width: '15%',
+      align: 'right' as const
+    }
+  ], [isUpdatingProductOrder]);
+
+  const handleMoveTagUp = (tag: BaseTag) => {
+    const currentIndex = productTags.findIndex(t => t.id === tag.id);
+    if (currentIndex <= 0) return;
+    const targetTag = productTags[currentIndex - 1];
+    updateProductTagOrderMutation({ id: tag.id, order: targetTag.tags_display_in_table_order });
+    updateProductTagOrderMutation({ id: targetTag.id, order: tag.tags_display_in_table_order });
   };
 
-  const handleUpdateInventoryTagOrder = (id: number, order: number | null) => {
-    updateInventoryTagOrderMutation({ id, order });
+  const handleMoveTagDown = (tag: BaseTag) => {
+    const currentIndex = productTags.findIndex(t => t.id === tag.id);
+    if (currentIndex === -1 || currentIndex >= productTags.length - 1) return;
+    const targetTag = productTags[currentIndex + 1];
+    updateProductTagOrderMutation({ id: tag.id, order: targetTag.tags_display_in_table_order });
+    updateProductTagOrderMutation({ id: targetTag.id, order: tag.tags_display_in_table_order });
   };
 
-  const handleUpdateProductTag = (id: number, updates: Partial<BaseTag>) => {
-    updateProductTagMutation({ id, updates });
+  const handleRemoveTag = (tagId: number) => {
+    updateProductTagOrderMutation({ id: tagId, order: null });
   };
 
-  const handleUpdateInventoryTag = (id: number, updates: Partial<BaseTag>) => {
-    updateInventoryTagMutation({ id, updates });
+  const handleUpdateTag = (tagId: number, updates: Partial<BaseTag>) => {
+    if (editingTag) {
+      updateProductTagMutation({ id: tagId, updates });
+      setEditingTag(null);
+    }
   };
 
   return (
@@ -548,13 +658,12 @@ const TagDisplaySettings = () => {
             {isLoadingProductTags ? (
               <div className="text-gray-400">Loading product tags...</div>
             ) : (
-              <TagDisplayOrderManager
-                tags={productTags}
-                onUpdateDisplayOrder={handleUpdateProductTagOrder}
-                onUpdateTag={handleUpdateProductTag}
-                isUpdating={isUpdatingProductOrder || isUpdatingProduct}
-                productTypes={productTypeNames}
-                productGroups={productGroupNames}
+              <Table
+                columns={productTagsColumns}
+                data={productTags}
+                keyExtractor={(tag: BaseTag) => String(tag.id)}
+                onRowClick={(tag: BaseTag) => setEditingTag(tag)}
+                rowClassName="cursor-pointer hover:bg-gray-700/50"
               />
             )}
           </Card.Body>
@@ -572,18 +681,35 @@ const TagDisplaySettings = () => {
             {isLoadingInventoryTags ? (
               <div className="text-gray-400">Loading inventory tags...</div>
             ) : (
-              <TagDisplayOrderManager
-                tags={inventoryTags}
-                onUpdateDisplayOrder={handleUpdateInventoryTagOrder}
-                onUpdateTag={handleUpdateInventoryTag}
-                isUpdating={isUpdatingInventoryOrder || isUpdatingInventory}
-                productTypes={productTypeNames}
-                productGroups={productGroupNames}
+              <Table
+                columns={productTagsColumns}
+                data={inventoryTags}
+                keyExtractor={(tag: BaseTag) => String(tag.id)}
+                onRowClick={(tag: BaseTag) => setEditingTag(tag)}
+                rowClassName="cursor-pointer hover:bg-gray-700/50"
               />
             )}
           </Card.Body>
         </Card>
       </div>
+
+      {/* Single Edit Tag Modal */}
+      {editingTag && (
+        <Modal
+          isOpen={true}
+          onClose={() => setEditingTag(null)}
+          size="xl"
+        >
+          <TagEditForm
+            tag={editingTag}
+            onUpdate={(updates) => handleUpdateTag(editingTag.id, updates)}
+            isUpdating={isUpdatingProduct || isUpdatingInventory}
+            productTypes={productTypeNames}
+            productGroups={productGroupNames}
+            onClose={() => setEditingTag(null)}
+          />
+        </Modal>
+      )}
     </Page>
   );
 };
