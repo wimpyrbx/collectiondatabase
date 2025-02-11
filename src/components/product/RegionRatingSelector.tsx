@@ -132,6 +132,7 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
           truncate={true}
           onValueChange={(val) => handleRegionChange(val.toString())}
           placeholder="Select Region..."
+          className={`transition-opacity duration-200 ${!value.region ? 'opacity-50 focus-within:opacity-100 hover:opacity-100' : ''}`}
         />
         <FormElement
           elementType="listsingle"
@@ -141,6 +142,7 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
           onValueChange={(val) => handleRatingSystemChange(val.toString())}
           placeholder="Select System..."
           disabled={!value.region}
+          className={`transition-opacity duration-200 ${!value.ratingSystem ? 'opacity-50 focus-within:opacity-100 hover:opacity-100' : ''}`}
         />
         <FormElement
           elementType="listsingle"
@@ -150,6 +152,7 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
           onValueChange={(val) => onChange({ ...value, rating: val.toString() })}
           placeholder="None"
           disabled={!value.ratingSystem}
+          className={`transition-opacity duration-200 ${!value.rating ? 'opacity-50 focus-within:opacity-100 hover:opacity-100' : ''}`}
         />
       </div>
     </div>

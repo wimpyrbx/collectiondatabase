@@ -136,7 +136,7 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
                     rating_name: 'rating' in data ? data.rating : product.rating_name,
                     region_name: 'region' in data ? data.region : product.region_name,
                     product_updated_at: new Date().toISOString(),
-                    pricecharting_id: data.pricecharting_id ?? product.pricecharting_id
+                    pricecharting_id: 'pricecharting_id' in data ? data.pricecharting_id : product.pricecharting_id
                   }
                 : product
             );

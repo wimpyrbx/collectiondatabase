@@ -21,6 +21,7 @@ export interface BaseTag {
   tag_description: string | null;
   tags_display_in_table: boolean;
   tags_display_in_table_order: number | null;
+  tags_table_filter: boolean;
   tag_type: TagType;
   tag_values: string[] | null;
   tag_product_types: string[] | null;

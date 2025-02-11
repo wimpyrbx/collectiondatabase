@@ -153,6 +153,43 @@ const Home = () => {
     const uniqueGroups = Array.from(new Set(data.map(item => item.product_group_name ?? ''))).filter(Boolean) as string[];
     const uniqueVariants = Array.from(new Set(data.map(item => item.product_variant ?? ''))).filter(Boolean) as string[];
 
+    // Get all unique tag combinations
+    const allTags = new Map<string, Set<string>>();
+    data.forEach(item => {
+      const tags = getTags(item.product_id, 'products');
+      tags.forEach(tag => {
+        const [tagName, tagValue] = tag.split('=');
+        if (!allTags.has(tagName)) {
+          allTags.set(tagName, new Set());
+        }
+        if (tagValue) {
+          allTags.get(tagName)?.add(tagValue);
+        } else {
+          allTags.get(tagName)?.add('true');
+        }
+      });
+    });
+
+    // Convert tags to filter options
+    const tagFilters = Array.from(allTags.entries())
+      .filter(([tagName]) => {
+        // Only include tags that have table_filter enabled
+        const tag = availableTags.find(t => t.tag_name === tagName);
+        return tag?.tags_table_filter;
+      })
+      .map(([tagName, values]) => ({
+        key: `tag_${tagName}`,
+        label: `Tag: ${tagName}`,
+        options: Array.from(values).map(value => ({
+          value: `${tagName}=${value}`,
+          label: value === 'true' ? tagName : `${tagName}: ${value}`,
+          count: data.filter(item => {
+            const tags = getTags(item.product_id, 'products');
+            return tags.includes(`${tagName}=${value}`);
+          }).length
+        }))
+      }));
+
     return [
       {
         key: 'product_type_name',
@@ -187,13 +224,19 @@ const Home = () => {
             count: data.filter(item => item.product_variant === variant).length
           }))
         ]
-      }
+      },
+      ...tagFilters
     ];
-  }, []);
+  }, [getTags, availableTags]);
 
   const tableState = useTableState({
     initialSort: 'product_title',
-    data: data || [],
+    data: React.useMemo(() => {
+      return (data || []).map(item => ({
+        ...item,
+        tags: getTags(item.product_id, 'products')
+      }));
+    }, [data, getTags]),
     getFilterConfigs: getFilterConfigs
   });
 

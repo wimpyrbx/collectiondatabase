@@ -6,7 +6,7 @@ import clsx from 'clsx';
 export type TextSize = 'xs' | 'sm' | 'md';
 export type RoundedSize = 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type LabelPosition = 'left' | 'above' | 'below';
-export type ElementType = 'input' | 'select' | 'textarea' | 'listsingle' | 'listmultiple';
+export type ElementType = 'input' | 'select' | 'textarea' | 'listsingle' | 'listmultiple' | 'switch';
 
 export type SelectItem = {
   value: string | number;
@@ -42,6 +42,7 @@ export interface FormElementProps {
   maxLength?: number;
   truncate?: boolean;
   className?: string;
+  checked?: boolean;
 }
 
 const defaultStyles = {
@@ -81,6 +82,7 @@ export const FormElement: React.FC<FormElementProps> = ({
   selectedOptions = [],
   truncate = false,
   className,
+  checked,
 }) => {
   const elementRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const baseClasses = `${bgColor} ${textColor} ${disabled ? 'opacity-50' : ''} text-${textSize} ${width} ${padding} ${margin} ${
@@ -134,6 +136,52 @@ export const FormElement: React.FC<FormElementProps> = ({
     };
 
     switch (elementType) {
+      case 'switch':
+        return (
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={checked ?? false}
+              onChange={(e) => {
+                console.log('Switch toggled in FormElement:', e.target.checked);
+                handleChange(e.target.checked ? 'true' : 'false');
+              }}
+              disabled={disabled}
+            />
+            <div 
+              className={`
+                relative w-11 h-6
+                bg-gray-600
+                rounded-full
+                peer peer-focus:ring-4 peer-focus:ring-blue-800
+                peer-checked:after:translate-x-full
+                peer-checked:after:border-white
+                peer-checked:bg-blue-600
+                after:content-['']
+                after:absolute
+                after:top-0.5
+                after:left-[2px]
+                after:bg-white
+                after:border-gray-300
+                after:border
+                after:rounded-full
+                after:h-5
+                after:w-5
+                after:transition-all
+                ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+              `}
+              onClick={() => {
+                if (!disabled) {
+                  const newValue = !(checked ?? false);
+                  console.log('Switch clicked in FormElement:', newValue);
+                  handleChange(newValue ? 'true' : 'false');
+                }
+              }}
+            />
+          </div>
+        );
+
       case 'listsingle':
       case 'listmultiple':
         return (

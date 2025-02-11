@@ -111,6 +111,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       initialValue={formData.product_variant || ''}
                       onValueChange={(value) => handleInputChange('product_variant', String(value))}
                       labelPosition="above"
+                      className={`transition-opacity duration-200 ${!formData.product_variant ? 'opacity-50 focus-within:opacity-100 hover:opacity-100' : ''}`}
                     />
                   </div>
                   <div className="col-span-2">
@@ -123,6 +124,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       initialValue={formData.release_year?.toString() || ''}
                       onValueChange={(value) => handleInputChange('release_year', value ? Number(value) : null)}
                       labelPosition="above"
+                      className={`transition-opacity duration-200 ${!formData.release_year ? 'opacity-50 focus-within:opacity-100 hover:opacity-100' : ''}`}
                     />
                   </div>
                   <div className="col-span-4">
@@ -135,6 +137,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       initialValue={formData.pricecharting_id || ''}
                       onValueChange={(value) => handleInputChange('pricecharting_id', String(value) || null)}
                       labelPosition="above"
+                      className={`transition-opacity duration-200 ${!formData.pricecharting_id ? 'opacity-50 focus-within:opacity-100 hover:opacity-100' : ''}`}
                     />
                   </div>
                 </div>
@@ -202,6 +205,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     onValueChange={(value) => handleInputChange('product_notes', String(value))}
                     labelPosition="above"
                     rows={3}
+                    className={`transition-opacity duration-200 ${!formData.product_notes ? 'opacity-50 focus-within:opacity-100 hover:opacity-100' : ''}`}
                   />
                 </div>
 

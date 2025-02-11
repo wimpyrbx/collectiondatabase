@@ -300,14 +300,15 @@ export const TypedTagSelector = forwardRef<TypedTagSelectorRef, TypedTagSelector
                   initialValue={value || ''}
                   onValueChange={newValue => {
                     const stringValue = String(newValue);
-                    const trimmedValue = stringValue.trim();
-                    if (trimmedValue) {
+                    // Only prevent empty spaces, allow spaces in non-empty text
+                    if (stringValue.trim() || value) {
                       handleTagToggle(tag, true);
-                      handleTagValueChange(tag.id, trimmedValue);
+                      handleTagValueChange(tag.id, stringValue);
                     } else {
                       handleTagToggle(tag, false);
                     }
                   }}
+                  className=""
                 />
               </div>
             );
