@@ -409,7 +409,8 @@ export const TagDisplayOrderManager: React.FC<TagDisplayOrderManagerProps> = ({
       tags_display_in_table_order: null,
       tag_icon: null,
       tag_icon_color: null,
-      tag_display_as: null
+      tag_display_as: null,
+      tags_table_filter: false
     };
 
     try {

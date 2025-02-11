@@ -212,18 +212,11 @@ const Home = () => {
       {
         key: 'product_variant',
         label: 'Variant',
-        options: [
-          {
-            value: 'none',
-            label: '(No Variant)',
-            count: data.filter(item => !item.product_variant || item.product_variant.trim() === '').length
-          },
-          ...uniqueVariants.map(variant => ({
-            value: variant,
-            label: variant,
-            count: data.filter(item => item.product_variant === variant).length
-          }))
-        ]
+        options: uniqueVariants.map(variant => ({
+          value: variant,
+          label: variant,
+          count: data.filter(item => item.product_variant === variant).length
+        })).filter(option => option.count > 0)
       },
       ...tagFilters
     ];
@@ -291,6 +284,7 @@ const Home = () => {
             sortDirection={tableState.sortDirection}
             onSort={tableState.onSort}
             pagination={tableState.pagination}
+            paginationPosition='bottom'
             onRowClick={handleProductUpdate}
             updatedId={updatedProductId}
             isModalOpen={selectedProduct !== null}
