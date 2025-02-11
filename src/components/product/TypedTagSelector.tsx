@@ -7,6 +7,7 @@ import { FormElement } from '@/components/formelement';
 import { BaseTag } from '@/types/tags';
 import { useProductsCache } from '@/hooks/useProductsCache';
 import { FaQuestionCircle, FaTags } from 'react-icons/fa';
+import * as FaIcons from 'react-icons/fa';
 
 interface TypedTagSelectorProps {
   productId: number;
@@ -205,32 +206,37 @@ export const TypedTagSelector = forwardRef<TypedTagSelectorRef, TypedTagSelector
     <div className={`${className}`}>
       {/* Toggle Tags (Boolean) */}
       {groupedTags.boolean && groupedTags.boolean.length > 0 && (
-        <div className="pt-3">
-          {groupedTags.boolean.map(tag => (
-            <Switch
-              key={tag.id}
-              checked={selectedTags.includes(tag.tag_name || '')}
-              onChange={checked => handleTagToggle(tag, checked)}
-              shape="boxed"
-              size="xs"
-              labelIcon={tag.tag_icon || <FaQuestionCircle />}
-              labelIconColor={tag.tag_icon_color ? `text-${tag.tag_icon_color}-500` : 'text-gray-500'}
-              label={
-                <div className="flex flex-col">
-                  <span className="text-xs text-gray-300">{tag.tag_name}</span>
-                  {tag.tag_description && (
-                    <span className="text-xs text-gray-500">{tag.tag_description}</span>
-                  )}
-                </div>
-              }
-            />
-          ))}
+        <div className="pt-3 grid grid-cols-3 gap-2">
+          {groupedTags.boolean.map(tag => {
+            const Icon = tag.tag_icon ? FaIcons[tag.tag_icon as keyof typeof FaIcons] : FaQuestionCircle; 
+            const IconColor = tag.tag_icon_color ? `text-${tag.tag_icon_color}-500` : 'text-gray-500';
+            return (
+              <div key={tag.id} className="col-span-3">
+                <Switch
+                  checked={selectedTags.includes(tag.tag_name || '')}
+                  onChange={checked => handleTagToggle(tag, checked)}
+                  shape="boxed"
+                  size="xs"
+                  labelIcon={<Icon />}
+                  labelIconColor={IconColor}
+                  label={
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-300">{tag.tag_name}</span>
+                      {tag.tag_description && (
+                        <span className="text-xs text-gray-500">{tag.tag_description}</span>
+                      )}
+                    </div>
+                  }
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Selection Tags (Set) */}
       {groupedTags.set && groupedTags.set.length > 0 && (
-        <div className="pt-3">
+        <div className="pt-3 grid grid-cols-3 mb-3 gap-2">
           {groupedTags.set.map(tag => {
             const isSelected = selectedTags.includes(tag.tag_name || '');
             const value = tagValues[tag.id];
@@ -271,22 +277,25 @@ export const TypedTagSelector = forwardRef<TypedTagSelectorRef, TypedTagSelector
 
       {/* Text Tags */}
       {groupedTags.text && groupedTags.text.length > 0 && (
-        <div className=" pt-3">
+        <div className="grid grid-cols-3 mb-3 gap-3">
           {groupedTags.text.map(tag => {
             const isSelected = selectedTags.includes(tag.tag_name || '');
             const value = tagValues[tag.id];
+            const Icon = tag.tag_icon ? FaIcons[tag.tag_icon as keyof typeof FaIcons] : FaQuestionCircle; 
+            const IconColor = tag.tag_icon_color ? `text-${tag.tag_icon_color}-500` : 'text-gray-500';
             return (
               <div
                 key={tag.id}
-                className={`p-1 pt-1 pb-2 pr-2 rounded-lg border ${
+                className={`p-1 rounded-lg border col-span-3 ${
                   isSelected && value ? 'bg-green-600/20 border-green-600' : 'bg-gray-600/20 border-gray-600'
                 }`}
               >
+                
                 <FormElement
                   elementType="input"
                   textSize='xs'
-                  labelIcon={tag.tag_icon || <FaQuestionCircle />}
-                  labelIconColor={tag.tag_icon_color ? `text-${tag.tag_icon_color}-500` : 'text-gray-500'}
+                  labelIcon={<Icon />}
+                  labelIconColor={IconColor}
                   label={tag.tag_name || ''}
                   initialValue={value || ''}
                   onValueChange={newValue => {

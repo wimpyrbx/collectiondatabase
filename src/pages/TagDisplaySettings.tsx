@@ -14,6 +14,8 @@ import { Button } from '@/components/ui';
 import * as FaIcons from 'react-icons/fa';
 import clsx from 'clsx';
 import { Table } from '@/components/table/Table';
+import type { Column as TableColumn } from '@/components/table/Table';
+import type { ProductTag, InventoryTag } from '@/types/tags';
 
 interface TagDisplayOrderManagerProps {
   tags: BaseTag[];
@@ -370,9 +372,15 @@ export const TagDisplayOrderManager: React.FC<TagDisplayOrderManagerProps> = ({
     const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (newIndex < 0 || newIndex >= displayedTags.length) return;
 
-    const targetTag = displayedTags[newIndex];
-    onUpdateDisplayOrder(tag.id, targetTag.tags_display_in_table_order);
-    onUpdateDisplayOrder(targetTag.id, tag.tags_display_in_table_order);
+    // Create a new array with the moved tag in the new position
+    const reorderedTags = [...displayedTags];
+    const [movedTag] = reorderedTags.splice(currentIndex, 1);
+    reorderedTags.splice(newIndex, 0, movedTag);
+
+    // Update all orders to be sequential
+    reorderedTags.forEach((tag, index) => {
+      onUpdateDisplayOrder(tag.id, index + 1);
+    });
   };
 
   const handleAddTag = (tagId: number) => {
@@ -550,17 +558,25 @@ const TagDisplaySettings = () => {
     isUpdating: isUpdatingInventory 
   } = useInventoryTagsTable();
 
-  const productTagsColumns = React.useMemo(() => [
+  const productTagsColumns = React.useMemo<TableColumn<BaseTag & ProductTag>[]>(() => [
     {
       key: 'name',
       header: 'Name',
-      accessor: (tag: BaseTag) => (
+      accessor: (tag: BaseTag & ProductTag) => (
         <div className="flex items-center gap-2">
-          {getTagTypeIcon(tag.tag_type)}
+          {tag.tag_icon && (
+            <div className="flex items-center">
+              {React.createElement(FaIcons[tag.tag_icon as keyof typeof FaIcons], {
+                className: clsx(
+                  'h-4 w-4',
+                  tag.tag_icon_color ? `text-${tag.tag_icon_color}-500` : 'text-gray-500'
+                )
+              })}
+            </div>
+          )}
           <span>{tag.tag_name}</span>
         </div>
-      ),
-      width: '30%'
+      )
     },
     {
       key: 'description',
@@ -581,7 +597,7 @@ const TagDisplaySettings = () => {
         <div className="flex items-center justify-end gap-1">
           <Button
             size="xs"
-            onClick={() => handleMoveTagUp(tag)}
+            onClick={() => handleMoveTag(tag, 'up')}
             disabled={isUpdatingProductOrder}
             className="bg-blue-600 hover:bg-blue-500"
           >
@@ -589,7 +605,7 @@ const TagDisplaySettings = () => {
           </Button>
           <Button
             size="xs"
-            onClick={() => handleMoveTagDown(tag)}
+            onClick={() => handleMoveTag(tag, 'down')}
             disabled={isUpdatingProductOrder}
             className="bg-blue-600 hover:bg-blue-500"
           >
@@ -610,20 +626,90 @@ const TagDisplaySettings = () => {
     }
   ], [isUpdatingProductOrder]);
 
-  const handleMoveTagUp = (tag: BaseTag) => {
-    const currentIndex = productTags.findIndex(t => t.id === tag.id);
-    if (currentIndex <= 0) return;
-    const targetTag = productTags[currentIndex - 1];
-    updateProductTagOrderMutation({ id: tag.id, order: targetTag.tags_display_in_table_order });
-    updateProductTagOrderMutation({ id: targetTag.id, order: tag.tags_display_in_table_order });
-  };
+  const inventoryTagsColumns = React.useMemo<TableColumn<BaseTag & InventoryTag>[]>(() => [
+    {
+      key: 'name',
+      header: 'Name',
+      accessor: (tag: BaseTag & InventoryTag) => (
+        <div className="flex items-center gap-2">
+          {tag.tag_icon && (
+            <div className="flex items-center">
+              {React.createElement(FaIcons[tag.tag_icon as keyof typeof FaIcons], {
+                className: clsx(
+                  'h-4 w-4',
+                  tag.tag_icon_color ? `text-${tag.tag_icon_color}-500` : 'text-gray-500'
+                )
+              })}
+            </div>
+          )}
+          <span>{tag.tag_name}</span>
+        </div>
+      )
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      accessor: (tag: BaseTag) => tag.tag_description || '-',
+      width: '40%'
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      accessor: (tag: BaseTag) => tag.tag_type,
+      width: '15%'
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      accessor: (tag: BaseTag) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            size="xs"
+            onClick={() => handleMoveTag(tag, 'up')}
+            disabled={isUpdatingInventoryOrder}
+            className="bg-blue-600 hover:bg-blue-500"
+          >
+            ↑
+          </Button>
+          <Button
+            size="xs"
+            onClick={() => handleMoveTag(tag, 'down')}
+            disabled={isUpdatingInventoryOrder}
+            className="bg-blue-600 hover:bg-blue-500"
+          >
+            ↓
+          </Button>
+          <Button
+            size="xs"
+            onClick={() => handleRemoveTag(tag.id)}
+            disabled={isUpdatingInventoryOrder}
+            className="bg-red-600 hover:bg-red-500"
+          >
+            ×
+          </Button>
+        </div>
+      ),
+      width: '15%',
+      align: 'right' as const
+    }
+  ], [isUpdatingInventoryOrder]);
 
-  const handleMoveTagDown = (tag: BaseTag) => {
+  const handleMoveTag = (tag: BaseTag, direction: 'up' | 'down') => {
     const currentIndex = productTags.findIndex(t => t.id === tag.id);
-    if (currentIndex === -1 || currentIndex >= productTags.length - 1) return;
-    const targetTag = productTags[currentIndex + 1];
-    updateProductTagOrderMutation({ id: tag.id, order: targetTag.tags_display_in_table_order });
-    updateProductTagOrderMutation({ id: targetTag.id, order: tag.tags_display_in_table_order });
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= productTags.length) return;
+
+    // Create a new array with the moved tag in the new position
+    const reorderedTags = [...productTags];
+    const [movedTag] = reorderedTags.splice(currentIndex, 1);
+    reorderedTags.splice(newIndex, 0, movedTag);
+
+    // Update all orders to be sequential
+    reorderedTags.forEach((tag, index) => {
+      updateProductTagOrderMutation({ id: tag.id, order: index + 1 });
+    });
   };
 
   const handleRemoveTag = (tagId: number) => {
@@ -682,7 +768,7 @@ const TagDisplaySettings = () => {
               <div className="text-gray-400">Loading inventory tags...</div>
             ) : (
               <Table
-                columns={productTagsColumns}
+                columns={inventoryTagsColumns}
                 data={inventoryTags}
                 keyExtractor={(tag: BaseTag) => String(tag.id)}
                 onRowClick={(tag: BaseTag) => setEditingTag(tag)}

@@ -62,20 +62,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   if (!product) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="xl">
+    <Modal isOpen={isOpen} onClose={handleClose} size="2xl">
       <Card modal>
         <Card.Header
           icon={<FaLayerGroup />}
           iconColor="text-cyan-500"
           title={`Product: ${product.product_title}`}
-          bgColor="bg-blue-500/50"
+          bgColor="bg-cyan-500/50"
           rightContent={`ID: ${product.product_id}`}
         />
         <Card.Body>
           <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-12 gap-2 h-full">
               {/* Image Column */}
-              <div className="col-span-3 h-full">
+              <div className="col-span-2 w-full">
                 <ImageContainer
                   type="product"
                   id={product.product_id}
@@ -208,13 +208,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
 
               {/* Tags Column */}
-              <div className="col-span-3">
+              <div className="col-span-4">
                 <FormElementLabel
                   label="Product Tags"
                   labelIcon={<FaTags />}
                   labelIconColor="text-orange-500"
                 />
-                <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-3 pt-0 mt-[3px]">
+                <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-3 pt-0 pb-0 mb-0 mt-[3px]">
                   {product && (
                     <TypedTagSelector
                       key={`tags-${isOpen}-${product.product_id}`}

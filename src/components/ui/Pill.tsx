@@ -21,7 +21,7 @@ const Pill: React.FC<PillProps> = ({
     if (!icon) return null;
     if (typeof icon === 'string') {
       // @ts-ignore - FaIcons will have the icon as a property
-      const IconComponent = FaIcons[icon];
+      const IconComponent = FaIcons[icon as keyof typeof FaIcons];
       return IconComponent ? <IconComponent /> : null;
     }
     return icon;

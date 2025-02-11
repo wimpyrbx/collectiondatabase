@@ -72,7 +72,7 @@ const Switch: React.FC<Props> = ({
             {label && (
               <div className="flex items-center">
                 {labelIcon && (
-                  <span className={`mr-2 ${disabled ? 'text-gray-600' : `text-${labelIconColor}-300`}`}>
+                  <span className={`mr-2 ${disabled ? 'text-gray-600' : `${labelIconColor}`}`}>
                     {labelIcon}
                   </span>
                 )}

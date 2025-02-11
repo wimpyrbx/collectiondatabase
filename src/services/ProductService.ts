@@ -133,8 +133,8 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
                     product_notes: data.product_notes ?? product.product_notes,
                     product_group_name: data.product_group ?? product.product_group_name,
                     product_type_name: data.product_type ?? product.product_type_name,
-                    rating_name: data.rating ?? product.rating_name,
-                    region_name: data.region ?? product.region_name,
+                    rating_name: 'rating' in data ? data.rating : product.rating_name,
+                    region_name: 'region' in data ? data.region : product.region_name,
                     product_updated_at: new Date().toISOString(),
                     pricecharting_id: data.pricecharting_id ?? product.pricecharting_id
                   }

@@ -5,14 +5,16 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
 const sizeClasses = {
   sm: 'max-w-md',
   md: 'max-w-2xl',
   lg: 'max-w-4xl',
-  xl: 'max-w-7xl'
+  xl: 'max-w-7xl',
+  // 2xl should be about 75% of the width of the screen, but we need to manually set it without 8xl etc
+  '2xl': 'max-w-[calc(100vw-40rem)]'
 };
 
 export const Modal: React.FC<ModalProps> = ({

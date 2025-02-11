@@ -68,8 +68,8 @@ export function useProductModal({
       product_variant: product.product_variant,
       release_year: product.release_year?.toString() || '',
       product_notes: product.product_notes,
-      product_group: product.product_group_name,
-      product_type: product.product_type_name,
+      product_group_name: product.product_group_name || '',
+      product_type_name: product.product_type_name || '',
       pricecharting_id: product.pricecharting_id
     };
   }, []);
@@ -102,10 +102,13 @@ export function useProductModal({
 
     // Prepare update data
     const updateData: ProductUpdateDTO = {
-      ...formData,
-      // Convert release_year to number or null
+      product_title: formData.product_title,
+      product_variant: formData.product_variant,
       release_year: formData.release_year ? Number(formData.release_year) : null,
-      // Include region and rating
+      product_notes: formData.product_notes,
+      product_group: formData.product_group_name,
+      product_type: formData.product_type_name,
+      pricecharting_id: formData.pricecharting_id,
       region: regionRating.region || null,
       rating: regionRating.rating || null
     };

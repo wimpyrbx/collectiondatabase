@@ -1,3 +1,4 @@
+/*
 import React, { forwardRef } from 'react';
 import { useProductTagsCache } from '@/hooks/useProductTagsCache';
 import { useTagsCache } from '@/hooks/useTagsCache';

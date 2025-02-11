@@ -4,6 +4,7 @@ import { useProductTagsCache } from '@/hooks/useProductTagsCache';
 import { useInventoryTagsCache } from '@/hooks/useInventoryTagsCache';
 import Pill from '@/components/ui/Pill';
 import { BaseTag } from '@/types/tags';
+import * as FaIcons from 'react-icons/fa';
 
 interface DisplayTagsProps {
   id: number;
@@ -52,6 +53,13 @@ export const DisplayTags: React.FC<DisplayTagsProps> = ({
     }
   };
 
+  const getIconElement = (iconName: string | null) => {
+    if (!iconName) return null;
+    // @ts-ignore - FaIcons will have the icon as a property
+    const IconComponent = FaIcons[iconName as keyof typeof FaIcons];
+    return IconComponent ? <IconComponent /> : null;
+  };
+
   return (
     <div className={`flex flex-wrap gap-1 ${className}`}>
       {tags.map(tag => {
@@ -59,8 +67,7 @@ export const DisplayTags: React.FC<DisplayTagsProps> = ({
         const tagData = availableTags?.find((t: BaseTag) => t.tag_name === tagName);
         if (!tagData) return null;
 
-        const iconColor = tagData.tag_icon_color ? `text-${tagData.tag_icon_color}-500` : 'mr-1 text-gray-200';
-        const icon = tagData.tag_icon || 'FaQuestionCircle';
+        const iconColor = tagData.tag_icon_color ? `text-${tagData.tag_icon_color}-500` : 'text-gray-200';
         const bgColor = tagData.tag_icon_color ? `bg-${tagData.tag_icon_color || 'gray'}-700/50` : 'bg-gray-700';
         const textColor = 'text-white';
 
@@ -68,7 +75,7 @@ export const DisplayTags: React.FC<DisplayTagsProps> = ({
           <Pill 
             key={tag}
             textColor={textColor}
-            icon={icon}
+            icon={getIconElement(tagData.tag_icon)}
             iconColor={iconColor}
             bgColor={bgColor}
             className="text-xs"
