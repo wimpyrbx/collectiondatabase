@@ -2,9 +2,8 @@
 import React from 'react';
 import Page from '@/components/page/Page';
 import { useProductsCache } from '@/hooks/useProductsCache';
-import { useTagsCache } from '@/hooks/useTagsCache';
 import { ProductViewItem } from '@/types/product';
-import { FaListAlt, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaTags, FaCalendar } from 'react-icons/fa';
+import { FaListAlt, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaStar, FaPlus, FaImage } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
@@ -14,71 +13,57 @@ import regionsData from '@/data/regions.json';
 import productTypesData from '@/data/product_types.json';
 import { getRatingDisplayInfo, getProductTypeInfo } from '@/utils/productUtils';
 import { ImageDisplay } from '@/components/image/ImageDisplay';
-import Pill from '@/components/ui/Pill';
-import { BaseTag } from '@/types/tags';
-import { useProductTagsCache } from '@/hooks/useProductTagsCache';
-import { DisplayError } from '@/components/ui';
-import DisplayTags from '@/components/tag/DisplayTags';
+import { DisplayError, Button } from '@/components/ui';
 
 const Home = () => {
   const { data, isLoading, isError, error } = useProductsCache();
-  const { getTags } = useTagsCache();
-  const { data: availableTags = [] } = useProductTagsCache();
   const [selectedProduct, setSelectedProduct] = React.useState<ProductViewItem | null>(null);
   const [updatedProductId, setUpdatedProductId] = React.useState<number | null>(null);
+  const [isCreating, setIsCreating] = React.useState(false);
 
   const columns: Column<ProductViewItem>[] = [
     {
-      key: 'type',
-      header: 'Type/Group',
+      key: 'product_group',
+      header: 'Group',
       icon: <FaLayerGroup className="w-4 h-4" />,
-      width: '100px',
-      accessor: (item) => {
-        const typeInfo = getProductTypeInfo(item.product_type_name, productTypesData.types);
-        return (
-          <div className="flex items-center gap-2">
-            {typeInfo.imagePath && (
-              <img
-                src={typeInfo.imagePath}
-                alt={typeInfo.displayName}
-                className="w-4 h-4"
-              />
-            )}
-            <span className="text-xs">{item.product_group_name}</span>
-          </div>
-        );
-      }
+      width: '90px',
+      accessor: (item: ProductViewItem) => item.product_group_name || '',
+      align: 'left' as const
+    },
+    {
+      key: 'product_type',
+      header: 'Type',
+      icon: <FaLayerGroup className="w-4 h-4" />,
+      width: '90px',
+      accessor: (item: ProductViewItem) => item.product_type_name || '',
+      align: 'left' as const
+    },
+    // show image if it exists in front of the title
+    {
+      key: 'product_image',
+      header: '',
+      icon: <FaImage className="w-4 h-4" />,
+      width: '30px',
+      accessor: (item: ProductViewItem) => item.product_id ? <ImageDisplay type="product" id={item.product_id} title={item.product_title} className="object-contain p-0 h-[20px]" /> : '',
+      align: 'center' as const
     },
     {
       key: 'product_title',
       header: 'Product Title',
       icon: <FaTag className="w-4 h-4" />,
-      accessor: (item: ProductViewItem) => (
-        <div className="grid grid-cols-[40px_1fr] gap-2 items-center">
-          <div className="w-[40px] flex items-center justify-center">
-            <ImageDisplay
-              type="product"
-              id={item.product_id}
-              title={item.product_title}
-              className="max-h-[40px] object-contain p-0"
-              showTooltip={true}
-            />
-          </div>
-          <div>
-            <span>{item.product_title}</span>
-            {item.product_variant && (
-              <span className="text-sm text-cyan-500/75">
-                ({item.product_variant})
-              </span>
-            )}
-          </div>
-        </div>
-      ),
+      accessor: (item: ProductViewItem) => item.product_title || '',
+      align: 'left' as const,
       sortable: true,
-      tooltip: {
-        text: 'Click to sort by product title',
-        style: 'minimal'        
-      }
+      sortKey: 'product_title'
+    },
+    {
+      key: 'product_variant',
+      header: 'Variant',
+      icon: <FaLayerGroup className="w-4 h-4" />,
+      accessor: (item: ProductViewItem) => item.product_variant || '',
+      align: 'left' as const,
+      sortable: true,
+      sortKey: 'product_variant'
     },
     {
       key: 'release_year',
@@ -86,8 +71,7 @@ const Home = () => {
       icon: <FaCalendar className="w-4 h-4" />,
       width: '80px',
       accessor: (item: ProductViewItem) => item.release_year || '',
-      sortable: true,
-      align: 'center' as const
+      align: 'left' as const
     },
     {
       key: 'region_name',
@@ -105,26 +89,6 @@ const Home = () => {
       sortable: true
     },
     {
-      key: 'rating',
-      header: 'Rating',
-      width: '100px',
-      accessor: (item) => {
-        const ratingInfo = getRatingDisplayInfo(item.region_name, item.rating_name, regionsData.regions);
-        return (
-          <div className="flex items-center gap-2">
-            {ratingInfo.imagePath && (
-              <img
-                src={ratingInfo.imagePath}
-                alt={ratingInfo.displayName}
-                className="h-6"
-              />
-            )}
-            <span>{ratingInfo.displayName}</span>
-          </div>
-        );
-      }
-    },
-    {
       key: 'final_price',
       header: 'Price',
       icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
@@ -133,18 +97,6 @@ const Home = () => {
       sortable: true,
       sortKey: 'final_price',
       align: 'left' as const
-    },
-    {
-      key: 'tags',
-      header: 'Tags',
-      icon: <FaTags className="w-4 h-4" />,
-      width: '200px',
-      accessor: (item: ProductViewItem) => {
-        const tags = getTags(item.product_id, 'products');
-        if (!tags || tags.length === 0) return '';
-        return <DisplayTags id={item.product_id} tagScope="products" />;
-      },
-      sortable: false
     }
   ];
 
@@ -152,37 +104,6 @@ const Home = () => {
     const uniqueTypes = Array.from(new Set(data.map(item => item.product_type_name ?? ''))).filter(Boolean) as string[];
     const uniqueGroups = Array.from(new Set(data.map(item => item.product_group_name ?? ''))).filter(Boolean) as string[];
     const uniqueVariants = Array.from(new Set(data.map(item => item.product_variant ?? ''))).filter(Boolean) as string[];
-
-    // Get all unique tag combinations
-    const allTags = new Map<string, Set<string>>();
-    data.forEach(item => {
-      const tags = getTags(item.product_id, 'products');
-      tags.forEach(tag => {
-        const [tagName, tagValue] = tag.split('=');
-        if (!allTags.has(tagName)) {
-          allTags.set(tagName, new Set());
-        }
-        if (tagValue) {
-          allTags.get(tagName)?.add(tagValue);
-        } else {
-          allTags.get(tagName)?.add('true');
-        }
-      });
-    });
-
-    // Convert tags to filter options
-    const tagFilters = Array.from(allTags.entries()).map(([tagName, values]) => ({
-      key: `tag_${tagName}`,
-      label: `Tag: ${tagName}`,
-      options: Array.from(values).map(value => ({
-        value: `${tagName}=${value}`,
-        label: value === 'true' ? tagName : `${tagName}: ${value}`,
-        count: data.filter(item => {
-          const tags = getTags(item.product_id, 'products');
-          return tags.includes(`${tagName}=${value}`);
-        }).length
-      }))
-    }));
 
     return [
       {
@@ -218,38 +139,39 @@ const Home = () => {
             count: data.filter(item => item.product_variant === variant).length
           }))
         ]
-      },
-      ...tagFilters
+      }
     ];
-  }, [getTags]);
+  }, []);
 
   const tableState = useTableState({
     initialSort: 'product_title',
-    data: React.useMemo(() => {
-      return (data || []).map(item => ({
-        ...item,
-        tags: getTags(item.product_id, 'products')
-      }));
-    }, [data, getTags]),
-    getFilterConfigs: getFilterConfigs
+    data: data || [],
+    getFilterConfigs
   });
 
   const handleProductUpdate = (product: ProductViewItem) => {
     setSelectedProduct(product);
     setUpdatedProductId(null);
+    setIsCreating(false);
   };
 
   const handleModalClose = () => {
     setSelectedProduct(null);
+    setIsCreating(false);
   };
 
-  const handleUpdateSuccess = (productId: number) => {
+  const handleSuccess = (productId: number) => {
     setSelectedProduct(null);
+    setIsCreating(false);
     setUpdatedProductId(productId);
-    // Clear the animation after it plays
     setTimeout(() => {
       setUpdatedProductId(null);
-    }, 1500); // Increased to 1.5s to match animation duration
+    }, 1500);
+  };
+
+  const handleCreateNew = () => {
+    setSelectedProduct(null);
+    setIsCreating(true);
   };
 
   return (
@@ -260,14 +182,23 @@ const Home = () => {
       iconColor="text-orange-500"
       subtitle="Manage your products"
     >
-      <Card
-        className="w-full"
-      >
+      <Card className="w-full">
         <Card.Header
           title="Products"
           icon={<FaListAlt />}
           iconColor="text-orange-500"
           collapsible={true}
+          rightContent={
+            <Button
+              onClick={handleCreateNew}
+              bgColor="bg-green-900"
+              iconLeft={<FaPlus />}
+              type="button"
+              className="w-32"
+            >
+              New Product
+            </Button>
+          }
         />
         <Card.Body>
           <BaseFilterableTable<ProductViewItem>
@@ -287,16 +218,19 @@ const Home = () => {
             pagination={tableState.pagination}
             onRowClick={handleProductUpdate}
             updatedId={updatedProductId}
-            isModalOpen={selectedProduct !== null}
+            isModalOpen={selectedProduct !== null || isCreating}
+            fixedHeight="h-[36px]"
+            navigationLocation="top"
           />
         </Card.Body>
       </Card>
 
       <ProductModal
         product={selectedProduct}
-        isOpen={selectedProduct !== null}
+        isOpen={selectedProduct !== null || isCreating}
         onClose={handleModalClose}
-        onUpdateSuccess={handleUpdateSuccess}
+        onSuccess={handleSuccess}
+        mode={isCreating ? 'create' : 'edit'}
       />
     </Page>
   );

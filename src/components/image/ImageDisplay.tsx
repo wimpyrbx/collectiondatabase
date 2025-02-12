@@ -113,7 +113,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
           <img
             src={finalImageUrl}
             alt={title}
-            className="max-w-[200px] max-h-[200px] object-contain"
+            className={className}
             data-image-key={getImageCacheKey(type, id)}
           />
         </div>

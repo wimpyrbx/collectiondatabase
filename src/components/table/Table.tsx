@@ -43,6 +43,8 @@ export function Table<T>({
   sortBy,
   sortDirection,
   updatedId,
+  fixedHeight,
+  navigationLocation = 'top',
   isModalOpen = false
 }: TableProps<T>) {
   const { className: animationClass } = useUpdateAnimation(updatedId || '');
@@ -186,9 +188,9 @@ export function Table<T>({
     const { currentPage, pageSize, totalPages, totalItems, onPageChange, onPageSizeChange } = pagination;
 
     return (
-      <div className="flex items-center justify-between py-3 bg-gray-800">
+      <div className="flex items-center justify-between py-3 bg-gray-700/50">
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-gray-400 ml-3">
             Show
           </span>
           <select
@@ -212,7 +214,7 @@ export function Table<T>({
           </span>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 mr-3">
           <span className="text-sm text-gray-400">
             {totalItems > 0 
               ? `Showing ${((currentPage - 1) * pageSize) + 1} to ${Math.min(currentPage * pageSize, totalItems)} of ${totalItems}`
@@ -260,7 +262,7 @@ export function Table<T>({
           elementRef={{ current: headerRefs.current.get(tooltipState.columnKey) || null }}
         />
       )}
-      {renderPagination()}
+      {navigationLocation === 'top' && pagination && renderPagination()}
       <div className="overflow-x-auto border-l border-r border-b border-gray-900 overflow-x-hidden">
         <table className="min-w-full divide-y divide-gray-700">
           <thead className="bg-gray-900">
@@ -277,10 +279,10 @@ export function Table<T>({
                       'px-3 py-2 text-left text-xs font-medium uppercase whitespace-nowrap border-b-2 border-t-2 border-gray-900',
                       column.sortable && 'cursor-pointer hover:text-gray-100',
                       !column.sortable && 'cursor-default',
-                      isColumnSorted ? 'text-gray-100' : 'text-gray-400',
+                      isColumnSorted ? 'text-gray-100' : 'text-gray-500',
                       column.headerClassName,
-                      isColumnSorted && sortDirection === 'asc' ? '!border-t-blue-900' : '',
-                      isColumnSorted && sortDirection === 'desc' ? '!border-b-blue-900' : '',
+                      isColumnSorted && sortDirection === 'asc' ? '!border-t-cyan-900' : '',
+                      isColumnSorted && sortDirection === 'desc' ? '!border-b-cyan-900' : '',
                       column.align === 'center' && 'text-center',
                       column.align === 'right' && 'text-right'
                     )}
@@ -327,19 +329,21 @@ export function Table<T>({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-700 bg-gray-900/40">
+          <tbody className="divide-y divide-gray-700/50 bg-gray-900/40">
             {data.map((item) => {
               const rowKey = keyExtractor(item);
               const isChanged = changedRows.has(rowKey);
               // Convert both to strings for comparison since updatedId might be a number
               const isUpdated = updatedId !== null && updatedId !== undefined && 
                               rowKey.toString() === updatedId.toString();
-              
+                              
               return (
                 <tr 
                   key={rowKey}
                   onClick={(e) => handleRowClick(e, item)}
                   className={clsx(
+                    'cursor-pointer',
+                    fixedHeight,
                     'transition-all duration-0',
                     'hover:bg-gray-900/50',
                     isChanged && 'animate-fadeOut',
@@ -384,6 +388,7 @@ export function Table<T>({
           )}
         </table>
       </div>
+      {navigationLocation === 'bottom' && pagination && renderPagination()}
     </div>
   );
 } 

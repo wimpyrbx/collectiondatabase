@@ -120,7 +120,7 @@ const RegionRatingSelector: React.FC<RegionRatingSelectorProps> = ({
 
   return (
     <div className={className}>
-      <div className="flex items-center gap-2 text-xs font-medium text-gray-300 mb-0.5">
+      <div className="flex items-center gap-2 text-xs font-medium text-gray-300 mb-0.5 ml-1">
         <FaGlobe className="text-cyan-400" />
         <span>Region & Rating</span>
       </div>

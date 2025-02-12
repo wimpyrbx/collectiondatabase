@@ -1,8 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { Card } from '@/components/card';
 import { InventoryViewItem } from '@/types/inventory';
-import { InventoryTagSelector, type InventoryTagSelectorRef } from '@/components/inventory/InventoryTagSelector';
 import { FaBox, FaTimes, FaStore, FaShoppingCart, FaArchive, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
 import { getInventoryWithFallbackUrl } from '@/utils/imageUtils';
 import { Button } from '@/components/ui';
@@ -27,7 +26,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
   onClose,
   onUpdateSuccess,
 }) => {
-  const tagSelectorRef = useRef<InventoryTagSelectorRef>(null);
   const [imageSrc, setImageSrc] = useState<string>('');
   const { updateInventory, isUpdating } = useInventoryTable();
   const { isTransitionAllowed } = useInventoryStatusTransitionsCache();
@@ -85,7 +83,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
   // Check if there are any pending changes
   const hasChanges = () => {
-    return pendingStatus !== null || tagSelectorRef.current?.hasChanges() || false;
+    return pendingStatus !== null;
   };
 
   // Handle save changes
@@ -102,11 +100,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
             inventory_status: pendingStatus
           }
         });
-      }
-      
-      // Apply tag changes if any
-      if (tagSelectorRef.current?.hasChanges()) {
-        await tagSelectorRef.current.applyChanges();
       }
       
       onUpdateSuccess?.(inventory.inventory_id);
@@ -299,7 +292,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                 )}
               </div>
 
-              {/* Right Column: Status & Tags */}
+              {/* Right Column: Status */}
               <div className="col-span-3 space-y-4">
                 {/* Status Section */}
                 <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-4">
@@ -357,16 +350,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                         );
                       })}
                   </div>
-                </div>
-
-                {/* Tags Section */}
-                <div className="rounded-lg bg-gray-900/50 border border-gray-700 p-4">
-                  <InventoryTagSelector
-                    key={`tags-${isOpen}-${inventory.inventory_id}`}
-                    ref={tagSelectorRef}
-                    inventoryId={inventory.inventory_id}
-                    productId={inventory.product_id}
-                  />
                 </div>
               </div>
             </div>

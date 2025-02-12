@@ -92,19 +92,6 @@ export function useTableState<T extends Record<string, any>>({
           const matchesOtherFilters = Object.entries(otherFilters).every(([key, values]) => {
             if (!values || values.length === 0) return true;
             
-            // Handle tag filters in other filters
-            if (key.startsWith('tag_')) {
-              const tags = (item as any).tags || [];
-              return values.every(filterValue => {
-                const [tagName, tagValue] = filterValue.split('=');
-                if (tagValue) {
-                  return tags.includes(`${tagName}=${tagValue}`);
-                } else {
-                  return tags.includes(tagName);
-                }
-              });
-            }
-
             const itemValue = item[key];
             // Handle empty values specially
             if (values.includes('')) {
@@ -114,26 +101,9 @@ export function useTableState<T extends Record<string, any>>({
           });
 
           // Check if item matches this option
-          let matchesThisOption = false;
-          if (config.key.startsWith('tag_')) {
-            const tags = (item as any).tags || [];
-            const tagKey = config.key.replace('tag_', '');
-
-            if (option.value === '') {
-              // For empty option (None), count items that DON'T have the tag or have it as false
-              matchesThisOption = !tags.some((t: string) => t === `${tagKey}=true`);
-            } else if (option.value.includes('=')) {
-              // For tags with values (set/text tags)
-              matchesThisOption = tags.includes(option.value);
-            } else {
-              // For boolean tags, check for tagname=true
-              matchesThisOption = tags.includes(`${option.value}=true`);
-            }
-          } else {
-            matchesThisOption = option.value === '' 
-              ? !item[config.key] || String(item[config.key]).trim() === ''
-              : item[config.key] === option.value;
-          }
+          const matchesThisOption = option.value === '' 
+            ? !item[config.key] || String(item[config.key]).trim() === ''
+            : item[config.key] === option.value;
 
           return matchesSearch && matchesOtherFilters && matchesThisOption;
         }).length;

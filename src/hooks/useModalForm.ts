@@ -1,38 +1,38 @@
 import { useState, useCallback, useEffect } from 'react';
 
 interface UseModalFormOptions<T> {
-  initialData: T | null;
+  initialData: T | null | undefined;
   isOpen: boolean;
   onClose: () => void;
-  transform?: (data: T) => any;
+  transform?: (data: T | null) => any;
   onReset?: () => void;
 }
 
-export function useModalForm<T extends object>({
+export function useModalForm<T>({
   initialData,
   isOpen,
   onClose,
-  transform = (data: T) => data,
+  transform = (data: T | null) => data,
   onReset
 }: UseModalFormOptions<T>) {
-  const [formData, setFormData] = useState<Partial<T>>({});
+  const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<string[]>([]);
 
   // Reset form when modal opens/closes or initial data changes
   useEffect(() => {
-    if (isOpen && initialData) {
-      setFormData(transform(initialData));
+    if (isOpen) {
+      setFormData(transform(initialData || null));
       setErrors([]);
-    } else if (!isOpen) {
+    } else {
       setFormData({});
       setErrors([]);
       onReset?.();
     }
   }, [isOpen, initialData, transform, onReset]);
 
-  const handleInputChange = useCallback(<K extends keyof T>(field: K, value: T[K]) => {
+  const handleInputChange = useCallback(<K extends keyof any>(field: K, value: any) => {
     setErrors([]); // Clear errors when user makes changes
-    setFormData(prev => ({
+    setFormData((prev: Record<string, any>) => ({
       ...prev,
       [field]: value
     }));

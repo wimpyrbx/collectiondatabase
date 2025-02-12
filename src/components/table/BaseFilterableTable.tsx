@@ -51,6 +51,9 @@ export interface BaseFilterableTableProps<T> {
 
   updatedId?: string | number | null;
   isModalOpen?: boolean;
+  
+  fixedHeight?: string;
+  navigationLocation?: 'top' | 'bottom';
 }
 
 export const BaseFilterableTable = <T extends Record<string, any>>({
@@ -71,7 +74,9 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
   onSort,
   pagination,
   updatedId,
-  isModalOpen = false
+  fixedHeight,
+  isModalOpen = false,
+  navigationLocation
 }: BaseFilterableTableProps<T>) => {
   const [isFiltersExpanded, setIsFiltersExpanded] = React.useState(false);
   const { className: animationClass } = useUpdateAnimation(updatedId || '');
@@ -102,7 +107,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
                 if (onSearchChange) onSearchChange('');
               }
             }}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 mb-2 bg-gray-900 border border-gray-700 rounded-lg p-2 hover:border-gray-700 w-[100px]"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 mb-0 bg-gray-900 border border-gray-700 rounded-lg p-2 hover:border-gray-700 w-[100px]"
           >
             <span>{isFiltersExpanded ? 'Hide Filters' : 'Show Filters'}</span>
             <svg
@@ -186,6 +191,8 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
         }}
         updatedId={updatedId}
         isModalOpen={isModalOpen}
+        fixedHeight={fixedHeight}
+        navigationLocation={navigationLocation}
       />
     </div>
   );

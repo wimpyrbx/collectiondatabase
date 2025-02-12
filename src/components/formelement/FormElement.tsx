@@ -42,6 +42,7 @@ export interface FormElementProps {
   maxLength?: number;
   truncate?: boolean;
   className?: string;
+  disableTransitionOpacity?: boolean;
 }
 
 const defaultStyles = {
@@ -81,11 +82,32 @@ export const FormElement: React.FC<FormElementProps> = ({
   selectedOptions = [],
   truncate = false,
   className,
+  disableTransitionOpacity = false
 }) => {
   const elementRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const baseClasses = `${bgColor} ${textColor} ${disabled ? 'opacity-50' : ''} text-${textSize} ${width} ${padding} ${margin} ${
     rounded === 'none' ? '' : `rounded-${rounded}`
   } border border-gray-700 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 placeholder-gray-500/50`;
+
+  // Helper function to check if the value is empty
+  const isEmpty = (value: any) => {
+    if (Array.isArray(value)) return value.length === 0;
+    if (typeof value === 'string') return value.trim() === '';
+    if (typeof value === 'number') return false;
+    return !value;
+  };
+
+  // Check if the current value is empty
+  const isValueEmpty = elementType === 'listsingle' || elementType === 'listmultiple'
+    ? isEmpty(selectedOptions)
+    : isEmpty(initialValue);
+
+  // Combine base classes with transition opacity if enabled
+  const combinedClassName = clsx(
+    className,
+    !disableTransitionOpacity && 'transition-opacity duration-200',
+    !disableTransitionOpacity && isValueEmpty && 'opacity-50 focus-within:opacity-100 hover:opacity-100'
+  );
 
   const handleChange = (value: SelectionValue) => {
     onValueChange?.(value);
@@ -200,7 +222,7 @@ export const FormElement: React.FC<FormElementProps> = ({
   };
 
   return (
-    <div className={clsx('flex flex-col', className)}>
+    <div className={combinedClassName}>
       {labelPosition === 'above' && renderLabel()}
       <div className={clsx(
         'flex relative',

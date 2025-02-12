@@ -86,30 +86,45 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
       optimistic: [
         {
           queryKey: ['products'],
-          update: (oldData: Product[]) => {
-            // Create an optimistic product entry
-            const optimisticProduct: Product = {
-              id: -1, // Temporary ID
-              product_type: data.product_type,
-              region: data.region || null,
+          update: (oldData: ProductViewItem[]) => {
+            // Create an optimistic view item entry
+            const optimisticProduct: ProductViewItem = {
+              product_id: -1, // Temporary ID
               product_title: data.product_title,
               product_variant: data.product_variant || null,
               release_year: data.release_year ? Number(data.release_year) : null,
+              is_product_active: data.is_product_active ?? true,
+              product_notes: data.product_notes || null,
+              product_created_at: new Date().toISOString(),
+              product_updated_at: new Date().toISOString(),
+              product_group_name: data.product_group || null,
+              product_type_name: data.product_type,
+              rating_name: data.rating || null,
+              region_name: data.region || null,
               price_usd: data.price_usd || null,
               price_nok: null,
               price_nok_fixed: null,
-              is_product_active: data.is_product_active ?? true,
-              product_notes: data.product_notes || null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
               price_new_usd: data.price_new_usd || null,
               price_new_nok: null,
               price_new_nok_fixed: null,
-              rating: data.rating || null,
-              product_group: data.product_group || null,
+              final_price: null,
+              normal_count: 0,
+              for_sale_count: 0,
+              collection_count: 0,
+              sold_count: 0,
+              total_count: 0,
+              total_sales: 0,
+              unique_buyers: 0,
+              avg_sale_price: null,
+              max_sale_price: null,
+              min_sale_price: null,
               pricecharting_id: data.pricecharting_id || null
             };
             return [...oldData, optimisticProduct];
+          },
+          // Add rollback function
+          rollback: (oldData: ProductViewItem[]) => {
+            return oldData.filter(item => item.product_id !== -1);
           }
         }
       ]
@@ -175,41 +190,78 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
     );
   }
 
-  // Additional product-specific methods
-  async updateWithTags(
-    id: number, 
-    data: ProductUpdateDTO,
-    tagSelectorRef: React.RefObject<{ applyChanges: () => Promise<void>; hasChanges: () => boolean }>
-  ): Promise<{ data: Product | null; errors: string[] }> {
-    const result = await this.update(id, data);
-    
-    if (result.errors.length > 0) {
-      return result;
-    }
-
-    try {
-      // Apply tag changes if any
-      if (tagSelectorRef.current?.hasChanges()) {
-        await tagSelectorRef.current.applyChanges();
-      }
-      
-      return result;
-    } catch (error) {
-      return {
-        data: null,
-        errors: [this.handleError(error)]
-      };
-    }
-  }
-
   /**
    * Example of how to manually invalidate caches when needed
    */
   async refreshRelatedCaches(): Promise<void> {
     await this.invalidateCaches([
       ['products'],
-      ['inventory'],
-      ['product_tags']
+      ['inventory']
     ]);
+  }
+
+  public async create(data: ProductCreateDTO): Promise<{ data: Product | null; errors: string[] }> {
+    const validation = this.validateCreate(data);
+    if (!validation.isValid) {
+      return { data: null, errors: validation.errors };
+    }
+
+    const cacheOps = this.getCreateCacheOperations(data);
+    const previousValues = new Map<string, any>();
+
+    try {
+      // Apply optimistic updates if any
+      if (cacheOps.optimistic) {
+        for (const update of cacheOps.optimistic) {
+          const oldData = this.queryClient.getQueryData(update.queryKey);
+          previousValues.set(JSON.stringify(update.queryKey), oldData);
+          if (oldData) {
+            this.queryClient.setQueryData(update.queryKey, update.update(oldData));
+          }
+        }
+      }
+
+      const { data: created, error } = await this.supabaseClient
+        .from(this.tableName)
+        .insert(data)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      // Update cache with the real product data
+      this.queryClient.setQueryData<ProductViewItem[]>(['products'], old => {
+        if (!old) return [];
+        return old.map(item => {
+          if (item.product_id === -1) {
+            // Replace optimistic entry with real data
+            return {
+              ...item,
+              product_id: created.id,
+              product_created_at: created.created_at,
+              product_updated_at: created.updated_at
+            };
+          }
+          return item;
+        });
+      });
+
+      return { data: created as Product, errors: [] };
+    } catch (error) {
+      // Rollback optimistic updates
+      if (cacheOps.optimistic) {
+        for (const update of cacheOps.optimistic) {
+          const key = JSON.stringify(update.queryKey);
+          const oldData = previousValues.get(key);
+          if (oldData) {
+            this.queryClient.setQueryData(
+              update.queryKey,
+              update.rollback ? update.rollback(oldData) : oldData
+            );
+          }
+        }
+      }
+      return { data: null, errors: [this.handleError(error)] };
+    }
   }
 } 

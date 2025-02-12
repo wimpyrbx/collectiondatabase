@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaImage, FaTrash, FaUpload } from 'react-icons/fa';
+import { FaImage, FaTrash, FaUpload, FaTimes } from 'react-icons/fa';
 import clsx from 'clsx';
 import { getProductImageUrl, getInventoryImageUrl, useImageUpload, deleteImage, checkProductImageExists } from '@/utils/imageUtils';
 import Button from '../ui/Button';
@@ -11,6 +11,9 @@ interface ImageContainerProps {
   title: string;
   onError?: (message: string) => void;
   className?: string;
+  pendingImage?: File | null;
+  onPendingImageChange?: (file: File | null) => void;
+  isCreateMode?: boolean;
 }
 
 export const ImageContainer: React.FC<ImageContainerProps> = ({
@@ -18,7 +21,10 @@ export const ImageContainer: React.FC<ImageContainerProps> = ({
   id,
   title,
   onError,
-  className
+  className,
+  pendingImage,
+  onPendingImageChange,
+  isCreateMode
 }) => {
   const [imageSrc, setImageSrc] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
@@ -127,7 +133,39 @@ export const ImageContainer: React.FC<ImageContainerProps> = ({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {imageSrc ? (
+      {isCreateMode ? (
+        pendingImage ? (
+          <div className="relative w-full h-full">
+            <img 
+              src={URL.createObjectURL(pendingImage)} 
+              alt="Pending upload" 
+              className="max-w-full max-h-full object-contain"
+            />
+            <button
+              onClick={() => onPendingImageChange?.(null)}
+              className="absolute top-2 right-2 p-2 bg-red-900/80 rounded-full hover:bg-red-800/80 transition-colors"
+            >
+              <FaTimes />
+            </button>
+          </div>
+        ) : (
+          <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-800/50 transition-colors">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  onPendingImageChange?.(file);
+                }
+              }}
+            />
+            <FaUpload className="w-8 h-8 mb-2" />
+            <span>Select an image to upload after creation</span>
+          </label>
+        )
+      ) : imageSrc ? (
         <>
           <img
             src={imageSrc}
@@ -146,38 +184,40 @@ export const ImageContainer: React.FC<ImageContainerProps> = ({
         </div>
       )}
 
-      {/* Upload Overlay */}
-      <div 
-        className={clsx(
-          "absolute inset-0 flex flex-col items-center justify-center",
-          "bg-black/50 backdrop-blur-sm",
-          "transition-opacity duration-200",
-          "z-50",
-          isDragging || isUploading ? "opacity-100" : "opacity-0 hover:opacity-100"
-        )}
-      >
-        {isUploading ? (
-          <div className="text-blue-400">
-            <span>Uploading...</span>
-          </div>
-        ) : (
-          <label className="cursor-pointer text-center flex flex-col items-center justify-center">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileInputChange}
-            />
-            <FaUpload className="w-24 h-24 mb-4 text-gray-100" />
-            <span className="text-sm text-gray-300">
-              {isDragging ? 'Drop to upload' : 'Click or drag to upload'}
-            </span>
-          </label>
-        )}
-      </div>
+      {/* Upload Overlay - Only show in edit mode */}
+      {!isCreateMode && (
+        <div 
+          className={clsx(
+            "absolute inset-0 flex flex-col items-center justify-center",
+            "bg-black/50 backdrop-blur-sm",
+            "transition-opacity duration-200",
+            "z-50",
+            isDragging || isUploading ? "opacity-100" : "opacity-0 hover:opacity-100"
+          )}
+        >
+          {isUploading ? (
+            <div className="text-blue-400">
+              <span>Uploading...</span>
+            </div>
+          ) : (
+            <label className="cursor-pointer text-center flex flex-col items-center justify-center">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileInputChange}
+              />
+              <FaUpload className="w-24 h-24 mb-4 text-gray-100" />
+              <span className="text-sm text-gray-300">
+                {isDragging ? 'Drop to upload' : 'Click or drag to upload'}
+              </span>
+            </label>
+          )}
+        </div>
+      )}
 
-      {/* Delete Button - Now centered below upload area */}
-      {hasRealImage && (
+      {/* Delete Button - Only show in edit mode and when there's a real image */}
+      {!isCreateMode && hasRealImage && (
         <BaseStyledContainer as="button"
           iconLeft={<FaTrash />}
           iconColor="text-red-300"

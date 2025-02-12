@@ -1,7 +1,7 @@
 // src/components/Sidebar.tsx
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaHome, FaInfoCircle, FaEnvelope, FaWpforms, FaQuestionCircle, FaLayerGroup, FaSearch, FaChevronRight, FaBoxes, FaTags } from 'react-icons/fa';
+import { FaHome, FaInfoCircle, FaEnvelope, FaWpforms, FaQuestionCircle, FaLayerGroup, FaSearch, FaChevronRight, FaBoxes } from 'react-icons/fa';
 import clsx from 'clsx';
 import { CacheMonitor } from './CacheMonitor';
 
@@ -40,13 +40,6 @@ const menuCategories: MenuCategories = {
         icon: <FaBoxes />, 
         iconColor: 'text-cyan-400',
         hoverColor: 'hover:text-cyan-300'
-      },
-      { 
-        path: '/tag-display-settings', 
-        label: 'Tag Settings', 
-        icon: <FaTags />, 
-        iconColor: 'text-orange-400',
-        hoverColor: 'hover:text-orange-300'
       },
       { 
         path: '/about', 
@@ -248,7 +241,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onCollapse }) => {
             'text-xs text-gray-500 text-center font-medium tracking-wider',
             collapsed && 'text-[10px]'
           )}>
-            {collapsed ? 'v1.0' : 'Collection Database v1.0'}
+            Collection DB v1.0
           </div>
         </div>
       </div>
