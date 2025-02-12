@@ -2,6 +2,8 @@ import React from 'react';
 import * as FaIcons from 'react-icons/fa';
 import FormElementLabel from './FormElementLabel';
 import clsx from 'clsx';
+import { FaTimes } from 'react-icons/fa';
+import Pill from '../ui/Pill';
 
 export type TextSize = 'xs' | 'sm' | 'md';
 export type RoundedSize = 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -16,7 +18,7 @@ export type SelectItem = {
 export type TextValue = string | number;
 export type SelectionValue = TextValue | TextValue[];
 
-export interface FormElementProps {
+export interface For3mElementProps {
   elementType: ElementType;
   initialValue?: TextValue;
   onValueChange?: (value: SelectionValue) => void;
@@ -43,6 +45,7 @@ export interface FormElementProps {
   truncate?: boolean;
   className?: string;
   disableTransitionOpacity?: boolean;
+  showResetPill?: boolean;
 }
 
 const defaultStyles = {
@@ -56,7 +59,7 @@ const defaultStyles = {
   labelPosition: 'left' as LabelPosition,
 };
 
-export const FormElement: React.FC<FormElementProps> = ({
+export const FormElement: React.FC<For3mElementProps> = ({
   elementType,
   initialValue = '',
   onValueChange,
@@ -82,7 +85,8 @@ export const FormElement: React.FC<FormElementProps> = ({
   selectedOptions = [],
   truncate = false,
   className,
-  disableTransitionOpacity = false
+  disableTransitionOpacity = false,
+  showResetPill = false
 }) => {
   const elementRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const baseClasses = `${bgColor} ${textColor} ${disabled ? 'opacity-50' : ''} text-${textSize} ${width} ${padding} ${margin} ${
@@ -177,7 +181,7 @@ export const FormElement: React.FC<FormElementProps> = ({
             {options.length === 0 && (
               <option value="" disabled>{placeholder || 'No options available'}</option>
             )}
-            {options.map(item => {
+            {options.map((item: SelectItem) => {
               const isSelected = Array.isArray(selectedOptions) 
                 ? selectedOptions.includes(item.value)
                 : selectedOptions === item.value;
@@ -221,15 +225,47 @@ export const FormElement: React.FC<FormElementProps> = ({
     }
   };
 
+  const hasSelectedValues = elementType === 'listsingle' || elementType === 'listmultiple' 
+    ? Array.isArray(selectedOptions) 
+      ? selectedOptions.length > 0 
+      : !!selectedOptions
+    : false;
+
   return (
     <div className={combinedClassName}>
-      {labelPosition === 'above' && renderLabel()}
+      {showResetPill && hasSelectedValues && ['listsingle', 'listmultiple'].includes(elementType) ? (
+        <div className="grid grid-cols-2 w-full">
+          <div className="col-span-1">
+            {labelPosition === 'above' && renderLabel()}
+          </div>
+          <div className="col-span-1 flex justify-end">
+            <Pill
+              onClick={() => handleChange(elementType === 'listmultiple' ? [] : '')}
+              icon={<FaTimes />}
+              iconColor="text-gray-300"
+              bgColor="bg-red-700/50"
+              hoverEffect="pulse"
+              size="xs"
+              className="transition-colors !pt-0 !pb-0 !mt-0 !mb-0 !border-none"
+            >
+              Reset
+            </Pill>
+          </div>
+        </div>
+      ) : (
+        <>
+          {labelPosition === 'above' && renderLabel()}
+        </>
+      )}
+
       <div className={clsx(
         'flex relative',
         labelPosition === 'left' ? 'flex-row items-center gap-3' : 'flex-col gap-2'
       )}>
         {labelPosition === 'left' && renderLabel()}
-        {renderElement()}
+        <div className="w-full">
+          {renderElement()}
+        </div>
         {showClearButton && ['input', 'textarea'].includes(elementType) && initialValue && !disabled && (
           <button
             type="button"

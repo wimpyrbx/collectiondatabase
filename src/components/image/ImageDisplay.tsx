@@ -100,14 +100,17 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
         <div 
           className={clsx(
             "fixed z-50 pointer-events-none",
-            "bg-gray-700/90 p-4 rounded-lg shadow-lg",
-            "border border-gray-500/50",
+            "bg-gray-800/95 p-3 rounded-lg",
+            "border border-gray-600/50",
+            "shadow-xl shadow-black/50",
+            "absolute",
             tooltipClassName
           )}
           style={{
-            left: mousePosition.x + 20,
-            top: mousePosition.y + 20,
-            transform: 'translate(0, -50%)'
+            left: '100%',
+            top: '50%',
+            marginLeft: '1rem',
+            transform: 'translateY(-50%)'
           }}
         >
           <img

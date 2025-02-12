@@ -2,6 +2,8 @@ import React from 'react';
 import { Table, type Column } from '@/components/table/Table';
 import { Button } from '@/components/ui';
 import { useUpdateAnimation } from '@/hooks/useUpdateAnimation';
+import { FormElement } from '@/components/formelement';
+import { FaFilter } from 'react-icons/fa';
 
 export interface FilterOption {
   value: string;
@@ -122,43 +124,25 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
 
           <div
             className={`transition-all duration-200 ease-in-out overflow-hidden ${
-              isFiltersExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+              isFiltersExpanded ? 'max-h-[500px] opacity-100 mt-3' : 'max-h-0 opacity-0'
             }`}
           >
             <div className="flex gap-4">
               {filters.map((filter) => (
                 <div key={filter.key} className="flex-1">
-                  <div className="flex justify-between items-center mb-1 pl-2">
-                    <label className="text-sm font-medium text-gray-400">{filter.label}</label>
-                    {selectedFilters[filter.key]?.length > 0 && (
-                      <button
-                        onClick={() => onFilterChange(filter.key, [])}
-                        className="text-gray-500 hover:text-red-400 text-xs p-0 px-2"
-                      >
-                        reset
-                      </button>
-                    )}
-                  </div>
-                  <select
-                    multiple
-                    value={selectedFilters[filter.key] || []}
-                    onChange={(e) => onFilterChange(
-                      filter.key,
-                      Array.from(e.target.selectedOptions, option => option.value)
-                    )}
-                    className="w-full p-2 text-sm border border-gray-700 rounded-lg bg-gray-900 text-gray-300 appearance-none
-                      [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] [appearance:none] [&::-ms-expand]:hidden !overflow-auto bg-[length:0] !bg-none"
-                  >
-                    {filter.options.map((option) => (
-                      <option
-                        key={option.value}
-                        value={option.value}
-                        className={option.count === 0 ? 'text-red-500' : ''}
-                      >
-                        {option.label}{option.count !== undefined ? ` (${option.count})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <FormElement
+                    elementType="listmultiple"
+                    label={filter.label}
+                    labelIcon={<FaFilter />}
+                    labelIconColor="text-gray-400"
+                    labelPosition="above"
+                    options={filter.options}
+                    selectedOptions={selectedFilters[filter.key] || []}
+                    onValueChange={(values) => onFilterChange(filter.key, Array.isArray(values) ? values.map(String) : [])}
+                    placeholder={`Select ${filter.label}...`}
+                    className="w-full"
+                    showResetPill={true}
+                  />
                 </div>
               ))}
             </div>
