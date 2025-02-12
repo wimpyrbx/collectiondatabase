@@ -23,7 +23,6 @@ export interface BaseFilterableTableProps<T> {
   isLoading?: boolean;
   error?: any;
   onRowClick?: (item: T) => void;
-  paginationPosition?: 'top' | 'bottom';
   
   // Filter configuration
   filters: FilterConfig[];
@@ -72,15 +71,14 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
   onSort,
   pagination,
   updatedId,
-  isModalOpen = false,
-  paginationPosition = 'top'
+  isModalOpen = false
 }: BaseFilterableTableProps<T>) => {
   const [isFiltersExpanded, setIsFiltersExpanded] = React.useState(false);
   const { className: animationClass } = useUpdateAnimation(updatedId || '');
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-start gap-4 mb-[-10px] pb-0">
+      <div className="flex justify-between items-start gap-4">
         {/* Left side: Search */}
         {onSearchChange && (
           <div className="w-1/4">
@@ -122,7 +120,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
               isFiltersExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
             }`}
           >
-            <div className="flex gap-4 mb-[5px]">
+            <div className="flex gap-4">
               {filters.map((filter) => (
                 <div key={filter.key} className="flex-1">
                   <div className="flex justify-between items-center mb-1 pl-2">
@@ -173,7 +171,6 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
         onRowClick={onRowClick}
         sortBy={sortBy}
         sortDirection={sortDirection}
-        paginationPosition={paginationPosition}
         pagination={{
           ...pagination,
           onPageChange: (page) => {

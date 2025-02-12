@@ -171,24 +171,18 @@ const Home = () => {
     });
 
     // Convert tags to filter options
-    const tagFilters = Array.from(allTags.entries())
-      .filter(([tagName]) => {
-        // Only include tags that have table_filter enabled
-        const tag = availableTags.find(t => t.tag_name === tagName);
-        return tag?.tags_table_filter;
-      })
-      .map(([tagName, values]) => ({
-        key: `tag_${tagName}`,
-        label: `Tag: ${tagName}`,
-        options: Array.from(values).map(value => ({
-          value: `${tagName}=${value}`,
-          label: value === 'true' ? tagName : `${tagName}: ${value}`,
-          count: data.filter(item => {
-            const tags = getTags(item.product_id, 'products');
-            return tags.includes(`${tagName}=${value}`);
-          }).length
-        }))
-      }));
+    const tagFilters = Array.from(allTags.entries()).map(([tagName, values]) => ({
+      key: `tag_${tagName}`,
+      label: `Tag: ${tagName}`,
+      options: Array.from(values).map(value => ({
+        value: `${tagName}=${value}`,
+        label: value === 'true' ? tagName : `${tagName}: ${value}`,
+        count: data.filter(item => {
+          const tags = getTags(item.product_id, 'products');
+          return tags.includes(`${tagName}=${value}`);
+        }).length
+      }))
+    }));
 
     return [
       {
@@ -212,15 +206,22 @@ const Home = () => {
       {
         key: 'product_variant',
         label: 'Variant',
-        options: uniqueVariants.map(variant => ({
-          value: variant,
-          label: variant,
-          count: data.filter(item => item.product_variant === variant).length
-        })).filter(option => option.count > 0)
+        options: [
+          {
+            value: 'none',
+            label: '(No Variant)',
+            count: data.filter(item => !item.product_variant || item.product_variant.trim() === '').length
+          },
+          ...uniqueVariants.map(variant => ({
+            value: variant,
+            label: variant,
+            count: data.filter(item => item.product_variant === variant).length
+          }))
+        ]
       },
       ...tagFilters
     ];
-  }, [getTags, availableTags]);
+  }, [getTags]);
 
   const tableState = useTableState({
     initialSort: 'product_title',
@@ -284,7 +285,6 @@ const Home = () => {
             sortDirection={tableState.sortDirection}
             onSort={tableState.onSort}
             pagination={tableState.pagination}
-            paginationPosition='bottom'
             onRowClick={handleProductUpdate}
             updatedId={updatedProductId}
             isModalOpen={selectedProduct !== null}

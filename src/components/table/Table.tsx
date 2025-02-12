@@ -40,7 +40,6 @@ export function Table<T>({
   onRowClick,
   rowClassName,
   pagination,
-  paginationPosition = 'top',
   sortBy,
   sortDirection,
   updatedId,
@@ -188,10 +187,7 @@ export function Table<T>({
 
     return (
       <div className="flex items-center justify-between py-3 bg-gray-800">
-        <div className={clsx(
-          "flex items-center space-x-2",
-          paginationPosition === 'bottom' && "ml-3"
-        )}>
+        <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-400">
             Show
           </span>
@@ -216,10 +212,7 @@ export function Table<T>({
           </span>
         </div>
 
-        <div className={clsx(
-          "flex items-center space-x-4",
-          paginationPosition === 'bottom' && "mr-3"
-        )}>
+        <div className="flex items-center space-x-4">
           <span className="text-sm text-gray-400">
             {totalItems > 0 
               ? `Showing ${((currentPage - 1) * pageSize) + 1} to ${Math.min(currentPage * pageSize, totalItems)} of ${totalItems}`
@@ -267,7 +260,7 @@ export function Table<T>({
           elementRef={{ current: headerRefs.current.get(tooltipState.columnKey) || null }}
         />
       )}
-      {paginationPosition === 'top' && renderPagination()}
+      {renderPagination()}
       <div className="overflow-x-auto border-l border-r border-b border-gray-900 overflow-x-hidden">
         <table className="min-w-full divide-y divide-gray-700">
           <thead className="bg-gray-900">
@@ -391,7 +384,6 @@ export function Table<T>({
           )}
         </table>
       </div>
-      {paginationPosition === 'bottom' && renderPagination()}
     </div>
   );
 } 

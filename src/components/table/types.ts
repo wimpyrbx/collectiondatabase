@@ -35,7 +35,6 @@ export interface TableProps<T> {
   onRowClick?: (item: T) => void;
   rowClassName?: string;
   pagination?: TablePagination;
-  paginationPosition?: 'top' | 'bottom';
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   updatedId?: string | number | null;

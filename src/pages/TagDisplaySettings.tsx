@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Page from '@/components/page/Page';
 import { Card } from '@/components/card';
-import { FaTags, FaEdit, FaFilter } from 'react-icons/fa';
+import { FaTags, FaEdit } from 'react-icons/fa';
 import Modal from '@/components/modal/Modal';
 import { useProductTagsCache } from '@/hooks/useProductTagsCache';
 import { useInventoryTagsCache } from '@/hooks/useInventoryTagsCache';
@@ -52,7 +52,6 @@ const TagEditForm: React.FC<TagEditFormProps> = ({
   const [tagValues, setTagValues] = React.useState<string[]>(tag.tag_values || []);
   const [selectedProductTypes, setSelectedProductTypes] = React.useState<string[]>(tag.tag_product_types || []);
   const [selectedProductGroups, setSelectedProductGroups] = React.useState<string[]>(tag.tag_product_groups || []);
-  const [tagTableFilter, setTagTableFilter] = React.useState<boolean>(tag.tags_table_filter ?? false);
   const [error, setError] = React.useState<string | null>(null);
   const [tagInUse, setTagInUse] = React.useState(false);
 
@@ -69,44 +68,36 @@ const TagEditForm: React.FC<TagEditFormProps> = ({
     }
   }, [tag.id]);
 
-  // Add useEffect to log state changes
-  React.useEffect(() => {
-    console.log('tagTableFilter state changed:', tagTableFilter);
-  }, [tagTableFilter]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
 
-  // Add useEffect to update state when tag prop changes
-  React.useEffect(() => {
-    setTagTableFilter(tag.tags_table_filter ?? false);
-  }, [tag.tags_table_filter]);
-
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
-    if (!tagName) {
+    // Validate required fields
+    if (!tagName.trim()) {
       setError('Tag name is required');
       return;
     }
 
-    console.log('Submitting tag with table filter:', tagTableFilter);
-
-    try {
-      await onUpdate({
-        tag_name: tagName,
-        tag_icon: tagIcon,
-        tag_description: tagDescription,
-        tag_icon_color: tagColor,
-        tag_type: tagType,
-        tag_display_as: tagDisplayAs,
-        tag_values: tagValues,
-        tag_product_types: selectedProductTypes,
-        tag_product_groups: selectedProductGroups,
-        tags_table_filter: tagTableFilter
-      });
-      onClose();
-    } catch (error) {
-      console.error('Failed to update tag:', error);
-      setError('Failed to update tag');
+    // If changing tag type and tag is in use, prevent the change
+    if (tagType !== tag.tag_type && tagInUse) {
+      setError('Cannot change type of tag that is in use');
+      return;
     }
+
+    // Prepare updates
+    const updates: Partial<BaseTag> = {
+      tag_name: tagName,
+      tag_icon: tagIcon || null,
+      tag_description: tagDescription || null,
+      tag_icon_color: tagColor || null,
+      tag_type: tagType,
+      tag_display_as: tagDisplayAs || null,
+      tag_values: tagValues.length > 0 ? tagValues : null,
+      tag_product_types: selectedProductTypes.length > 0 ? selectedProductTypes : null,
+      tag_product_groups: selectedProductGroups.length > 0 ? selectedProductGroups : null
+    };
+
+    onUpdate(updates);
   };
 
   const handleTagNameChange = (value: SelectionValue) => setTagName(String(value));
@@ -183,20 +174,6 @@ const TagEditForm: React.FC<TagEditFormProps> = ({
                 selectedOptions={tagType}
                 onValueChange={handleTagTypeChange}
                 disabled={isUpdating || tagInUse}
-              />
-
-              {/* Table Filter Toggle */}
-              <FormElement
-                elementType="switch"
-                label="Show in Table Filters"
-                labelIcon={<FaFilter />}
-                labelIconColor="text-blue-500"
-                checked={tagTableFilter}
-                onValueChange={(value) => {
-                  console.log('Switch value changed:', value);
-                  setTagTableFilter(value === 'true');
-                }}
-                disabled={isUpdating}
               />
 
               {/* Tag Values (only for set type) */}

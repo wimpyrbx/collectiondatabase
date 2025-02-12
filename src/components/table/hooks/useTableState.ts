@@ -117,15 +117,17 @@ export function useTableState<T extends Record<string, any>>({
           let matchesThisOption = false;
           if (config.key.startsWith('tag_')) {
             const tags = (item as any).tags || [];
-            const tagName = config.key.replace('tag_', '');
-            const [_, tagValue] = option.value.split('=');
+            const tagKey = config.key.replace('tag_', '');
 
             if (option.value === '') {
-              // For empty option (None), count items that don't have the tag at all
-              matchesThisOption = !tags.some((t: string) => t.startsWith(tagName));
-            } else {
-              // For all tags (boolean, set, text), just check for exact match
+              // For empty option (None), count items that DON'T have the tag or have it as false
+              matchesThisOption = !tags.some((t: string) => t === `${tagKey}=true`);
+            } else if (option.value.includes('=')) {
+              // For tags with values (set/text tags)
               matchesThisOption = tags.includes(option.value);
+            } else {
+              // For boolean tags, check for tagname=true
+              matchesThisOption = tags.includes(`${option.value}=true`);
             }
           } else {
             matchesThisOption = option.value === '' 
