@@ -176,6 +176,7 @@ export function useTableState<T extends Record<string, any>>({
   return {
     // Data
     currentPageData,
+    filteredAndSortedData: sorted,
     
     // Filter state
     filters: filterConfigs,

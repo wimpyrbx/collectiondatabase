@@ -14,12 +14,14 @@ import productTypesData from '@/data/product_types.json';
 import { getRatingDisplayInfo, getProductTypeInfo } from '@/utils/productUtils';
 import { ImageDisplay } from '@/components/image/ImageDisplay';
 import { DisplayError, Button } from '@/components/ui';
+import clsx from 'clsx';
 
 const Home = () => {
   const { data, isLoading, isError, error } = useProductsCache();
   const [selectedProduct, setSelectedProduct] = React.useState<ProductViewItem | null>(null);
   const [updatedProductId, setUpdatedProductId] = React.useState<number | null>(null);
   const [isCreating, setIsCreating] = React.useState(false);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const columns: Column<ProductViewItem>[] = [
     {
@@ -38,7 +40,6 @@ const Home = () => {
       accessor: (item: ProductViewItem) => item.product_type_name || '',
       align: 'left' as const
     },
-    // show image if it exists in front of the title
     {
       key: 'product_image',
       header: '',
@@ -146,11 +147,13 @@ const Home = () => {
     setSelectedProduct(product);
     setUpdatedProductId(null);
     setIsCreating(false);
+    setIsModalOpen(true);
   };
 
   const handleModalClose = () => {
     setSelectedProduct(null);
     setIsCreating(false);
+    setIsModalOpen(false);
   };
 
   const handleSuccess = (productId: number) => {
@@ -160,11 +163,13 @@ const Home = () => {
     setTimeout(() => {
       setUpdatedProductId(null);
     }, 1500);
+    setIsModalOpen(false);
   };
 
   const handleCreateNew = () => {
     setSelectedProduct(null);
     setIsCreating(true);
+    setIsModalOpen(true);
   };
 
   return (
@@ -211,19 +216,34 @@ const Home = () => {
             pagination={tableState.pagination}
             onRowClick={handleProductUpdate}
             updatedId={updatedProductId}
-            isModalOpen={selectedProduct !== null || isCreating}
+            isModalOpen={isModalOpen}
             fixedHeight="h-[36px]"
             navigationLocation="top"
+            rowClassName={(item: ProductViewItem) => 
+              selectedProduct?.product_id === item.product_id && isModalOpen 
+                ? '!bg-cyan-500/20 transition-colors duration-200' 
+                : ''
+            }
           />
         </Card.Body>
       </Card>
 
       <ProductModal
         product={selectedProduct}
-        isOpen={selectedProduct !== null || isCreating}
+        isOpen={isModalOpen}
         onClose={handleModalClose}
         onSuccess={handleSuccess}
         mode={isCreating ? 'create' : 'edit'}
+        tableData={tableState.filteredAndSortedData}
+        onNavigate={(productId) => {
+          const product = data?.find(p => p.product_id === productId);
+          if (product) {
+            setSelectedProduct(product);
+          }
+        }}
+        currentPage={tableState.pagination.currentPage}
+        onPageChange={tableState.pagination.onPageChange}
+        pageSize={tableState.pagination.pageSize}
       />
     </Page>
   );

@@ -1,6 +1,7 @@
 import { CrudService, ValidationResult, CacheOperation } from './base/CrudService';
 import type { Product } from '@/types/tables';
 import type { ProductViewItem } from '@/types/product';
+import axios from 'axios';
 
 // Base DTO without the release_year to avoid type conflicts
 type BaseProductDTO = Omit<Product, 'id' | 'created_at' | 'updated_at' | 'release_year'>;
@@ -12,6 +13,9 @@ export interface ProductCreateDTO extends BaseProductDTO {
 export interface ProductUpdateDTO extends Partial<ProductCreateDTO> {}
 
 export class ProductService extends CrudService<Product, ProductCreateDTO, ProductUpdateDTO> {
+  private readonly baseUrl = '/api/products';
+  private isUpdating = false;
+
   protected validateCreate(data: ProductCreateDTO): ValidationResult {
     const errors: string[] = [];
     
@@ -262,6 +266,15 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
         }
       }
       return { data: null, errors: [this.handleError(error)] };
+    }
+  }
+
+  async deleteProduct(productId: number): Promise<void> {
+    this.isUpdating = true;
+    try {
+      await axios.delete(`${this.baseUrl}/${productId}`);
+    } finally {
+      this.isUpdating = false;
     }
   }
 } 

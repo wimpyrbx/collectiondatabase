@@ -1,4 +1,4 @@
--- Backup created at 2025-02-13 03:31:16
+-- Backup created at 2025-01-26 02:06:08
 
 BEGIN;
 
@@ -791,8 +791,12 @@ GRANT EXECUTE ON FUNCTION validate_product_group_ids() TO service_role;
 DROP TABLE IF EXISTS sales CASCADE;
 DROP TABLE IF EXISTS sale_items CASCADE;
 DROP TABLE IF EXISTS purchases CASCADE;
+DROP TABLE IF EXISTS products_tags_relationship CASCADE;
+DROP TABLE IF EXISTS products_tags CASCADE;
 DROP TABLE IF EXISTS products_history CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS inventory_tags_relationship CASCADE;
+DROP TABLE IF EXISTS inventory_tags CASCADE;
 DROP TABLE IF EXISTS inventory_status_transitions CASCADE;
 DROP TABLE IF EXISTS inventory_status_tracking CASCADE;
 DROP TABLE IF EXISTS inventory_history CASCADE;
@@ -839,6 +843,27 @@ CREATE TABLE inventory_status_transitions (
   requires_sale_status character varying(50)
 );
 
+CREATE TABLE inventory_tags (
+  id bigint NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  tag_name character varying,
+  tag_description character varying,
+  tags_display_in_table boolean DEFAULT false,
+  tags_display_in_table_order integer,
+  tag_type USER-DEFINED NOT NULL DEFAULT 'boolean'::tag_type,
+  tag_values ARRAY,
+  tag_product_types ARRAY,
+  tag_product_groups ARRAY
+);
+
+CREATE TABLE inventory_tags_relationship (
+  id bigint NOT NULL,
+  inventory_id bigint NOT NULL,
+  tag_id bigint NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  tag_value text NOT NULL
+);
+
 CREATE TABLE products (
   id integer NOT NULL DEFAULT nextval('products_id_seq'::regclass),
   product_type character varying(50) NOT NULL,
@@ -866,6 +891,27 @@ CREATE TABLE products_history (
   product_id integer NOT NULL,
   changes jsonb NOT NULL,
   changed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE products_tags (
+  id bigint NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  tag_name character varying,
+  tag_description character varying,
+  tags_display_in_table boolean DEFAULT false,
+  tags_display_in_table_order integer,
+  tag_type USER-DEFINED NOT NULL DEFAULT 'boolean'::tag_type,
+  tag_values ARRAY,
+  tag_product_types ARRAY,
+  tag_product_groups ARRAY
+);
+
+CREATE TABLE products_tags_relationship (
+  id bigint NOT NULL,
+  product_id integer NOT NULL,
+  tag_id bigint NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  tag_value text NOT NULL
 );
 
 CREATE TABLE purchases (
@@ -902,34 +948,39 @@ CREATE TABLE sales (
 CREATE INDEX idx_inventory_product_id ON public.inventory USING btree (product_id);
 CREATE INDEX idx_inventory_sale_id ON public.inventory USING btree (sale_id);
 CREATE UNIQUE INDEX inventory_status_transitions_from_status_to_status_requires_key ON public.inventory_status_transitions USING btree (from_status, to_status, requires_sale_status);
+CREATE INDEX idx_inventory_tags_display_order ON public.inventory_tags USING btree (tags_display_in_table_order) WHERE (tags_display_in_table = true);
+CREATE INDEX idx_inventory_tags_relationship_inventory_id ON public.inventory_tags_relationship USING btree (inventory_id);
+CREATE INDEX idx_inventory_tags_relationship_tag_id ON public.inventory_tags_relationship USING btree (tag_id);
+CREATE INDEX idx_products_tags_relationship_product_id ON public.products_tags_relationship USING btree (product_id);
+CREATE INDEX idx_products_tags_relationship_tag_id ON public.products_tags_relationship USING btree (tag_id);
 CREATE INDEX idx_sale_items_inventory_id ON public.sale_items USING btree (inventory_id);
 CREATE INDEX idx_sale_items_sale_id ON public.sale_items USING btree (sale_id);
 
 -- ============================
 -- TRIGGERS
 -- ============================
-DROP TRIGGER IF EXISTS inventory_add_to_sale_trigger ON inventory CASCADE;
-CREATE TRIGGER inventory_add_to_sale_trigger BEFORE UPDATE OF sale_id ON public.inventory FOR EACH ROW WHEN (((new.sale_id IS DISTINCT FROM old.sale_id) AND (new.sale_id IS NOT NULL))) EXECUTE FUNCTION handle_add_to_sale();
-DROP TRIGGER IF EXISTS update_nok_on_rate_change ON currency_rates CASCADE;
-CREATE TRIGGER update_nok_on_rate_change AFTER INSERT OR UPDATE ON public.currency_rates FOR EACH ROW EXECUTE FUNCTION update_all_products_nok();
-DROP TRIGGER IF EXISTS update_product_prices ON currency_rates CASCADE;
-CREATE TRIGGER update_product_prices AFTER INSERT ON public.currency_rates FOR EACH ROW EXECUTE FUNCTION update_all_product_prices();
-DROP TRIGGER IF EXISTS calculate_nok_prices_trigger ON products CASCADE;
-CREATE TRIGGER calculate_nok_prices_trigger BEFORE INSERT OR UPDATE OF price_usd, price_new_usd ON public.products FOR EACH ROW EXECUTE FUNCTION calculate_nok_prices();
-DROP TRIGGER IF EXISTS products_update_trigger ON products CASCADE;
-CREATE TRIGGER products_update_trigger BEFORE UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION track_product_changes();
-DROP TRIGGER IF EXISTS update_nok_on_usd_change ON products CASCADE;
-CREATE TRIGGER update_nok_on_usd_change BEFORE INSERT OR UPDATE OF price_usd ON public.products FOR EACH ROW WHEN ((new.price_usd IS NOT NULL)) EXECUTE FUNCTION update_price_nok();
-DROP TRIGGER IF EXISTS update_sales_totals_trigger ON sale_items CASCADE;
-CREATE TRIGGER update_sales_totals_trigger AFTER INSERT OR DELETE OR UPDATE OF sold_price ON public.sale_items FOR EACH ROW EXECUTE FUNCTION update_sales_totals();
 DROP TRIGGER IF EXISTS inventory_delete_trigger ON inventory CASCADE;
 CREATE TRIGGER inventory_delete_trigger BEFORE DELETE ON public.inventory FOR EACH ROW EXECUTE FUNCTION handle_inventory_delete();
 DROP TRIGGER IF EXISTS inventory_override_price_update_trigger ON inventory CASCADE;
 CREATE TRIGGER inventory_override_price_update_trigger BEFORE UPDATE OF override_price ON public.inventory FOR EACH ROW EXECUTE FUNCTION handle_override_price_change();
+DROP TRIGGER IF EXISTS inventory_add_to_sale_trigger ON inventory CASCADE;
+CREATE TRIGGER inventory_add_to_sale_trigger BEFORE UPDATE OF sale_id ON public.inventory FOR EACH ROW WHEN (((new.sale_id IS DISTINCT FROM old.sale_id) AND (new.sale_id IS NOT NULL))) EXECUTE FUNCTION handle_add_to_sale();
 DROP TRIGGER IF EXISTS inventory_remove_from_sale_trigger ON inventory CASCADE;
 CREATE TRIGGER inventory_remove_from_sale_trigger BEFORE UPDATE OF sale_id ON public.inventory FOR EACH ROW WHEN (((new.sale_id IS DISTINCT FROM old.sale_id) AND (new.sale_id IS NULL))) EXECUTE FUNCTION handle_remove_from_sale();
+DROP TRIGGER IF EXISTS products_update_trigger ON products CASCADE;
+CREATE TRIGGER products_update_trigger BEFORE UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION track_product_changes();
 DROP TRIGGER IF EXISTS inventory_update_trigger ON inventory CASCADE;
 CREATE TRIGGER inventory_update_trigger BEFORE UPDATE ON public.inventory FOR EACH ROW EXECUTE FUNCTION track_inventory_changes();
+DROP TRIGGER IF EXISTS calculate_nok_prices_trigger ON products CASCADE;
+CREATE TRIGGER calculate_nok_prices_trigger BEFORE INSERT OR UPDATE OF price_usd, price_new_usd ON public.products FOR EACH ROW EXECUTE FUNCTION calculate_nok_prices();
+DROP TRIGGER IF EXISTS update_product_prices ON currency_rates CASCADE;
+CREATE TRIGGER update_product_prices AFTER INSERT ON public.currency_rates FOR EACH ROW EXECUTE FUNCTION update_all_product_prices();
+DROP TRIGGER IF EXISTS update_nok_on_usd_change ON products CASCADE;
+CREATE TRIGGER update_nok_on_usd_change BEFORE INSERT OR UPDATE OF price_usd ON public.products FOR EACH ROW WHEN ((new.price_usd IS NOT NULL)) EXECUTE FUNCTION update_price_nok();
+DROP TRIGGER IF EXISTS update_sales_totals_trigger ON sale_items CASCADE;
+CREATE TRIGGER update_sales_totals_trigger AFTER INSERT OR DELETE OR UPDATE OF sold_price ON public.sale_items FOR EACH ROW EXECUTE FUNCTION update_sales_totals();
+DROP TRIGGER IF EXISTS update_nok_on_rate_change ON currency_rates CASCADE;
+CREATE TRIGGER update_nok_on_rate_change AFTER INSERT OR UPDATE ON public.currency_rates FOR EACH ROW EXECUTE FUNCTION update_all_products_nok();
 
 -- ============================
 -- TABLE DATA
@@ -995,6 +1046,9 @@ INSERT INTO inventory_status_transitions (id, from_status, to_status, requires_s
 INSERT INTO inventory_status_transitions (id, from_status, to_status, requires_sale_status) VALUES (7, 'Collection', 'Normal', NULL);
 INSERT INTO inventory_status_transitions (id, from_status, to_status, requires_sale_status) VALUES (8, 'Collection', 'For Sale', NULL);
 
+-- Data for inventory_tags
+INSERT INTO inventory_tags (id, created_at, tag_name, tag_description, tags_display_in_table, tags_display_in_table_order, tag_type, tag_values, tag_product_types, tag_product_groups) VALUES (1, '2025-01-23T10:29:34.014979+00:00', 'New/Sealed', 'Item is brand new/sealed', False, NULL, 'boolean', NULL, NULL, NULL);
+
 -- Data for products
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1011, 'Game', 'PAL', 'AC/DC Live: Rock Band Track Pack', NULL, NULL, 16.0, 208.0, 210.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 48.0, 624.0, 620.0, 'PEGI 12', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1013, 'Game', 'PAL', 'Ace Combat: Assault Horizon', NULL, NULL, 14.8, 192.4, 200.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 44.4, 577.2, 580.0, 'PEGI 16', 'Xbox 360', NULL);
@@ -1005,9 +1059,14 @@ INSERT INTO products (id, product_type, region, product_title, product_variant, 
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1018, 'Game', 'PAL', 'AFL Live', NULL, NULL, 12.3, 159.9, 160.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 36.9, 479.7, 480.0, NULL, 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1019, 'Game', 'PAL', 'AFL Live 2', NULL, NULL, 13.5, 175.5, 180.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 40.5, 526.5, 530.0, NULL, 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1012, 'Game', 'PAL', 'Ace Combat 6: Fires of Liberation', NULL, NULL, 5.1, 66.3, 70.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 15.3, 198.9, 200.0, 'PEGI 12', 'Xbox 360', NULL);
+INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1010, 'Game', 'PAL', 'A-Train HX', NULL, NULL, 17.0, 221.0, 230.0, True, 'qq', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 51.0, 663.0, 660.0, 'PEGI 3', 'Playstation 4', NULL);
+INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1008, 'Game', 'PAL', '2014 FIFA World Cup Brazil', 'Champions Edition', 2009, 5.0, 65.0, 70.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 15.0, 195.0, 200.0, 'PEGI 3', 'Xbox', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1009, 'Peripheral', 'PAL', '50 Cent: Blood on the Sand', '', NULL, 7.0, 91.0, 100.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 21.0, 273.0, 270.0, 'ACB M', 'Xbox', NULL);
+INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1006, 'Other', 'PAL', '2010 FIFA World Cup South Africa', '', NULL, 5.6, 72.8, 80.0, True, 'vasdfadsfzzz', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 16.8, 218.4, 220.0, 'PEGI 3', 'Xbox 360', NULL);
+INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1001, 'Game', 'PAL', '007: Blood Stonezz', 'ef', 2011, 7.0, 91.0, 100.0, True, '', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 21.0, 273.0, 270.0, 'PEGI 12', 'Xbox 360', NULL);
+INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1005, 'Game', 'PAL', '2006 FIFA World Cup Germany', '', 2021, 11.4, 148.2, 150.0, True, '', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 34.2, 444.6, 440.0, 'PEGI 16', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1002, 'Game', 'PAL', 'asdf', '', NULL, 6.3, 81.9, 90.0, True, '', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 18.9, 245.7, 250.0, 'BBFC PG', 'Playstation 4', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1008, 'Game', 'PAL', '2014 FIFA World Cup Brazil', 'Champions Edition', 2009, 5.0, 65.0, 70.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 15.0, 195.0, 200.0, 'PEGI 3', 'Xbox', 5158);
+INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1007, 'Console', 'PAL', '2014 FIFA World Cup Brazil', '', NULL, 12.9, 167.7, 170.0, True, 'asdf', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 38.7, 503.1, 500.0, 'PEGI 3', 'Playstation 3', 1234);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1020, 'Game', 'PAL', 'Afro Samurai', NULL, NULL, 12.3, 159.9, 160.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 36.9, 479.7, 480.0, NULL, 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1021, 'Game', 'PAL', 'Air Conflicts: Pacific Carriers', NULL, NULL, 10.8, 140.4, 150.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 32.4, 421.2, 420.0, 'PEGI 16', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1022, 'Game', 'PAL', 'Air Conflicts: Secret Wars', NULL, NULL, 5.2, 67.6, 70.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 15.6, 202.8, 200.0, 'PEGI 12', 'Xbox 360', NULL);
@@ -1024,7 +1083,9 @@ INSERT INTO products (id, product_type, region, product_title, product_variant, 
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1034, 'Game', 'PAL', 'Aliens vs. Predator', 'Survivor Edition', NULL, 15.0, 195.0, 200.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 45.0, 585.0, 590.0, 'PEGI 18', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1035, 'Game', 'PAL', 'Aliens: Colonial Marines', 'Collector''s Edition', NULL, 14.7, 191.1, 200.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 44.1, 573.3, 570.0, 'PEGI 18', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1036, 'Game', 'PAL', 'Aliens: Colonial Marines', 'Extermination Edition', NULL, 13.7, 178.1, 180.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 41.1, 534.3, 530.0, 'PEGI 18', 'Xbox 360', NULL);
+INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1004, 'Game', 'PAL', '007: Quantum of Solace', 'Collectors Edition', 2007, 9.8, 127.4, 130.0, True, '', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 29.4, 382.2, 380.0, 'PEGI 16', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1023, 'Game', 'PAL', 'Air Conflicts: Vietnam', NULL, NULL, 8.2, 106.6, 110.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 24.6, 319.8, 320.0, 'PEGI 16', 'Xbox 360', NULL);
+INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1003, 'Game', 'PAL', '007: Quantum of Solace', '', 2000, 10.1, 131.3, 140.0, True, '', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 30.3, 393.9, 390.0, 'PEGI 16', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1037, 'Game', 'PAL', 'Aliens: Colonial Marines', 'Limited Edition', NULL, 8.5, 110.5, 120.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 25.5, 331.5, 330.0, 'PEGI 18', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1038, 'Game', 'PAL', 'Alone in the Dark', NULL, NULL, 12.8, 166.4, 170.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 38.4, 499.2, 500.0, 'PEGI 18', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1039, 'Game', 'PAL', 'Alone in the Dark', 'Limited Edition', NULL, 6.5, 84.5, 90.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 19.5, 253.5, 250.0, 'PEGI 16', 'Xbox 360', NULL);
@@ -1041,12 +1102,6 @@ INSERT INTO products (id, product_type, region, product_title, product_variant, 
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1050, 'Game', 'PAL', 'Apache: Air Assault', NULL, NULL, 7.9, 102.7, 110.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 23.7, 308.1, 310.0, 'PEGI 16', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1051, 'Game', 'PAL', 'Arcana Heart 3', NULL, NULL, 7.0, 91.0, 100.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 21.0, 273.0, 270.0, 'PEGI 12', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1052, 'Game', 'PAL', 'Arcana Heart 3', 'Limited Edition', NULL, 6.0, 78.0, 80.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 18.0, 234.0, 230.0, 'PEGI 12', 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1010, 'Game', 'PAL', 'A-Train HX', NULL, NULL, 17.0, 221.0, 230.0, True, 'qqcc', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 51.0, 663.0, 660.0, 'PEGI 12', 'Playstation 4', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1001, 'Game', 'PAL', '007: Blood Stonezz', 'fqwe', 2011, 7.0, 91.0, 100.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 21.0, 273.0, 270.0, 'PEGI 16', 'Xbox 360', 5444);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1007, 'Console', 'PAL', '2014 FIFA World Cup Brazil', '', 2013, 12.9, 167.7, 170.0, True, 'asdf', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 38.7, 503.1, 500.0, 'PEGI 3', 'Playstation 3', 1234);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1005, 'Console', 'PAL', '2006 FIFA World Cup Germany', NULL, 2021, 11.4, 148.2, 150.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 34.2, 444.6, 440.0, 'PEGI 18', 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1003, 'Console', 'PAL', '007: Quantum of Solace', '', 2000, 10.1, 131.3, 140.0, True, '', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 30.3, 393.9, 390.0, 'PEGI 18', 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1006, 'Peripheral', 'PAL', '2010 FIFA World Cup South Africa', '', 2005, 5.6, 72.8, 80.0, True, 'vasdfadsfzzz', '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 16.8, 218.4, 220.0, 'PEGI 3', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1053, 'Game', 'PAL', 'Arcania: Gothic 4', NULL, NULL, 12.2, 158.6, 160.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 36.6, 475.8, 480.0, 'PEGI 16', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1054, 'Game', 'PAL', 'Arcania: The Complete Tale', NULL, NULL, 14.5, 188.5, 190.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 43.5, 565.5, 570.0, 'PEGI 16', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1055, 'Game', 'PAL', 'Armored Core 4', NULL, NULL, 11.4, 148.2, 150.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 34.2, 444.6, 440.0, NULL, 'Xbox 360', NULL);
@@ -1096,15 +1151,6 @@ INSERT INTO products (id, product_type, region, product_title, product_variant, 
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1099, 'Game', 'PAL', 'Asura''s Wrath', NULL, NULL, 12.4, 161.2, 170.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 37.2, 483.6, 480.0, 'PEGI 16', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1100, 'Game', 'PAL', 'Avatar: The Game', NULL, NULL, 13.1, 170.3, 180.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 39.3, 510.9, 510.0, 'PEGI 12', 'Xbox 360', NULL);
 INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1101, 'Game', 'PAL', 'Avatar: The Legend of Aang - The Burning Earth', NULL, NULL, 8.3, 107.9, 110.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 24.9, 323.7, 320.0, 'PEGI 7', 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1102, 'Game', 'PAL', 'aaa', NULL, NULL, NULL, NULL, NULL, True, NULL, '2025-02-12T00:57:25.061946+00:00', '2025-02-12T00:57:25.061946+00:00', NULL, NULL, NULL, NULL, 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1103, 'Game', NULL, '08', 'afs', NULL, NULL, NULL, NULL, True, NULL, '2025-02-12T01:01:30.498311+00:00', '2025-02-12T01:01:30.498311+00:00', NULL, NULL, NULL, NULL, 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1104, 'Game', NULL, '00006', NULL, NULL, NULL, NULL, NULL, True, NULL, '2025-02-12T01:02:42.211825+00:00', '2025-02-12T01:02:42.211825+00:00', NULL, NULL, NULL, NULL, 'Other', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1105, 'Game', NULL, '003a', NULL, NULL, NULL, NULL, NULL, True, NULL, '2025-02-12T01:04:06.950984+00:00', '2025-02-12T01:04:06.950984+00:00', NULL, NULL, NULL, NULL, 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1106, 'Game', 'PAL', '0131', NULL, NULL, NULL, NULL, NULL, True, NULL, '2025-02-12T01:09:22.72723+00:00', '2025-02-12T01:09:22.72723+00:00', NULL, NULL, NULL, 'PEGI 16', 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1107, 'Game', NULL, '0a', NULL, NULL, NULL, NULL, NULL, True, NULL, '2025-02-12T01:14:56.812357+00:00', '2025-02-12T01:14:56.812357+00:00', NULL, NULL, NULL, NULL, 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1109, 'Game', 'PAL', 'asv', NULL, NULL, NULL, NULL, NULL, True, NULL, '2025-02-12T18:47:39.431521+00:00', '2025-02-12T18:47:39.431521+00:00', NULL, NULL, NULL, 'PEGI 16', 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1108, 'Game', 'PAL', '100e', NULL, NULL, NULL, NULL, NULL, True, NULL, '2025-02-12T01:23:23.977393+00:00', '2025-02-12T01:23:23.977393+00:00', NULL, NULL, NULL, 'PEGI 7', 'Xbox 360', NULL);
-INSERT INTO products (id, product_type, region, product_title, product_variant, release_year, price_usd, price_nok, price_nok_fixed, is_product_active, product_notes, created_at, updated_at, price_new_usd, price_new_nok, price_new_nok_fixed, rating, product_group, pricecharting_id) VALUES (1004, 'Peripheral', 'PAL', '007: Quantum of Solace', 'Collectors Edition', 2007, 9.8, 127.4, 130.0, True, NULL, '2025-01-17T13:45:39.16251+00:00', '2025-01-17T13:45:39.16251+00:00', 29.4, 382.2, 380.0, 'PEGI 18', 'Xbox 360', NULL);
 
 -- Data for products_history
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (1, 1002, [{'field': 'product_variant', 'new_value': 'test', 'old_value': ''}], '2025-01-23T13:29:52.762731+00:00');
@@ -1167,7 +1213,6 @@ INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (57, 1
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (58, 1002, [{'field': 'rating', 'new_value': 'BBFC 12', 'old_value': None}], '2025-01-24T21:16:46.912288+00:00');
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (59, 1003, [{'field': 'product_notes', 'new_value': '', 'old_value': 'asdffqqa'}], '2025-01-24T21:25:30.056201+00:00');
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (60, 1005, [{'field': 'rating', 'new_value': 'PEGI 16', 'old_value': None}], '2025-01-25T14:41:08.617502+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (117, 1004, [{'field': 'product_type', 'new_value': 'Peripheral', 'old_value': 'Game'}], '2025-02-11T17:34:29.092191+00:00');
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (61, 1004, [{'field': 'rating', 'new_value': None, 'old_value': 'PEGI 16'}, {'field': 'product_notes', 'new_value': 'asdf', 'old_value': ''}], '2025-01-25T15:00:45.222476+00:00');
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (62, 1004, [{'field': 'rating', 'new_value': 'PEGI 16', 'old_value': None}, {'field': 'product_notes', 'new_value': '', 'old_value': 'asdf'}], '2025-01-25T15:00:55.180918+00:00');
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (63, 1002, [{'field': 'rating', 'new_value': 'BBFC PG', 'old_value': 'BBFC 12'}], '2025-01-25T16:42:54.860677+00:00');
@@ -1195,57 +1240,11 @@ INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (84, 1
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (85, 1009, [{'field': 'rating', 'new_value': 'ACB M', 'old_value': 'ACB MA15'}], '2025-01-25T17:33:42.411088+00:00');
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (86, 1005, [{'field': 'rating', 'new_value': 'PEGI 7', 'old_value': 'PEGI 16'}], '2025-01-25T19:05:20.708749+00:00');
 INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (87, 1005, [{'field': 'rating', 'new_value': 'PEGI 16', 'old_value': 'PEGI 7'}], '2025-01-25T19:05:25.553468+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (88, 1005, [{'field': 'rating', 'new_value': 'PEGI 7', 'old_value': 'PEGI 16'}], '2025-01-26T01:53:21.736312+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (89, 1005, [{'field': 'rating', 'new_value': 'PEGI 3', 'old_value': 'PEGI 7'}], '2025-01-26T01:53:28.700594+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (90, 1004, [{'field': 'product_title', 'new_value': '007: Quantum of Solace2', 'old_value': '007: Quantum of Solace'}], '2025-01-26T11:39:35.691113+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (91, 1004, [{'field': 'product_title', 'new_value': '007: Quantum of Solace', 'old_value': '007: Quantum of Solace2'}], '2025-01-26T11:39:40.561058+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (92, 1004, [{'field': 'rating', 'new_value': 'PEGI 18', 'old_value': 'PEGI 16'}, {'field': 'product_notes', 'new_value': 'zxcv', 'old_value': ''}], '2025-01-26T14:46:29.974494+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (93, 1004, [{'field': 'product_notes', 'new_value': 'zxcvzxcvasdfww', 'old_value': 'zxcv'}], '2025-01-26T15:00:35.103672+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (94, 1004, [{'field': 'product_notes', 'new_value': 'zxcvzxcvasdfww\nzxcv\nsdaf', 'old_value': 'zxcvzxcvasdfww'}], '2025-01-26T15:08:40.906103+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (95, 1004, [{'field': 'rating', 'new_value': 'PEGI 12', 'old_value': 'PEGI 18'}], '2025-01-29T14:10:34.536174+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (96, 1004, [{'field': 'rating', 'new_value': 'PEGI 18', 'old_value': 'PEGI 12'}], '2025-01-29T14:10:36.978466+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (97, 1006, [{'field': 'release_year', 'new_value': 2005, 'old_value': None}], '2025-02-10T23:02:45.807061+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (98, 1007, [{'field': 'release_year', 'new_value': 2013, 'old_value': None}], '2025-02-10T23:03:07.956818+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (99, 1004, [{'field': 'product_notes', 'new_value': '', 'old_value': 'zxcvzxcvasdfww\nzxcv\nsdaf'}], '2025-02-10T23:40:04.349152+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (100, 1010, [{'field': 'product_notes', 'new_value': 'qqcc', 'old_value': 'qq'}], '2025-02-11T00:38:17.533722+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (101, 1003, [{'field': 'rating', 'new_value': None, 'old_value': 'PEGI 16'}], '2025-02-11T00:59:53.460347+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (102, 1003, [{'field': 'rating', 'new_value': 'BBFC PG', 'old_value': None}], '2025-02-11T01:00:11.754545+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (103, 1005, [{'field': 'rating', 'new_value': 'PEGI 16', 'old_value': 'PEGI 3'}, {'field': 'release_year', 'new_value': None, 'old_value': 2021}], '2025-02-11T03:03:49.484646+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (104, 1005, [{'field': 'release_year', 'new_value': 2021, 'old_value': None}], '2025-02-11T03:03:57.456283+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (105, 1004, [{'field': 'product_notes', 'new_value': 'f', 'old_value': ''}], '2025-02-11T15:35:06.268951+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (106, 1004, [{'field': 'product_notes', 'new_value': '', 'old_value': 'f'}], '2025-02-11T15:35:10.870111+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (107, 1003, [{'field': 'product_variant', 'new_value': 'fq', 'old_value': ''}], '2025-02-11T15:35:18.446839+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (108, 1003, [{'field': 'product_variant', 'new_value': '', 'old_value': 'fq'}], '2025-02-11T15:35:24.583386+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (109, 1005, [{'field': 'product_type', 'new_value': 'Console', 'old_value': 'Game'}], '2025-02-11T17:09:37.980836+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (110, 1004, [{'field': 'product_type', 'new_value': 'Peripheral', 'old_value': 'Game'}], '2025-02-11T17:23:47.901846+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (111, 1003, [{'field': 'product_type', 'new_value': 'Console', 'old_value': 'Game'}], '2025-02-11T17:26:52.307957+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (112, 1004, [{'field': 'product_type', 'new_value': 'Console', 'old_value': 'Peripheral'}], '2025-02-11T17:29:51.716802+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (113, 1004, [{'field': 'product_type', 'new_value': 'Peripheral', 'old_value': 'Console'}], '2025-02-11T17:29:56.36439+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (114, 1001, [{'field': 'product_type', 'new_value': 'Console', 'old_value': 'Game'}], '2025-02-11T17:33:38.378878+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (115, 1001, [{'field': 'product_type', 'new_value': 'Game', 'old_value': 'Console'}], '2025-02-11T17:33:52.794642+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (116, 1004, [{'field': 'product_type', 'new_value': 'Game', 'old_value': 'Peripheral'}], '2025-02-11T17:34:25.775353+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (118, 1001, [{'field': 'product_type', 'new_value': 'Other', 'old_value': 'Game'}], '2025-02-11T17:34:37.737831+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (119, 1001, [{'field': 'product_type', 'new_value': 'Console', 'old_value': 'Other'}], '2025-02-11T17:42:54.637434+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (120, 1006, [{'field': 'product_type', 'new_value': 'Console', 'old_value': 'Other'}], '2025-02-11T17:43:26.569721+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (121, 1006, [{'field': 'product_type', 'new_value': 'Peripheral', 'old_value': 'Console'}], '2025-02-11T17:43:31.82471+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (122, 1001, [{'field': 'product_type', 'new_value': 'Peripheral', 'old_value': 'Console'}], '2025-02-11T18:00:02.698103+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (123, 1001, [{'field': 'product_type', 'new_value': 'Game', 'old_value': 'Peripheral'}], '2025-02-11T18:00:15.429071+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (124, 1001, [{'field': 'product_type', 'new_value': 'Console', 'old_value': 'Game'}], '2025-02-11T18:00:21.706733+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (125, 1001, [{'field': 'product_type', 'new_value': 'Game', 'old_value': 'Console'}], '2025-02-11T18:00:34.924754+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (126, 1003, [{'field': 'rating', 'new_value': 'PEGI 18', 'old_value': 'BBFC PG'}], '2025-02-12T00:27:29.476787+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (127, 1010, [{'field': 'rating', 'new_value': 'PEGI 12', 'old_value': 'PEGI 3'}], '2025-02-12T00:40:44.897834+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (128, 1007, [{'field': 'rating', 'new_value': 'PEGI 7', 'old_value': 'PEGI 3'}], '2025-02-12T00:40:55.820621+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (129, 1007, [{'field': 'rating', 'new_value': 'PEGI 3', 'old_value': 'PEGI 7'}], '2025-02-12T00:40:59.587283+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (130, 1001, [{'field': 'product_variant', 'new_value': '', 'old_value': 'ef'}], '2025-02-12T00:48:34.515714+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (131, 1102, [{'field': 'region', 'new_value': 'PAL', 'old_value': None}], '2025-02-12T00:58:07.651447+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (132, 1102, [{'field': 'product_group', 'new_value': 'Xbox 360', 'old_value': None}], '2025-02-12T00:58:18.480097+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (133, 1103, [{'field': 'product_variant', 'new_value': 'afs', 'old_value': None}], '2025-02-12T01:02:19.925691+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (134, 1106, [{'field': 'region', 'new_value': 'PAL', 'old_value': None}, {'field': 'rating', 'new_value': 'PEGI 16', 'old_value': None}], '2025-02-12T01:14:28.532082+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (135, 1108, [{'field': 'region', 'new_value': 'PAL', 'old_value': None}, {'field': 'rating', 'new_value': 'PEGI 7', 'old_value': None}], '2025-02-12T01:23:32.685463+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (136, 1001, [{'field': 'rating', 'new_value': 'PEGI 16', 'old_value': 'PEGI 12'}, {'field': 'product_variant', 'new_value': 'fqwe', 'old_value': ''}, {'field': 'product_notes', 'new_value': None, 'old_value': ''}], '2025-02-12T19:34:10.529135+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (137, 1108, [{'field': 'product_title', 'new_value': '100e', 'old_value': '0b'}], '2025-02-12T20:12:25.10315+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (138, 1004, [{'field': 'product_notes', 'new_value': None, 'old_value': ''}], '2025-02-13T01:38:54.590435+00:00');
-INSERT INTO products_history (id, product_id, changes, changed_at) VALUES (139, 1005, [{'field': 'rating', 'new_value': 'PEGI 18', 'old_value': 'PEGI 16'}, {'field': 'product_variant', 'new_value': None, 'old_value': ''}, {'field': 'product_notes', 'new_value': None, 'old_value': ''}], '2025-02-13T02:27:37.684517+00:00');
+
+-- Data for products_tags
+INSERT INTO products_tags (id, created_at, tag_name, tag_description, tags_display_in_table, tags_display_in_table_order, tag_type, tag_values, tag_product_types, tag_product_groups) VALUES (55, '2025-01-23T17:25:56.040805+00:00', 'Kinect', 'Requires kinect sensor', True, 1, 'set', ['value1', 'value2'], ['Game'], ['Xbox 360', 'Xbox']);
+INSERT INTO products_tags (id, created_at, tag_name, tag_description, tags_display_in_table, tags_display_in_table_order, tag_type, tag_values, tag_product_types, tag_product_groups) VALUES (57, '2025-01-26T00:51:04.773954+00:00', 'Developer', '', True, 3, 'text', NULL, ['Game'], ['Xbox 360']);
+INSERT INTO products_tags (id, created_at, tag_name, tag_description, tags_display_in_table, tags_display_in_table_order, tag_type, tag_values, tag_product_types, tag_product_groups) VALUES (56, '2025-01-26T00:50:45.2226+00:00', 'Box Condition', '', True, 2, 'set', ['Missing', 'Bad', 'Ok', 'Good'], ['Game'], ['Xbox 360']);
 
 -- Data for sales
 INSERT INTO sales (id, buyer_name, sale_total, sale_date, sale_notes, created_at, number_of_items, sale_status) VALUES (3, 'Johnny', NULL, NULL, NULL, '2025-01-03T19:49:41.003554+00:00', 0, NULL);
@@ -1407,6 +1406,25 @@ CREATE VIEW view_sales AS
      LEFT JOIN inventory i ON si.inventory_id = i.id
      LEFT JOIN products p ON i.product_id = p.id
   GROUP BY s.id, s.buyer_name, s.sale_total, s.sale_date, s.sale_notes, s.created_at, s.number_of_items, s.sale_status;;
+
+DROP VIEW IF EXISTS view_tags_relationship CASCADE;
+
+CREATE VIEW view_tags_relationship AS
+ SELECT jsonb_build_object('products', COALESCE(( SELECT jsonb_object_agg(p.id::text, pt.tags) AS jsonb_object_agg
+           FROM products p
+             LEFT JOIN ( SELECT ptr.product_id,
+                    jsonb_agg(DISTINCT pt_1.tag_name) AS tags
+                   FROM products_tags_relationship ptr
+                     LEFT JOIN products_tags pt_1 ON ptr.tag_id = pt_1.id
+                  GROUP BY ptr.product_id) pt ON p.id = pt.product_id
+          WHERE pt.tags IS NOT NULL), '{}'::jsonb), 'inventory', COALESCE(( SELECT jsonb_object_agg(i.id::text, it.tags) AS jsonb_object_agg
+           FROM inventory i
+             LEFT JOIN ( SELECT itr.inventory_id,
+                    jsonb_agg(DISTINCT it_1.tag_name) AS tags
+                   FROM inventory_tags_relationship itr
+                     LEFT JOIN inventory_tags it_1 ON itr.tag_id = it_1.id
+                  GROUP BY itr.inventory_id) it ON i.id = it.inventory_id
+          WHERE it.tags IS NOT NULL), '{}'::jsonb)) AS combined_data;;
 
 
 COMMIT;

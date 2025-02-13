@@ -11,8 +11,8 @@ interface ModalProps {
 const sizeClasses = {
   sm: 'max-w-md',
   md: 'max-w-2xl',
-  lg: 'max-w-4xl',
-  xl: 'max-w-7xl',
+  lg: 'w-[800px]',
+  xl: 'w-[1024px]',
   // 2xl should be about 75% of the width of the screen, but we need to manually set it without 8xl etc
   '2xl': 'max-w-[calc(100vw-40rem)]'
 };

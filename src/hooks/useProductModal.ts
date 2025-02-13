@@ -180,6 +180,17 @@ export function useProductModal({
     setPendingImage(file);
   };
 
+  const handleDelete = async () => {
+    if (!product) return;
+
+    try {
+      await productService.deleteProduct(product.product_id);
+      onSuccess?.(product.product_id);
+    } catch (error) {
+      throw error;
+    }
+  };
+
   return {
     formData,
     errors,
@@ -188,9 +199,10 @@ export function useProductModal({
     handleInputChange,
     handleClose,
     handleSubmit,
-    isUpdating: false,
+    isUpdating: productService.isUpdating,
     setErrors,
     pendingImage,
-    handlePendingImageChange
+    handlePendingImageChange,
+    handleDelete
   };
 } 

@@ -25,6 +25,7 @@ export interface BaseFilterableTableProps<T> {
   isLoading?: boolean;
   error?: any;
   onRowClick?: (item: T) => void;
+  rowClassName?: (item: T) => string;
   
   // Filter configuration
   filters: FilterConfig[];
@@ -65,6 +66,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
   isLoading,
   error,
   onRowClick,
+  rowClassName,
   filters,
   selectedFilters,
   onFilterChange,
@@ -177,6 +179,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
         isModalOpen={isModalOpen}
         fixedHeight={fixedHeight}
         navigationLocation={navigationLocation}
+        rowClassName={rowClassName}
       />
     </div>
   );

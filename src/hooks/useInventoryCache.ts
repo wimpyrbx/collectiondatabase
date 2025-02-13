@@ -1,6 +1,6 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabaseClient';
-import { InventoryViewItem } from '@/types/inventory';
+import type { InventoryViewItem } from '@/types/inventory';
 
 export const INVENTORY_QUERY_KEY = ['inventory'] as const;
 
@@ -20,8 +20,8 @@ export const useInventoryCache = () => {
   return useQuery({
     queryKey: INVENTORY_QUERY_KEY,
     queryFn: fetchInventory,
-    gcTime: Infinity,
     staleTime: Infinity,
+    gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false

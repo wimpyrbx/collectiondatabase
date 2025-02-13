@@ -11,7 +11,7 @@ export interface TableColumn<T> {
   width?: string;
   align?: 'left' | 'center' | 'right';
   headerClassName?: string;
-  rowClassName?: string;
+  rowClassName?: string | ((item: T) => string);
   tooltip?: TooltipProps;
 }
 
@@ -33,7 +33,7 @@ export interface TableProps<T> {
   error?: Error | null;
   onSort?: (key: string) => void;
   onRowClick?: (item: T) => void;
-  rowClassName?: string;
+  rowClassName?: string | ((item: T) => string);
   pagination?: TablePagination;
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';

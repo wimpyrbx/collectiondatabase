@@ -1,32 +1,21 @@
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/supabaseClient';
-import type { InventoryViewItem } from '@/types/inventory';
+import type { Inventory, NewInventory, UpdateInventory } from '@/types/inventory';
 import { INVENTORY_QUERY_KEY } from './useInventoryCache';
-
-interface InventoryUpdate {
-  inventory_status?: string;
-  override_price?: number | null;
-  purchase_seller?: string | null;
-  purchase_origin?: string | null;
-  purchase_cost?: number | null;
-  purchase_date?: string | null;
-  purchase_notes?: string | null;
-  sale_buyer?: string | null;
-  sale_status?: string | null;
-  sale_date?: string | null;
-  sale_notes?: string | null;
-  sold_price?: number | null;
-}
+import type { InventoryViewItem } from '@/types/inventory';
 
 export const useInventoryTable = () => {
   const queryClient = useQueryClient();
 
   // Update mutation
   const updateInventoryMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: number, updates: InventoryUpdate }) => {
+    mutationFn: async ({ id, updates }: { id: number, updates: UpdateInventory }) => {
+      // Remove fields that should not be updated directly
+      const { id: _, created_at, ...validUpdates } = updates as any;
+
       const { data, error } = await supabase
         .from('inventory')
-        .update(updates)
+        .update(validUpdates)
         .eq('id', id)
         .select()
         .single();
@@ -35,8 +24,10 @@ export const useInventoryTable = () => {
       return data;
     },
     onMutate: async ({ id, updates }) => {
+      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: INVENTORY_QUERY_KEY });
 
+      // Snapshot the previous value
       const previousInventory = queryClient.getQueryData<InventoryViewItem[]>(INVENTORY_QUERY_KEY);
 
       // Optimistically update the cache
@@ -68,6 +59,107 @@ export const useInventoryTable = () => {
       return { previousInventory };
     },
     onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousInventory) {
+        queryClient.setQueryData(INVENTORY_QUERY_KEY, context.previousInventory);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure cache is in sync
+      queryClient.invalidateQueries({ queryKey: INVENTORY_QUERY_KEY });
+    },
+  });
+
+  // Create mutation
+  const createInventoryMutation = useMutation({
+    mutationFn: async (inventory: NewInventory) => {
+      const { data, error } = await supabase
+        .from('inventory')
+        .insert(inventory)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onMutate: async (newInventory) => {
+      await queryClient.cancelQueries({ queryKey: INVENTORY_QUERY_KEY });
+
+      const previousInventory = queryClient.getQueryData<InventoryViewItem[]>(INVENTORY_QUERY_KEY);
+
+      // Create an optimistic inventory view item
+      const optimisticInventory: InventoryViewItem = {
+        inventory_id: -1, // Temporary ID
+        product_id: newInventory.product_id,
+        purchase_id: newInventory.purchase_id,
+        sale_id: newInventory.sale_id,
+        inventory_status: newInventory.inventory_status,
+        inventory_created_at: new Date().toISOString(),
+        product_title: '', // Will be filled by the view
+        product_variant: null,
+        release_year: null,
+        is_product_active: true,
+        product_notes: null,
+        product_created_at: new Date().toISOString(),
+        product_updated_at: new Date().toISOString(),
+        product_group_name: null,
+        product_type_name: '',
+        rating_name: null,
+        region_name: null,
+        override_price: newInventory.override_price,
+        price_nok_fixed: null,
+        price_new_nok_fixed: null,
+        final_price: null,
+        purchase_seller: newInventory.purchase_seller,
+        purchase_origin: newInventory.purchase_origin,
+        purchase_cost: newInventory.purchase_cost,
+        purchase_date: newInventory.purchase_date,
+        purchase_notes: newInventory.purchase_notes,
+        sale_buyer: newInventory.sale_buyer,
+        sale_status: newInventory.sale_status,
+        sale_date: newInventory.sale_date,
+        sale_notes: newInventory.sale_notes,
+        sold_price: newInventory.sold_price
+      };
+
+      queryClient.setQueryData<InventoryViewItem[]>(INVENTORY_QUERY_KEY, old => {
+        return old ? [optimisticInventory, ...old] : [optimisticInventory];
+      });
+
+      return { previousInventory };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousInventory) {
+        queryClient.setQueryData(INVENTORY_QUERY_KEY, context.previousInventory);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: INVENTORY_QUERY_KEY });
+    },
+  });
+
+  // Delete mutation
+  const deleteInventoryMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase
+        .from('inventory')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: INVENTORY_QUERY_KEY });
+
+      const previousInventory = queryClient.getQueryData<InventoryViewItem[]>(INVENTORY_QUERY_KEY);
+
+      queryClient.setQueryData<InventoryViewItem[]>(INVENTORY_QUERY_KEY, old => {
+        return old ? old.filter(item => item.inventory_id !== id) : [];
+      });
+
+      return { previousInventory };
+    },
+    onError: (err, variables, context) => {
       if (context?.previousInventory) {
         queryClient.setQueryData(INVENTORY_QUERY_KEY, context.previousInventory);
       }
@@ -79,6 +171,10 @@ export const useInventoryTable = () => {
 
   return {
     updateInventory: updateInventoryMutation.mutate,
+    createInventory: createInventoryMutation.mutate,
+    deleteInventory: deleteInventoryMutation.mutate,
     isUpdating: updateInventoryMutation.isPending,
+    isCreating: createInventoryMutation.isPending,
+    isDeleting: deleteInventoryMutation.isPending,
   };
-} 
+}; 

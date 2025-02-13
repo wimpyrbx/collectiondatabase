@@ -16,7 +16,7 @@ export interface Column<T> {
   sortable?: boolean;
   align?: 'left' | 'center' | 'right';
   headerClassName?: string;
-  rowClassName?: string;
+  rowClassName?: string | ((item: T) => string);
   accessor: (row: T) => React.ReactNode;
 }
 
@@ -344,11 +344,12 @@ export function Table<T>({
                   className={clsx(
                     'cursor-pointer',
                     fixedHeight,
-                    'transition-all duration-0',
+                    'transition-colors duration-200 ease-in-out',
                     'hover:bg-gray-900/50',
                     isChanged && 'animate-fadeOut',
-                    rowClassName,
-                    isUpdated && 'animate-flash-green'
+                    typeof rowClassName === 'function' ? rowClassName(item) : rowClassName,
+                    isUpdated && 'animate-flash-green',
+                    isModalOpen && rowKey.toString() === updatedId?.toString() && '!bg-cyan-500/20'
                   )}
                 >
                   {columns.map((column) => (
@@ -358,7 +359,7 @@ export function Table<T>({
                         'px-3 py-2 whitespace-nowrap text-sm text-gray-300',
                         column.align === 'center' && 'text-center',
                         column.align === 'right' && 'text-right',
-                        column.rowClassName
+                        typeof column.rowClassName === 'function' ? column.rowClassName(item) : column.rowClassName
                       )}
                     >
                       {column.accessor(item)}

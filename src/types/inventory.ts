@@ -32,3 +32,27 @@ export interface InventoryViewItem {
     sale_notes: string | null;
     sold_price: number | null;
   }
+
+export interface Inventory {
+  id: number;
+  product_id: number;
+  purchase_id: number | null;
+  sale_id: number | null;
+  inventory_status: string;
+  created_at: string;
+  override_price: number | null;
+  purchase_seller: string | null;
+  purchase_origin: string | null;
+  purchase_cost: number | null;
+  purchase_date: string | null;
+  purchase_notes: string | null;
+  sale_buyer: string | null;
+  sale_status: string | null;
+  sale_date: string | null;
+  sale_notes: string | null;
+  sold_price: number | null;
+}
+
+export type NewInventory = Omit<Inventory, 'id' | 'created_at'>;
+
+export type UpdateInventory = Partial<NewInventory>;
