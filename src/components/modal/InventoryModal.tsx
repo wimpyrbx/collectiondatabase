@@ -5,7 +5,7 @@ import { InventoryViewItem } from '@/types/inventory';
 import { FaBox, FaTimes, FaStore, FaShoppingCart, FaArchive, FaCheck, FaExclamationTriangle, FaDollarSign, FaCalendar, FaUser, FaMapMarker, FaTag } from 'react-icons/fa';
 import { getInventoryWithFallbackUrl } from '@/utils/imageUtils';
 import { Button } from '@/components/ui';
-import { useInventoryStatusTransitionsCache } from '@/hooks/useInventoryStatusTransitionsCache';
+import { useInventoryStatusTransitionsCache } from '@/hooks/viewHooks';
 import { ImageContainer } from '@/components/image/ImageContainer';
 import { FormElement } from '@/components/formelement';
 import { useInventoryModal } from '@/hooks/useInventoryModal';

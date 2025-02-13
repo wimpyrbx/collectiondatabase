@@ -1,6 +1,6 @@
 import React from 'react';
 import Page from '@/components/page/Page';
-import { useInventoryCache } from '@/hooks/useInventoryCache';
+import { useInventoryCache, useProductsCache } from '@/hooks/viewHooks';
 import { InventoryViewItem } from '@/types/inventory';
 import { FaBoxes, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaStar, FaPlus, FaImage, FaStore } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
@@ -13,7 +13,6 @@ import productTypesData from '@/data/product_types.json';
 import { getRatingDisplayInfo, getProductTypeInfo } from '@/utils/productUtils';
 import { ImageDisplay } from '@/components/image/ImageDisplay';
 import { DisplayError, Button } from '@/components/ui';
-import { useProductsCache } from '@/hooks/useProductsCache';
 import { QuickAddInventory } from '@/components/inventory/QuickAddInventory';
 
 const Inventory = () => {

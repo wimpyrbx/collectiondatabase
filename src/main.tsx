@@ -2,6 +2,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createQueryOptions } from '@/config/queryConfig';
 import App from '@/App';
 import '@/index.css';
 import { preloadQueries } from '@/utils/cachePreloader';
@@ -9,13 +10,7 @@ import { preloadQueries } from '@/utils/cachePreloader';
 // Create a React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      staleTime: Infinity,
-      gcTime: Infinity,
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-    },
+    queries: createQueryOptions(),
   },
 });
 

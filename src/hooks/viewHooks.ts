@@ -1,7 +1,52 @@
+import { ProductViewItem } from '@/types/product';
+import { InventoryViewItem } from '@/types/inventory';
+import { SaleViewItem, SaleItemViewItem } from '@/types/sale';
+import { createViewHook } from './createViewHook';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabaseClient';
 import type { InventoryStatusTransition, InventoryStatusTransitionMap } from '@/types/inventory_status';
 
+// Products
+export const {
+  queryKey: PRODUCTS_QUERY_KEY,
+  config: productsConfig,
+  useHook: useProductsCache,
+} = createViewHook<ProductViewItem>({
+  name: 'products',
+  viewName: 'products',
+});
+
+// Inventory
+export const {
+  queryKey: INVENTORY_QUERY_KEY,
+  config: inventoryConfig,
+  useHook: useInventoryCache,
+} = createViewHook<InventoryViewItem>({
+  name: 'inventory',
+  viewName: 'inventory',
+});
+
+// Sales
+export const {
+  queryKey: SALES_QUERY_KEY,
+  config: salesConfig,
+  useHook: useSalesCache,
+} = createViewHook<SaleViewItem>({
+  name: 'sales',
+  viewName: 'sales',
+});
+
+// Sale Items
+export const {
+  queryKey: SALE_ITEMS_QUERY_KEY,
+  config: saleItemsConfig,
+  useHook: useSaleItemsCache,
+} = createViewHook<SaleItemViewItem>({
+  name: 'sale_items',
+  viewName: 'sale_items',
+});
+
+// Inventory Status Transitions
 export const INVENTORY_STATUS_TRANSITIONS_QUERY_KEY = ['inventory_status_transitions'] as const;
 
 const fetchInventoryStatusTransitions = async (): Promise<InventoryStatusTransition[]> => {

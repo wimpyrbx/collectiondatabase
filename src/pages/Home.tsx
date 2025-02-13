@@ -1,7 +1,7 @@
 // src/pages/Home.tsx
 import React from 'react';
 import Page from '@/components/page/Page';
-import { useProductsCache } from '@/hooks/useProductsCache';
+import { useProductsCache } from '@/hooks/viewHooks';
 import { ProductViewItem } from '@/types/product';
 import { FaListAlt, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaStar, FaPlus, FaImage } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';

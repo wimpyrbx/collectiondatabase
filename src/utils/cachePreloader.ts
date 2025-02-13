@@ -1,61 +1,45 @@
 import { QueryClient } from '@tanstack/react-query';
-import { PRODUCTS_QUERY_KEY } from '@/hooks/useProductsCache';
-import { INVENTORY_QUERY_KEY } from '@/hooks/useInventoryCache';
-import { SALES_QUERY_KEY } from '@/hooks/useSalesCache';
-import { SALE_ITEMS_QUERY_KEY } from '@/hooks/useSaleItemsCache';
-import { supabase } from '@/supabaseClient';
+import { createQueryOptions, PREFETCH_OPTIONS } from '@/config/queryConfig';
+import {
+  productsConfig,
+  inventoryConfig,
+  salesConfig,
+  saleItemsConfig,
+} from '@/hooks/viewHooks';
 
 export const preloadQueries = async (queryClient: QueryClient) => {
   const preloadPromises = [
     // Products
-    queryClient.prefetchQuery({
-      queryKey: PRODUCTS_QUERY_KEY,
-      queryFn: async () => {
-        const { data, error } = await supabase.from('view_products').select('*');
-        if (error) throw error;
-        return data;
-      },
-      staleTime: Infinity,
-      gcTime: Infinity,
-    }),
+    queryClient.prefetchQuery(
+      createQueryOptions({
+        ...productsConfig,
+        ...PREFETCH_OPTIONS,
+      })
+    ),
 
     // Inventory
-    queryClient.prefetchQuery({
-      queryKey: INVENTORY_QUERY_KEY,
-      queryFn: async () => {
-        const { data, error } = await supabase.from('view_inventory').select('*');
-        if (error) throw error;
-        return data;
-      },
-      staleTime: Infinity,
-      gcTime: Infinity,
-    }),
+    queryClient.prefetchQuery(
+      createQueryOptions({
+        ...inventoryConfig,
+        ...PREFETCH_OPTIONS,
+      })
+    ),
 
     // Sales
-    queryClient.prefetchQuery({
-      queryKey: SALES_QUERY_KEY,
-      queryFn: async () => {
-        const { data, error } = await supabase.from('view_sales').select('*');
-        if (error) throw error;
-        return data;
-      },
-      staleTime: Infinity,
-      gcTime: Infinity,
-    }),
+    queryClient.prefetchQuery(
+      createQueryOptions({
+        ...salesConfig,
+        ...PREFETCH_OPTIONS,
+      })
+    ),
 
     // Sale Items
-    queryClient.prefetchQuery({
-      queryKey: SALE_ITEMS_QUERY_KEY,
-      queryFn: async () => {
-        const { data, error } = await supabase.from('view_sale_items').select('*');
-        if (error) throw error;
-        return data;
-      },
-      staleTime: Infinity,
-      gcTime: Infinity,
-    }),
-
-    // Add more queries here as needed
+    queryClient.prefetchQuery(
+      createQueryOptions({
+        ...saleItemsConfig,
+        ...PREFETCH_OPTIONS,
+      })
+    ),
   ];
 
   await Promise.all(preloadPromises);
