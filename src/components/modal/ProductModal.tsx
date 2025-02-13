@@ -74,8 +74,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const confirmDelete = async () => {
     try {
       await handleDelete();
-      // Delete the product image if it exists
-      await deleteImage('product', product!.product_id);
       onClose();
     } catch (error) {
       setErrors(['Failed to delete product']);
@@ -156,42 +154,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             iconColor="text-cyan-500"
             title={mode === 'create' ? 'New Product' : `Product: ${product?.product_title}`}
             bgColor="bg-cyan-500/50"
-            rightContent={
-              <div className="flex items-center gap-2">
-                {mode === 'edit' && (
-                  <>
-                    <Button
-                      onClick={() => handleNavigate('prev')}
-                      bgColor="bg-gray-700"
-                      iconLeft={<FaChevronLeft />}
-                      type="button"
-                      className="w-10 !p-0"
-                      disabled={!tableData.length || tableData[0]?.product_id === product?.product_id}
-                    />
-                    <Button
-                      onClick={() => handleNavigate('next')}
-                      bgColor="bg-gray-700"
-                      iconLeft={<FaChevronRight />}
-                      type="button"
-                      className="w-10 !p-0"
-                      disabled={!tableData.length || tableData[tableData.length - 1]?.product_id === product?.product_id}
-                    />
-                    <div className="w-4" /> {/* Spacer */}
-                  </>
-                )}
-                {canDelete && (
-                  <Button
-                    onClick={() => setIsDeleteConfirmOpen(true)}
-                    variant="danger"
-                    size="sm"
-                    icon={<FaTrash />}
-                  >
-                    Delete
-                  </Button>
-                )}
-                {product ? `ID: ${product.product_id}` : undefined}
-              </div>
-            }
+            rightContent={product ? `ID: ${product.product_id}` : undefined}
           />
           <Card.Body>
             <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
@@ -335,56 +298,65 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </form>
           </Card.Body>
           <Card.Footer>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleClose}
-                  bgColor="bg-gray-800"
-                  hoverBgColor="hover:bg-gray-700"
-                >
-                  Cancel
-                </Button>
-                {mode === 'edit' && (
-                  <Button
-                    onClick={() => setIsDeleteConfirmOpen(true)}
-                    bgColor="bg-red-900/50"
-                    hoverBgColor="hover:bg-red-900/75"
-                    iconLeft={<FaTrash />}
-                  >
-                    Delete
-                  </Button>
-                )}
-                <Button
-                  onClick={handleSubmit}
-                  bgColor="bg-blue-900/50"
-                  hoverBgColor="hover:bg-blue-900/75"
-                  iconLeft={<FaSave />}
-                >
-                  Save
-                </Button>
-              </div>
-              {mode === 'edit' && (
-                <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between w-full">
+              {/* Left side - Previous and Cancel */}
+              <div className="flex gap-2">
+                {onNavigate && (
                   <Button
                     onClick={() => handleNavigate('prev')}
                     bgColor="bg-gray-800"
-                    hoverBgColor="hover:bg-gray-700"
+                    hoverBgColor={true}
                     iconLeft={<FaChevronLeft />}
                     disabled={!tableData.length || tableData[0]?.product_id === product?.product_id}
                   >
                     Previous
                   </Button>
+                )}
+                <Button
+                  onClick={handleClose}
+                  bgColor="bg-orange-800"
+                  hoverBgColor={true}
+                >
+                  Cancel
+                </Button>
+              </div>
+
+              {/* Center - Delete button */}
+              {canDelete && (
+                <div className="flex-1 flex justify-center">
+                  <Button
+                    onClick={() => setIsDeleteConfirmOpen(true)}
+                    bgColor="bg-red-900/50"
+                    hoverBgColor={true}
+                    iconLeft={<FaTrash />}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              )}
+
+              {/* Right side - Save and Next */}
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSubmit}
+                  bgColor="bg-blue-900/50"
+                  hoverBgColor={true}
+                  iconLeft={<FaSave />}
+                >
+                  Save
+                </Button>
+                {onNavigate && (
                   <Button
                     onClick={() => handleNavigate('next')}
                     bgColor="bg-gray-800"
-                    hoverBgColor="hover:bg-gray-700"
+                    hoverBgColor={true}
                     iconLeft={<FaChevronRight />}
                     disabled={!tableData.length || tableData[tableData.length - 1]?.product_id === product?.product_id}
                   >
                     Next
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
             {errors.length > 0 && (
               <div className="mt-4">
@@ -403,41 +375,30 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         onClose={() => setIsDeleteConfirmOpen(false)}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" aria-hidden="true" />
-        
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="bg-gray-800 rounded-lg p-6 max-w-sm w-full shadow-xl">
+          <Dialog.Panel className="mx-auto max-w-sm rounded-lg bg-gray-800 p-6 shadow-xl">
             <Dialog.Title className="text-lg font-medium text-gray-200 mb-4">
               Delete Product
             </Dialog.Title>
-            
             <p className="text-gray-300 mb-6">
               Are you sure you want to delete this product? This action cannot be undone.
             </p>
-            
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-2">
               <Button
                 onClick={() => setIsDeleteConfirmOpen(false)}
                 bgColor="bg-gray-800"
-                hoverBgColor="hover:bg-gray-700"
+                hoverBgColor={true}
               >
                 Cancel
               </Button>
               <Button
                 onClick={confirmDelete}
                 bgColor="bg-red-900/50"
-                hoverBgColor="hover:bg-red-900/75"
+                hoverBgColor={true}
                 iconLeft={<FaTrash />}
               >
                 Delete
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                bgColor="bg-blue-900/50"
-                hoverBgColor="hover:bg-blue-900/75"
-                iconLeft={<FaSave />}
-              >
-                Confirm
               </Button>
             </div>
           </Dialog.Panel>
