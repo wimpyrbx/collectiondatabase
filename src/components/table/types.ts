@@ -41,4 +41,5 @@ export interface TableProps<T> {
   isModalOpen?: boolean;
   fixedHeight?: string;
   navigationLocation?: 'top' | 'bottom';
+  updateAgeColumn?: string;
 } 

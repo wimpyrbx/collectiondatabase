@@ -3,18 +3,15 @@ import React from 'react';
 import Page from '@/components/page/Page';
 import { useProductsCache } from '@/hooks/viewHooks';
 import { ProductViewItem } from '@/types/product';
-import { FaListAlt, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaStar, FaPlus, FaImage } from 'react-icons/fa';
+import { FaListAlt, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaPlus, FaImage } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
 import { Card } from '@/components/card';
 import { ProductModal } from '@/components/modal/ProductModal';
 import regionsData from '@/data/regions.json';
-import productTypesData from '@/data/product_types.json';
-import { getRatingDisplayInfo, getProductTypeInfo } from '@/utils/productUtils';
 import { ImageDisplay } from '@/components/image/ImageDisplay';
-import { DisplayError, Button } from '@/components/ui';
-import clsx from 'clsx';
+import { Button } from '@/components/ui';
 
 const Home = () => {
   const { data, isLoading, isError, error } = useProductsCache();
@@ -201,7 +198,7 @@ const Home = () => {
         <Card.Body>
           <BaseFilterableTable<ProductViewItem>
             columns={columns}
-            data={tableState.currentPageData}
+            data={tableState.filteredAndSortedData}
             keyExtractor={(item) => item.product_id.toString()}
             isLoading={isLoading}
             error={error}
@@ -219,6 +216,7 @@ const Home = () => {
             isModalOpen={isModalOpen}
             fixedHeight="h-[36px]"
             navigationLocation="top"
+            updateAgeColumn="products_updated_at"
             rowClassName={(item: ProductViewItem) => 
               selectedProduct?.product_id === item.product_id && isModalOpen 
                 ? '!bg-cyan-500/20 transition-colors duration-200' 

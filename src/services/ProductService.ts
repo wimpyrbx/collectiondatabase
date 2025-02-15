@@ -2,6 +2,8 @@ import { CrudService, type ValidationResult, type CacheOperation } from './base/
 import type { Product } from '@/types/tables';
 import type { ProductViewItem } from '@/types/product';
 import { deleteImage } from '@/utils/imageUtils';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { QueryClient } from '@tanstack/react-query';
 
 // Base DTO without the release_year to avoid type conflicts
 type BaseProductDTO = Omit<Product, 'id' | 'created_at' | 'updated_at' | 'release_year'>;
@@ -15,6 +17,15 @@ export interface ProductUpdateDTO extends Partial<ProductCreateDTO> {}
 export class ProductService extends CrudService<Product, ProductCreateDTO, ProductUpdateDTO> {
   private readonly baseUrl = '/api/products';
   private isUpdating = false;
+
+  constructor(
+    supabaseClient: SupabaseClient,
+    queryClient: QueryClient,
+    tableName: string = 'products',
+    cacheConfig = { queryKey: ['products'] }
+  ) {
+    super(supabaseClient, queryClient, tableName, cacheConfig);
+  }
 
   protected validateCreate(data: ProductCreateDTO): ValidationResult {
     const errors: string[] = [];
@@ -81,7 +92,7 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
               is_product_active: data.is_product_active ?? true,
               product_notes: data.product_notes ?? null,
               product_created_at: new Date().toISOString(),
-              product_updated_at: new Date().toISOString(),
+              products_updated_at: new Date().toISOString(),
               product_group_name: data.product_group ?? null,
               product_type_name: data.product_type,
               rating_name: data.rating ?? null,
@@ -119,25 +130,43 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
         {
           queryKey: this.cacheConfig.queryKey,
           update: (oldData: ProductViewItem[]) => {
-            return oldData.map(product => 
-              product.product_id === id 
-                ? {
-                    ...product,
-                    product_title: data.product_title ?? product.product_title,
-                    product_variant: data.product_variant ?? product.product_variant,
-                    release_year: data.release_year ? Number(data.release_year) : product.release_year,
-                    is_product_active: data.is_product_active ?? product.is_product_active,
-                    product_notes: data.product_notes ?? product.product_notes,
-                    product_group_name: data.product_group ?? product.product_group_name,
-                    product_type_name: data.product_type ?? product.product_type_name,
-                    rating_name: data.rating ?? product.rating_name,
-                    region_name: data.region ?? product.region_name,
-                    price_usd: data.price_usd ?? product.price_usd,
-                    price_new_usd: data.price_new_usd ?? product.price_new_usd,
-                    pricecharting_id: data.pricecharting_id ?? product.pricecharting_id
-                  }
-                : product
-            );
+            return oldData.map(item => {
+              if (item.product_id === id) {
+                return {
+                  ...item,
+                  product_title: data.product_title ?? item.product_title,
+                  product_variant: data.product_variant ?? item.product_variant,
+                  release_year: data.release_year ? Number(data.release_year) : item.release_year,
+                  is_product_active: data.is_product_active ?? item.is_product_active,
+                  product_notes: data.product_notes ?? item.product_notes,
+                  product_group_name: data.product_group ?? item.product_group_name,
+                  product_type_name: data.product_type ?? item.product_type_name,
+                  rating_name: data.rating ?? item.rating_name,
+                  region_name: data.region ?? item.region_name,
+                  price_usd: data.price_usd ?? item.price_usd,
+                  price_new_usd: data.price_new_usd ?? item.price_new_usd,
+                  pricecharting_id: data.pricecharting_id ?? item.pricecharting_id
+                };
+              }
+              return item;
+            });
+          }
+        }
+      ],
+      // Add post-update cache operation to update timestamp only after successful server response
+      postUpdate: [
+        {
+          queryKey: this.cacheConfig.queryKey,
+          update: (oldData: ProductViewItem[]) => {
+            return oldData.map(item => {
+              if (item.product_id === id) {
+                return {
+                  ...item,
+                  products_updated_at: new Date().toISOString()
+                };
+              }
+              return item;
+            });
           }
         }
       ]

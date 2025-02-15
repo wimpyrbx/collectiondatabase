@@ -6,7 +6,8 @@ export interface ProductViewItem {
   is_product_active: boolean;
   product_notes: string | null;
   product_created_at: string;
-  product_updated_at: string;
+  products_updated_at: string;
+  products_updated_secondsago: number;
   product_group_name: string | null;
   product_type_name: string;
   rating_name: string | null;

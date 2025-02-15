@@ -43,6 +43,15 @@ export function useTableState<T extends Record<string, any>>({
       const matchesFilters = Object.entries(selectedFilters).every(([key, values]) => {
         if (!values || values.length === 0) return true;
 
+        // Handle recent updates filter
+        if (key === 'recent_updates') {
+          const secondsAgo = (item as any).products_updated_secondsago;
+          if (values.includes('recent')) {
+            return typeof secondsAgo === 'number' && secondsAgo <= 3600;
+          }
+          return true;
+        }
+
         // Handle tag filters
         if (key.startsWith('tag_')) {
           const tagName = key.replace('tag_', '');
@@ -63,7 +72,7 @@ export function useTableState<T extends Record<string, any>>({
         if (values.includes('')) {
           return !itemValue || String(itemValue).trim() === '';
         }
-        return values.includes(itemValue);
+        return values.includes(String(itemValue));
       });
 
       return matchesSearch && matchesFilters;
@@ -127,8 +136,9 @@ export function useTableState<T extends Record<string, any>>({
     const indexMap = new Map(data.map((item, index) => [item[sortBy], index]));
     
     return [...filtered].sort((a, b) => {
-      let valA = a[sortBy] ?? '';
-      let valB = b[sortBy] ?? '';
+      // Get the values, handling nested fields with _secondsago
+      let valA = sortBy.endsWith('_secondsago') ? Number(a[sortBy] ?? 0) : (a[sortBy] ?? '');
+      let valB = sortBy.endsWith('_secondsago') ? Number(b[sortBy] ?? 0) : (b[sortBy] ?? '');
       
       // If values are equal, maintain original order
       if (valA === valB) {
@@ -136,9 +146,18 @@ export function useTableState<T extends Record<string, any>>({
         const indexB = indexMap.get(valB) ?? 0;
         return indexA - indexB;
       }
+
+      // Handle numeric sorting (including secondsago fields)
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      }
       
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      // Convert to strings for string comparison
+      const strA = String(valA).toLowerCase();
+      const strB = String(valB).toLowerCase();
+      
+      if (strA < strB) return sortDirection === 'asc' ? -1 : 1;
+      if (strA > strB) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
   }, [filtered, sortBy, sortDirection, data]);

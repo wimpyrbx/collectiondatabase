@@ -14,11 +14,12 @@ export const useProductsTable = () => {
 
   // Update mutation
   const updateProductMutation = useMutation(
-    createMutationOptions<Product, unknown, { id: number; updates: Partial<Product> }, MutationContext>({
+    createMutationOptions<{data: Product}, unknown, { id: number; updates: Partial<Product> }, MutationContext>({
       mutationFn: async ({ id, updates }) => {
         // Remove fields that should not be updated directly
         const { id: _, created_at, updated_at, price_nok, price_nok_fixed, price_new_nok, price_new_nok_fixed, ...validUpdates } = updates;
 
+        // Do the update
         const { data, error } = await supabase
           .from('products')
           .update(validUpdates)
@@ -27,47 +28,66 @@ export const useProductsTable = () => {
           .single();
 
         if (error) throw error;
-        return data;
+        return { data };
       },
       onMutate: async ({ id, updates }) => {
         await queryClient.cancelQueries({ queryKey: PRODUCTS_QUERY_KEY });
         const previousProducts = queryClient.getQueryData<ProductViewItem[]>(PRODUCTS_QUERY_KEY);
 
-        if (previousProducts) {
-          queryClient.setQueryData<ProductViewItem[]>(PRODUCTS_QUERY_KEY, old => {
-            if (!old) return [];
-            return old.map(product => 
-              product.product_id === id 
-                ? {
-                    ...product,
-                    product_title: updates.product_title ?? product.product_title,
-                    product_variant: updates.product_variant ?? product.product_variant,
-                    release_year: updates.release_year ?? product.release_year,
-                    is_product_active: updates.is_product_active ?? product.is_product_active,
-                    product_notes: updates.product_notes ?? product.product_notes,
-                    product_group_name: updates.product_group ?? product.product_group_name,
-                    product_type_name: updates.product_type ?? product.product_type_name,
-                    rating_name: updates.rating ?? product.rating_name,
-                    region_name: updates.region ?? product.region_name,
-                    price_usd: updates.price_usd ?? product.price_usd,
-                    price_new_usd: updates.price_new_usd ?? product.price_new_usd,
-                  }
-                : product
-            );
-          });
-        }
-
+        // Don't update cache here - wait for success
         return { previousProducts };
       },
-      onError: (error: unknown, _variables: unknown, context: { previousProducts: ProductViewItem[] } | undefined) => {
+      onSuccess: (result, variables) => {
+        const { data } = result;
+        queryClient.setQueryData<ProductViewItem[]>(PRODUCTS_QUERY_KEY, old => {
+          if (!old) return [];
+          
+          // Find the existing product
+          const existingProduct = old.find(p => p.product_id === variables.id);
+          if (!existingProduct) return old;
+
+          // Create an object with only the fields that were in the update request
+          const updates: Partial<ProductViewItem> = {};
+          Object.entries(variables.updates).forEach(([key, value]) => {
+            // Skip fields that shouldn't be updated
+            if (['id', 'created_at', 'updated_at', 'price_nok', 'price_nok_fixed', 'price_new_nok', 'price_new_nok_fixed'].includes(key)) {
+              return;
+            }
+
+            // Map database field names to view field names
+            const viewField = key === 'product_group' ? 'product_group_name'
+              : key === 'product_type' ? 'product_type_name'
+              : key === 'rating' ? 'rating_name'
+              : key === 'region' ? 'region_name'
+              : key;
+
+            (updates as any)[viewField] = data[key as keyof Product];
+          });
+
+          // Always update timestamps on successful save
+          updates.products_updated_at = new Date().toISOString();
+          updates.products_updated_secondsago = 0;
+
+          return old.map(product => 
+            product.product_id === variables.id 
+              ? {
+                  ...product,
+                  ...updates
+                }
+              : product
+          );
+        });
+      },
+      onError: (
+        error: unknown,
+        variables?: { id: number; updates: Partial<Product> },
+        context?: MutationContext
+      ) => {
         console.error('Error updating product:', error);
         if (context?.previousProducts) {
           queryClient.setQueryData(PRODUCTS_QUERY_KEY, context.previousProducts);
         }
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY });
-      },
+      }
     })
   );
 
@@ -96,7 +116,8 @@ export const useProductsTable = () => {
           is_product_active: newProduct.is_product_active ?? true,
           product_notes: newProduct.product_notes ?? null,
           product_created_at: new Date().toISOString(),
-          product_updated_at: new Date().toISOString(),
+          products_updated_at: new Date().toISOString(),
+          products_updated_secondsago: 0,
           product_group_name: newProduct.product_group ?? null,
           product_type_name: newProduct.product_type,
           rating_name: newProduct.rating ?? null,
@@ -127,15 +148,16 @@ export const useProductsTable = () => {
 
         return { previousProducts };
       },
-      onError: (error: unknown, _variables: unknown, context: { previousProducts: ProductViewItem[] } | undefined) => {
+      onError: (
+        error: unknown,
+        variables?: NewProduct,
+        context?: MutationContext
+      ) => {
         console.error('Error creating product:', error);
         if (context?.previousProducts) {
           queryClient.setQueryData(PRODUCTS_QUERY_KEY, context.previousProducts);
         }
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY });
-      },
+      }
     })
   );
 
@@ -160,15 +182,16 @@ export const useProductsTable = () => {
 
         return { previousProducts };
       },
-      onError: (error: unknown, _variables: unknown, context: { previousProducts: ProductViewItem[] } | undefined) => {
+      onError: (
+        error: unknown,
+        variables?: number,
+        context?: MutationContext
+      ) => {
         console.error('Error deleting product:', error);
         if (context?.previousProducts) {
           queryClient.setQueryData(PRODUCTS_QUERY_KEY, context.previousProducts);
         }
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY });
-      },
+      }
     })
   );
 

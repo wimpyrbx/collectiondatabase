@@ -1,10 +1,12 @@
 import React from 'react';
-import { FiChevronLeft, FiChevronRight, FiChevronUp, FiChevronDown } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiChevronUp, FiChevronDown, FiClock } from 'react-icons/fi';
 import clsx from 'clsx';
 import { Tooltip } from '@/components/tooltip/Tooltip';
 import { TableProps } from './types';
 import { TooltipProps } from '@/utils/tooltip';
 import { useUpdateAnimation } from '@/hooks/useUpdateAnimation';
+import { timeAgo } from '@/utils/dateUtils';
+import { UpdateAge } from '@/components/UpdateAge';
 
 export interface Column<T> {
   key: string;
@@ -45,7 +47,8 @@ export function Table<T>({
   updatedId,
   fixedHeight,
   navigationLocation = 'top',
-  isModalOpen = false
+  isModalOpen = false,
+  updateAgeColumn
 }: TableProps<T>) {
   const { className: animationClass } = useUpdateAnimation(updatedId || '');
 
@@ -174,6 +177,44 @@ export function Table<T>({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pagination, isModalOpen]);
 
+  // Create the age column if updateAgeColumn is set
+  const allColumns = React.useMemo(() => {
+    if (!updateAgeColumn) return columns;
+
+    const ageColumn: Column<T> = {
+      key: 'age',
+      header: '',
+      icon: <FiClock className="w-4 h-4" />,
+      width: '20px',
+      align: 'center',
+      headerClassName: 'px-3',
+      rowClassName: '!p-0',
+      tooltip: {
+        text: 'Time since last update'
+      },
+      sortable: true,
+      sortKey: `${updateAgeColumn}_secondsago`,
+      accessor: (row: T) => {
+        // Check for the new secondsAgo field first
+        const secondsAgo = (row as any)[`${updateAgeColumn}_secondsago`];
+        const updateDate = (row as any)[updateAgeColumn];
+        
+        if (!updateDate && secondsAgo === undefined) return '-';
+        
+        return (
+          <UpdateAge 
+            key={updateDate || secondsAgo} 
+            date={updateDate}
+            secondsAgo={secondsAgo}
+            className="w-full h-full" 
+          />
+        );
+      }
+    };
+
+    return [ageColumn, ...columns];
+  }, [columns, updateAgeColumn]);
+
   if (isLoading) {
     return <div className="text-gray-500">Loading...</div>;
   }
@@ -256,8 +297,8 @@ export function Table<T>({
     <div ref={tableRef} className="bg-gray-800 rounded-lg shadow overflow-hidden">
       {tooltipState.visible && tooltipState.columnKey && (
         <Tooltip
-          {...columns.find(col => col.key === tooltipState.columnKey)?.tooltip}
-          text={columns.find(col => col.key === tooltipState.columnKey)?.tooltip?.text || ''}
+          {...allColumns.find(col => col.key === tooltipState.columnKey)?.tooltip}
+          text={allColumns.find(col => col.key === tooltipState.columnKey)?.tooltip?.text || ''}
           isOpen={tooltipState.visible}
           elementRef={{ current: headerRefs.current.get(tooltipState.columnKey) || null }}
         />
@@ -267,7 +308,7 @@ export function Table<T>({
         <table className="min-w-full divide-y divide-gray-700">
           <thead className="bg-gray-900">
             <tr>
-              {columns.map((column) => {
+              {allColumns.map((column) => {
                 const isColumnSorted = column.sortKey === sortBy || column.key === sortBy;
                 return (
                   <th
@@ -333,13 +374,13 @@ export function Table<T>({
             {data.map((item) => {
               const rowKey = keyExtractor(item);
               const isChanged = changedRows.has(rowKey);
-              // Convert both to strings for comparison since updatedId might be a number
               const isUpdated = updatedId !== null && updatedId !== undefined && 
                               rowKey.toString() === updatedId.toString();
                               
               return (
                 <tr 
                   key={rowKey}
+                  data-row-id={rowKey}
                   onClick={(e) => handleRowClick(e, item)}
                   className={clsx(
                     'cursor-pointer',
@@ -352,7 +393,7 @@ export function Table<T>({
                     isModalOpen && rowKey.toString() === updatedId?.toString() && '!bg-cyan-500/20'
                   )}
                 >
-                  {columns.map((column) => (
+                  {allColumns.map((column) => (
                     <td
                       key={column.key}
                       className={clsx(
@@ -372,7 +413,7 @@ export function Table<T>({
           {footerData && (
             <tfoot className="bg-gray-900">
               <tr>
-                {columns.map((column) => (
+                {allColumns.map((column) => (
                   <td
                     key={column.key}
                     className={clsx(

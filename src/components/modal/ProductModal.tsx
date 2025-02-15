@@ -66,10 +66,93 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     mode
   });
 
+  const [hasFormChanges, setHasFormChanges] = useState(false);
+  const [initialFormState, setInitialFormState] = useState<any>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  
+  // Reset form state when modal opens/product changes
+  useEffect(() => {
+    if (isOpen && mode === 'edit' && product) {
+      setInitialFormState({
+        product_title: product.product_title || '',
+        product_variant: product.product_variant || '',
+        release_year: product.release_year?.toString() || '',
+        pricecharting_id: product.pricecharting_id || '',
+        product_group_name: product.product_group_name || '',
+        product_type_name: product.product_type_name || '',
+        product_notes: product.product_notes || '',
+        region: product.region_name || '',
+        rating: product.rating_name || ''
+      });
+      setHasFormChanges(false);
+    } else if (mode === 'create') {
+      setInitialFormState({
+        product_title: '',
+        product_variant: '',
+        release_year: '',
+        pricecharting_id: '',
+        product_group_name: '',
+        product_type_name: '',
+        product_notes: '',
+        region: '',
+        rating: ''
+      });
+      setHasFormChanges(true); // Always enable save for new products
+    }
+  }, [isOpen, product, mode]);
+
+  // Track form changes
+  useEffect(() => {
+    if (mode === 'create') return; // Don't track changes for new products
+    
+    if (initialFormState && formData) {
+      const hasChanges = Object.keys(initialFormState).some(key => {
+        const initial = initialFormState[key];
+        let current = '';
+
+        // Handle special cases for region and rating
+        if (key === 'region') {
+          current = regionRating.region || '';
+        } else if (key === 'rating') {
+          current = regionRating.rating || '';
+        } else {
+          current = formData[key as keyof typeof formData]?.toString() || '';
+        }
+
+        // Normalize values for comparison (treat null, undefined, and empty string as equivalent)
+        const normalizedInitial = initial === null || initial === undefined ? '' : initial.toString();
+        const normalizedCurrent = current === null || current === undefined ? '' : current.toString();
+
+        const hasChanged = normalizedInitial !== normalizedCurrent;
+        
+        if (hasChanged) {
+          console.log(`Field ${key} changed:`, {
+            initial: initial,
+            normalizedInitial,
+            current: current,
+            normalizedCurrent,
+          });
+        }
+
+        return hasChanged;
+      });
+
+      console.log('Form changes detected:', {
+        initialState: initialFormState,
+        currentState: {
+          ...formData,
+          region: regionRating.region,
+          rating: regionRating.rating
+        },
+        hasChanges
+      });
+      
+      setHasFormChanges(hasChanges);
+    }
+  }, [formData, initialFormState, mode, regionRating]);
 
   // Only show delete button if product exists and has no inventory items
-  const canDelete = product && product.total_count === 0;
+  const canDelete = product && (!product.total_count || product.total_count === 0);
 
   const confirmDelete = async () => {
     try {
@@ -145,157 +228,171 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, mode, product, tableData]);
 
+  // Modify the handleSubmit to only work if there are changes
+  const wrappedHandleSubmit = (e: React.FormEvent) => {
+    if (!hasFormChanges) {
+      e.preventDefault();
+      return;
+    }
+    handleSubmit(e);
+  };
+
   return (
     <>
       <Modal isOpen={isOpen} onClose={handleClose} size="xl">
-        <Card modal>
+        <Card modal className="w-[1024px]">
           <Card.Header
             icon={<FaLayerGroup />}
             iconColor="text-cyan-500"
             title={mode === 'create' ? 'New Product' : `Product: ${product?.product_title}`}
             bgColor="bg-cyan-500/50"
-            rightContent={product ? `ID: ${product.product_id}` : undefined}
+            rightContent={
+              <div className="shrink-0 ml-4 whitespace-nowrap">
+                {product ? `ID: ${product.product_id}` : undefined}
+              </div>
+            }
           />
           <Card.Body>
-            <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-12 gap-2 h-full">
-                {/* Image Column */}
-                <div className="col-span-3 w-full">
-                  <ImageContainer
-                    type="product"
-                    id={product?.product_id || -1}
-                    title={product?.product_title || 'New Product'}
-                    onError={(message) => setErrors(prev => [...prev, message])}
-                    className="max-h-[400px]"
-                    pendingImage={pendingImage}
-                    onPendingImageChange={handlePendingImageChange}
-                    isCreateMode={mode === 'create'}
-                  />
-                </div>
+            <div className="h-[350px] overflow-y-auto px-6">
+              <form id="product-form" onSubmit={wrappedHandleSubmit} className="space-y-6">
+                <div className="grid grid-cols-12 gap-6">
+                  {/* Image Column */}
+                  <div className="col-span-3">
+                    <ImageContainer
+                      type="product"
+                      id={product?.product_id || -1}
+                      title={product?.product_title || 'New Product'}
+                      onError={(message) => setErrors(prev => [...prev, message])}
+                      className="h-[250px] w-full"
+                      pendingImage={pendingImage}
+                      onPendingImageChange={handlePendingImageChange}
+                      isCreateMode={mode === 'create'}
+                    />
+                  </div>
 
-                {/* Form Column */}
-                <div className="col-span-9 space-y-4">
-                  {/* Title, Variant, and Year Row */}
-                  <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-6">
+                  {/* Form Column */}
+                  <div className="col-span-9 space-y-4">
+                    {/* Title, Variant, and Year Row */}
+                    <div className="grid grid-cols-12 gap-2">
+                      <div className="col-span-6">
+                        <FormElement
+                          key={`title-${isOpen}-${product?.product_id ?? 'new'}`}
+                          elementType="input"
+                          label="Title"
+                          labelIcon={<FaTag />}
+                          labelIconColor="text-blue-400"
+                          initialValue={formData.product_title || ''}
+                          onValueChange={(value) => handleInputChange('product_title', String(value))}
+                          labelPosition="above"
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <FormElement
+                          key={`variant-${isOpen}-${product?.product_id ?? 'new'}`}
+                          elementType="input"
+                          label="Variant"
+                          labelIcon={<FaBoxes />}
+                          labelIconColor="text-purple-400"
+                          initialValue={formData.product_variant || ''}
+                          onValueChange={(value) => handleInputChange('product_variant', String(value))}
+                          labelPosition="above"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <FormElement
+                          key={`year-${isOpen}-${product?.product_id ?? 'new'}`}
+                          elementType="input"
+                          label="Year"
+                          labelIcon={<FaCalendar />}
+                          labelIconColor="text-yellow-400"
+                          initialValue={formData.release_year?.toString() || ''}
+                          onValueChange={(value) => handleInputChange('release_year', value ? Number(value) : null)}
+                          labelPosition="above"
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <FormElement
+                          key={`pricecharting-${isOpen}-${product?.product_id ?? 'new'}`}
+                          elementType="input"
+                          label="PriceCharting ID"
+                          labelIcon={<FaDollarSign />}
+                          labelIconColor="text-green-400"
+                          initialValue={formData.pricecharting_id || ''}
+                          onValueChange={(value) => handleInputChange('pricecharting_id', String(value) || null)}
+                          labelPosition="above"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-[5fr_1fr] gap-4">
+                        {/* Region & Rating Selector */}
+                        <div className="col-span-1">
+                            <RegionRatingSelector
+                                value={regionRating}
+                                onChange={setRegionRating}
+                            />
+                        </div>
+
+                        {/* Rating Image */}
+                        <div className="col-span-1">
+                            <div className={`aspect-square p-2 mt-[16px] w-full h-[73px] rounded-md bg-gray-900 border border-gray-700 flex items-center justify-center ${!regionRating.rating ? 'opacity-50 focus-within:opacity-100 hover:opacity-100' : ''}`}>
+                                {regionRating.rating ? (() => {
+                                    const ratingInfo = getRatingDisplayInfo(regionRating.region, regionRating.rating, regionsData.regions);
+                                        return ratingInfo && ratingInfo.imagePath ? (
+                                        <img 
+                                            src={ratingInfo.imagePath} 
+                                            alt={regionRating.rating} 
+                                            className="max-w-full max-h-full object-contain" 
+                                        />
+                                        ) : null;
+                                    })() : (
+                                    <span className="text-gray-600 text-xs">No Rating</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Product Group and Type Row */}
+                    <div className="grid grid-cols-[1fr_1fr_2fr] gap-2">
                       <FormElement
-                        key={`title-${isOpen}-${product?.product_id ?? 'new'}`}
-                        elementType="input"
-                        label="Title"
-                        labelIcon={<FaTag />}
-                        labelIconColor="text-blue-400"
-                        initialValue={formData.product_title || ''}
-                        onValueChange={(value) => handleInputChange('product_title', String(value))}
+                        key={`group-${isOpen}-${product?.product_id ?? 'new'}`}
+                        elementType="listsingle"
+                        label="Product Group"
+                        labelIcon={<FaLayerGroup />}
+                        labelIconColor="text-indigo-400"
+                        options={productGroupOptions}
+                        selectedOptions={formData.product_group_name || ''}
+                        onValueChange={(value) => handleInputChange('product_group_name', String(value))}
                         labelPosition="above"
                       />
-                    </div>
-                    <div className="col-span-4">
                       <FormElement
-                        key={`variant-${isOpen}-${product?.product_id ?? 'new'}`}
-                        elementType="input"
-                        label="Variant"
-                        labelIcon={<FaBoxes />}
-                        labelIconColor="text-purple-400"
-                        initialValue={formData.product_variant || ''}
-                        onValueChange={(value) => handleInputChange('product_variant', String(value))}
+                        key={`type-${isOpen}-${product?.product_id ?? 'new'}`}
+                        elementType="listsingle"
+                        label="Product Type"
+                        labelIcon={<FaCubes />}
+                        labelIconColor="text-pink-400"
+                        options={productTypeOptions}
+                        selectedOptions={formData.product_type_name || ''}
+                        onValueChange={(value) => handleInputChange('product_type_name', String(value))}
                         labelPosition="above"
                       />
-                    </div>
-                    <div className="col-span-2">
+                      {/* Notes */}
                       <FormElement
-                        key={`year-${isOpen}-${product?.product_id ?? 'new'}`}
-                        elementType="input"
-                        label="Year"
-                        labelIcon={<FaCalendar />}
-                        labelIconColor="text-yellow-400"
-                        initialValue={formData.release_year?.toString() || ''}
-                        onValueChange={(value) => handleInputChange('release_year', value ? Number(value) : null)}
-                        labelPosition="above"
-                      />
-                    </div>
-                    <div className="col-span-4">
-                      <FormElement
-                        key={`pricecharting-${isOpen}-${product?.product_id ?? 'new'}`}
-                        elementType="input"
-                        label="PriceCharting ID"
-                        labelIcon={<FaDollarSign />}
+                        key={`notes-${isOpen}-${product?.product_id ?? 'new'}`}
+                        elementType="textarea"
+                        label="Notes"
+                        labelIcon={<FaStickyNote />}
                         labelIconColor="text-green-400"
-                        initialValue={formData.pricecharting_id || ''}
-                        onValueChange={(value) => handleInputChange('pricecharting_id', String(value) || null)}
+                        initialValue={formData.product_notes || ''}
+                        onValueChange={(value) => handleInputChange('product_notes', String(value))}
                         labelPosition="above"
+                        rows={4}
                       />
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-[5fr_1fr] gap-2">
-                      {/* Region & Rating Selector */}
-                      <div className="col-span-1">
-                          <RegionRatingSelector
-                              value={regionRating}
-                              onChange={setRegionRating}
-                          />
-                      </div>
-
-                      {/* Rating Image */}
-                      {/* if no rating selected add transition opacity */}
-                      <div className="col-span-1">
-                          <div className={`aspect-square p-2 mt-[16px] w-full h-[73px] rounded-md bg-gray-900 border border-gray-700 flex items-center justify-center ${!regionRating.rating ? 'opacity-50 focus-within:opacity-100 hover:opacity-100' : ''}`}>
-                              {regionRating.rating ? (() => {
-                                  const ratingInfo = getRatingDisplayInfo(regionRating.region, regionRating.rating, regionsData.regions);
-                                      return ratingInfo && ratingInfo.imagePath ? (
-                                      <img 
-                                          src={ratingInfo.imagePath} 
-                                          alt={regionRating.rating} 
-                                          className="max-w-full max-h-full object-contain" 
-                                      />
-                                      ) : null;
-                                  })() : (
-                                  <span className="text-gray-600 text-xs">No Rating</span>
-                              )}
-                          </div>
-                      </div>
-                  </div>
-
-                  {/* Product Group and Type Row */}
-                  <div className="grid grid-cols-[1fr_1fr_2fr] gap-2">
-                    <FormElement
-                      key={`group-${isOpen}-${product?.product_id ?? 'new'}`}
-                      elementType="listsingle"
-                      label="Product Group"
-                      labelIcon={<FaLayerGroup />}
-                      labelIconColor="text-indigo-400"
-                      options={productGroupOptions}
-                      selectedOptions={formData.product_group_name || ''}
-                      onValueChange={(value) => handleInputChange('product_group_name', String(value))}
-                      labelPosition="above"
-                    />
-                    <FormElement
-                      key={`type-${isOpen}-${product?.product_id ?? 'new'}`}
-                      elementType="listsingle"
-                      label="Product Type"
-                      labelIcon={<FaCubes />}
-                      labelIconColor="text-pink-400"
-                      options={productTypeOptions}
-                      selectedOptions={formData.product_type_name || ''}
-                      onValueChange={(value) => handleInputChange('product_type_name', String(value))}
-                      labelPosition="above"
-                    />
-                    {/* Notes */}
-                    <FormElement
-                      key={`notes-${isOpen}-${product?.product_id ?? 'new'}`}
-                      elementType="textarea"
-                      label="Notes"
-                      labelIcon={<FaStickyNote />}
-                      labelIconColor="text-green-400"
-                      initialValue={formData.product_notes || ''}
-                      onValueChange={(value) => handleInputChange('product_notes', String(value))}
-                      labelPosition="above"
-                      rows={4}
-                    />
-                  </div>
                 </div>
-              </div>
-            </form>
+              </form>
+            </div>
           </Card.Body>
           <Card.Footer>
             <div className="flex items-center justify-between w-full">
@@ -321,9 +418,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 </Button>
               </div>
 
-              {/* Center - Delete button */}
-              {canDelete && (
-                <div className="flex-1 flex justify-center">
+              {/* Center - Delete button or explanation */}
+              <div className="flex-1 flex justify-center">
+                {canDelete ? (
                   <Button
                     onClick={() => setIsDeleteConfirmOpen(true)}
                     bgColor="bg-red-900/50"
@@ -332,25 +429,35 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   >
                     Delete
                   </Button>
-                </div>
-              )}
+                ) : product && (
+                  <span className="text-gray-400 text-sm flex items-center gap-2">
+                    <FaExclamationTriangle className="text-yellow-500" />
+                    Cannot delete - {product.total_count} item{product.total_count !== 1 ? 's' : ''} in inventory
+                  </span>
+                )}
+              </div>
 
               {/* Right side - Save and Next */}
               <div className="flex gap-2">
                 <Button
-                  onClick={handleSubmit}
-                  bgColor="bg-blue-900/50"
-                  hoverBgColor={true}
+                  onClick={wrappedHandleSubmit}
+                  bgColor="bg-green-600/50"
+                  hoverBgColor={false}
                   iconLeft={<FaSave />}
+                  disabled={!hasFormChanges || isUpdating}
+                  className={clsx(
+                    "transition-colors duration-200",
+                    (!hasFormChanges || isUpdating) && "opacity-50 bg-gray-800/50 cursor-not-allowed"
+                  )}
                 >
-                  Save
+                  {isUpdating ? 'Saving...' : 'Save'}
                 </Button>
                 {onNavigate && (
                   <Button
                     onClick={() => handleNavigate('next')}
                     bgColor="bg-gray-800"
                     hoverBgColor={true}
-                    iconLeft={<FaChevronRight />}
+                    iconRight={<FaChevronRight />}
                     disabled={!tableData.length || tableData[tableData.length - 1]?.product_id === product?.product_id}
                   >
                     Next

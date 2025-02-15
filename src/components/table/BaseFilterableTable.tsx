@@ -57,6 +57,7 @@ export interface BaseFilterableTableProps<T> {
   
   fixedHeight?: string;
   navigationLocation?: 'top' | 'bottom';
+  updateAgeColumn?: string;
 }
 
 export const BaseFilterableTable = <T extends Record<string, any>>({
@@ -80,10 +81,101 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
   updatedId,
   fixedHeight,
   isModalOpen = false,
-  navigationLocation
+  navigationLocation,
+  updateAgeColumn
 }: BaseFilterableTableProps<T>) => {
   const [isFiltersExpanded, setIsFiltersExpanded] = React.useState(false);
   const { className: animationClass } = useUpdateAnimation(updatedId || '');
+
+  // Calculate if we have any recent updates (< 1 hour)
+  const recentUpdatesCount = React.useMemo(() => {
+    if (!updateAgeColumn || !data.length) return 0;
+    const secondsInHour = 60 * 60;
+    
+    return data.filter(item => {
+      const secondsAgo = item[`${updateAgeColumn.replace('_at', '')}_secondsago`];
+      if (secondsAgo === undefined) {
+        return false;
+      }
+      
+      const isRecent = secondsAgo <= secondsInHour;
+            
+      return isRecent;
+    }).length;
+  }, [data, updateAgeColumn]);
+
+  // Add the recent updates filter if we have the age column
+  const allFilters = React.useMemo(() => {
+    if (!updateAgeColumn) return filters;
+
+    // Count items updated in last hour
+    const secondsAgoField = `${updateAgeColumn.replace('_at', '')}_secondsago`;
+    const count = data.filter(item => {
+      const secondsAgo = item[secondsAgoField];
+      return typeof secondsAgo === 'number' && secondsAgo <= 3600;
+    }).length;
+
+    const recentFilter: FilterConfig = {
+      key: 'recent_updates',
+      label: 'Recent Updates',
+      options: [
+        { 
+          value: 'recent', 
+          label: 'Last Hour', 
+          count
+        }
+      ]
+    };
+
+    return [...filters, recentFilter];
+  }, [filters, updateAgeColumn, data, keyExtractor]);
+
+  // Adjust pagination based on the data from useTableState
+  const adjustedPagination = React.useMemo(() => {
+    const totalItems = data.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pagination.pageSize));
+    
+    // Ensure current page is valid for the current page size
+    let currentPage = pagination.currentPage;
+    const maxPage = Math.max(1, Math.ceil(totalItems / pagination.pageSize));
+    if (currentPage > maxPage) {
+      currentPage = maxPage;
+    }
+
+    // Calculate valid start and end indices
+    const startIndex = (currentPage - 1) * pagination.pageSize;
+    const endIndex = Math.min(startIndex + pagination.pageSize, totalItems);
+
+    return {
+      ...pagination,
+      totalItems,
+      totalPages,
+      currentPage,
+      onPageChange: (page: number) => {
+        if (!isModalOpen) {
+          // Ensure the requested page is valid
+          const validPage = Math.min(Math.max(1, page), maxPage);
+          pagination.onPageChange(validPage);
+        }
+      },
+      onPageSizeChange: (newSize: number) => {
+        if (!isModalOpen) {
+          // When changing page size, adjust current page to maintain approximate scroll position
+          const currentTopItem = (currentPage - 1) * pagination.pageSize;
+          const newPage = Math.floor(currentTopItem / newSize) + 1;
+          pagination.onPageSizeChange(newSize);
+          pagination.onPageChange(Math.min(newPage, Math.ceil(totalItems / newSize)));
+        }
+      }
+    };
+  }, [data, pagination, isModalOpen]);
+
+  // Calculate the current page's data
+  const currentPageData = React.useMemo(() => {
+    const startIndex = (adjustedPagination.currentPage - 1) * adjustedPagination.pageSize;
+    const endIndex = Math.min(startIndex + adjustedPagination.pageSize, data.length);
+    return data.slice(startIndex, endIndex);
+  }, [data, adjustedPagination.currentPage, adjustedPagination.pageSize]);
 
   return (
     <div className="space-y-4">
@@ -107,7 +199,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
               setIsFiltersExpanded(!isFiltersExpanded);
               if (isFiltersExpanded) {
                 // Reset all filters when hiding
-                filters.forEach(filter => onFilterChange(filter.key, []));
+                allFilters.forEach(filter => onFilterChange(filter.key, []));
                 if (onSearchChange) onSearchChange('');
               }
             }}
@@ -130,7 +222,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
             }`}
           >
             <div className="flex gap-4">
-              {filters.map((filter) => (
+              {allFilters.map((filter) => (
                 <div key={filter.key} className="flex-1">
                   <FormElement
                     elementType="listmultiple"
@@ -154,7 +246,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
 
       <Table
         columns={columns}
-        data={data}
+        data={currentPageData}
         keyExtractor={keyExtractor}
         isLoading={isLoading}
         error={error}
@@ -162,24 +254,13 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
         onRowClick={onRowClick}
         sortBy={sortBy}
         sortDirection={sortDirection}
-        pagination={{
-          ...pagination,
-          onPageChange: (page) => {
-            if (!isModalOpen) {
-              pagination.onPageChange(page);
-            }
-          },
-          onPageSizeChange: (size) => {
-            if (!isModalOpen) {
-              pagination.onPageSizeChange(size);
-            }
-          }
-        }}
+        pagination={adjustedPagination}
         updatedId={updatedId}
         isModalOpen={isModalOpen}
         fixedHeight={fixedHeight}
         navigationLocation={navigationLocation}
         rowClassName={rowClassName}
+        updateAgeColumn={updateAgeColumn}
       />
     </div>
   );

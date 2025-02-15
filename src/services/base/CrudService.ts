@@ -31,6 +31,8 @@ export interface OptimisticUpdate<T> {
 export interface CacheOperation<T> {
   /** Optimistic updates to apply before operation completes */
   optimistic?: OptimisticUpdate<T>[];
+  /** Updates to apply after operation completes successfully */
+  postUpdate?: OptimisticUpdate<T>[];
 }
 
 export abstract class CrudService<T, CreateDTO = T, UpdateDTO = Partial<T>> {
@@ -135,6 +137,16 @@ export abstract class CrudService<T, CreateDTO = T, UpdateDTO = Partial<T>> {
         .single();
 
       if (error) throw error;
+
+      // Apply post-update operations if any
+      if (cacheOps.postUpdate) {
+        for (const update of cacheOps.postUpdate) {
+          const oldData = this.queryClient.getQueryData(update.queryKey);
+          if (oldData) {
+            this.queryClient.setQueryData(update.queryKey, update.update(oldData));
+          }
+        }
+      }
 
       return { data: updated as T, errors: [] };
     } catch (error) {

@@ -126,6 +126,7 @@ export const ImageContainer: React.FC<ImageContainerProps> = ({
         isDragging && "border-blue-500 border-2",
         "transition-all duration-200",
         "flex items-center justify-center",
+        "group",
         className
       )}
       onDragEnter={handleDragEnter}
@@ -218,21 +219,21 @@ export const ImageContainer: React.FC<ImageContainerProps> = ({
 
       {/* Delete Button - Only show in edit mode and when there's a real image */}
       {!isCreateMode && hasRealImage && (
-        <BaseStyledContainer as="button"
-          iconLeft={<FaTrash />}
-          iconColor="text-red-300"
-          bgColor="bg-red-700/80"
-          elementProps={{
-            onClick: handleDeleteImage,
-            disabled: isDeleting
-          }}
+        <button
+          type="button"
+          onClick={handleDeleteImage}
+          disabled={isDeleting}
           className={clsx(
             "absolute left-1/2 -translate-x-1/2 bottom-4",
-            "z-[60]",
+            "z-[60] p-2 rounded",
+            "bg-red-700/80 hover:bg-red-600/80",
+            "transition-all duration-200",
+            "opacity-0 group-hover:opacity-100",
             isDeleting && "opacity-50 cursor-not-allowed"
           )}
         >
-        </BaseStyledContainer>
+          <FaTrash className="text-red-300" />
+        </button>
       )}
     </div>
   );
