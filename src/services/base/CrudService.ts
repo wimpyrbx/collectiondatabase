@@ -136,7 +136,10 @@ export abstract class CrudService<T, CreateDTO = T, UpdateDTO = Partial<T>> {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.log('Database update error:', error);
+        throw error;
+      }
 
       // Apply post-update operations if any
       if (cacheOps.postUpdate) {
@@ -150,8 +153,10 @@ export abstract class CrudService<T, CreateDTO = T, UpdateDTO = Partial<T>> {
 
       return { data: updated as T, errors: [] };
     } catch (error) {
+      console.log('Error during update:', error);
       // Rollback optimistic updates
       if (cacheOps.optimistic) {
+        console.log('Rolling back optimistic updates...');
         for (const update of cacheOps.optimistic) {
           const key = JSON.stringify(update.queryKey);
           const oldData = previousValues.get(key);

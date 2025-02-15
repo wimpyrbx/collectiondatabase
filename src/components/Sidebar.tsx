@@ -1,5 +1,5 @@
 // src/components/Sidebar.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaHome, FaInfoCircle, FaEnvelope, FaWpforms, FaQuestionCircle, FaLayerGroup, FaSearch, FaChevronRight, FaBoxes } from 'react-icons/fa';
 import clsx from 'clsx';
@@ -91,6 +91,56 @@ interface SidebarProps {
   onCollapse: (collapsed: boolean) => void;
 }
 
+const AgeUpdateDebug: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
+  const [updateCount, setUpdateCount] = useState(0);
+  const [isFlashing, setIsFlashing] = useState(false);
+
+  useEffect(() => {
+    // Listen for age column updates
+    const handleAgeUpdate = () => {
+      setUpdateCount(prev => prev + 1);
+      setIsFlashing(true);
+      // Remove flash after 2 seconds
+      setTimeout(() => setIsFlashing(false), 200);
+    };
+
+    window.addEventListener('age-column-update', handleAgeUpdate);
+    return () => window.removeEventListener('age-column-update', handleAgeUpdate);
+  }, []);
+
+  return (
+    <div className={clsx(
+      'rounded-lg p-2 border',
+      'transition-all duration-[300ms] ease-out',
+      'shadow-md shadow-black/30',
+      isFlashing 
+        ? 'bg-green-500/20 border-green-500/30' 
+        : 'bg-gray-800/50 border-gray-700/50',
+      'text-xs'
+    )}>
+      <div className={clsx(
+        'flex items-center gap-2',
+        collapsed ? 'justify-center' : 'justify-between'
+      )}>
+        {!collapsed && (
+          <span className={clsx(
+            'text-gray-400 transition-colors duration-[300ms]',
+            isFlashing && 'text-cyan-300/80'
+          )}>
+            Age Updates:
+          </span>
+        )}
+        <span className={clsx(
+          'font-mono transition-colors duration-[300ms]',
+          isFlashing ? 'text-cyan-300' : 'text-cyan-400'
+        )}>
+          {updateCount}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, onCollapse }) => {
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -137,10 +187,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onCollapse }) => {
           collapsed ? 'px-4 py-6 mb-4' : 'p-6'
         )}>
           <h1 className={clsx(
-            'font-bold bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400 text-transparent bg-clip-text transition-all duration-300',
-            collapsed ? 'hidden' : 'text-2xl'
+            'font-bold text-white text-transparent transition-all duration-300',
+            collapsed ? 'hidden' : 'text-xl'
           )}>
-            Collection DB
+            COLLECTION DB
           </h1>
         </div>
 
@@ -226,10 +276,18 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onCollapse }) => {
 
         {/* Cache Monitor */}
         <div className={clsx(
-          'absolute bottom-20 transition-all duration-300',
+          'absolute bottom-24 mb-1.5 transition-all duration-300',
           collapsed ? 'left-2 right-2' : 'left-6 right-6'
         )}>
           <CacheMonitor collapsed={collapsed} />
+        </div>
+
+        {/* Age Update Debug */}
+        <div className={clsx(
+          'absolute bottom-14 transition-all duration-300',
+          collapsed ? 'left-2 right-2' : 'left-6 right-6'
+        )}>
+          <AgeUpdateDebug collapsed={collapsed} />
         </div>
 
         {/* Footer Area */}
@@ -241,7 +299,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onCollapse }) => {
             'text-xs text-gray-500 text-center font-medium tracking-wider',
             collapsed && 'text-[10px]'
           )}>
-            Collection DB v1.0
+            Collection DB v1.0.2
           </div>
         </div>
       </div>

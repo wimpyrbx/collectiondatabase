@@ -3,7 +3,7 @@ import React from 'react';
 import Page from '@/components/page/Page';
 import { useProductsCache } from '@/hooks/viewHooks';
 import { ProductViewItem } from '@/types/product';
-import { FaListAlt, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaPlus, FaImage } from 'react-icons/fa';
+import { FaListAlt, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaPlus, FaImage, FaStar, FaCalendarAlt } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
@@ -12,6 +12,7 @@ import { ProductModal } from '@/components/modal/ProductModal';
 import regionsData from '@/data/regions.json';
 import { ImageDisplay } from '@/components/image/ImageDisplay';
 import { Button } from '@/components/ui';
+import { getRatingDisplayInfo } from '@/utils/productUtils';
 
 const Home = () => {
   const { data, isLoading, isError, error } = useProductsCache();
@@ -58,6 +59,7 @@ const Home = () => {
       key: 'product_variant',
       header: 'Variant',
       icon: <FaLayerGroup className="w-4 h-4" />,
+      width: '100px',
       accessor: (item: ProductViewItem) => item.product_variant || '',
       align: 'left' as const,
       sortable: true,
@@ -65,36 +67,90 @@ const Home = () => {
     },
     {
       key: 'release_year',
-      header: 'Year',
-      icon: <FaCalendar className="w-4 h-4" />,
-      width: '80px',
+      header: '',
+      icon: <FaCalendarAlt className="w-4 h-4" />,
+      width: '20px',
       accessor: (item: ProductViewItem) => item.release_year || '',
-      align: 'left' as const
+      align: 'center' as const
     },
     {
       key: 'region_name',
-      header: 'Region',
+      header: '',
       icon: <FaGlobe className="w-4 h-4" />,
-      width: '100px',
+      width: '20px',
       accessor: (item: ProductViewItem) => {
         const region = regionsData.regions.find(r => r.name === item.region_name);
         return (
-          <div className="flex items-center space-x-2">
-            <span>{region?.display_name || item.region_name || ''}</span>
+            <span>{item.region_name || ''}</span>
+        );
+      },
+      align: 'center' as const
+    },
+    {
+      key: 'rating_name',
+      header: '',
+      icon: <FaStar className="w-4 h-4 text-yellow-400" />,
+      width: '20px',
+      accessor: (item: ProductViewItem) => {
+        if (!item.rating_name || !item.region_name) return '';
+        const ratingInfo = getRatingDisplayInfo(item.region_name, item.rating_name, regionsData.regions);
+        return (
+          <div className="flex items-center gap-2">
+            {ratingInfo?.imagePath && (
+              <img 
+                src={ratingInfo.imagePath} 
+                alt={item.rating_name}
+                className="h-5 w-auto object-contain"
+              />
+            )}
           </div>
         );
       },
-      sortable: true
+      align: 'center' as const
+    },
+    {
+      key: 'price_usd',
+      header: 'CIB',
+      icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
+      width: '70px',
+      accessor: (item: ProductViewItem) => item.price_usd ? `$${item.price_usd.toFixed(2)}` : '',
+      align: 'center' as const
+    },
+    {
+      key: 'price_new_usd',
+      header: 'New',
+      icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
+      width: '70px',
+      accessor: (item: ProductViewItem) => item.price_new_usd ? `$${item.price_new_usd.toFixed(2)}` : '',
+      align: 'center' as const
     },
     {
       key: 'final_price',
       header: 'Price',
       icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
-      width: '10px',
+      width: '80px',
       accessor: (item: ProductViewItem) => item.final_price ? `NOK ${item.final_price.toFixed(0)},-` : '',
-      sortable: true,
       sortKey: 'final_price',
-      align: 'left' as const
+      align: 'center' as const
+    },
+    {
+      key: 'pricecharting',
+      header: '',
+      icon: <FaGlobe className="w-4 h-4 text-blue-400" />,
+      width: '40px',
+      accessor: (item: ProductViewItem) => item.pricecharting_id ? (
+        <a
+          href={`https://www.pricecharting.com/game/${item.pricecharting_id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-gray-700/50 transition-colors"
+          title="Open in PriceCharting"
+        >
+          <FaGlobe className="text-blue-400" />
+        </a>
+      ) : '',
+      align: 'center' as const
     }
   ];
 

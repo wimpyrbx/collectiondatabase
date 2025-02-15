@@ -40,42 +40,49 @@ export const useProductsTable = () => {
       onSuccess: (result, variables) => {
         const { data } = result;
         queryClient.setQueryData<ProductViewItem[]>(PRODUCTS_QUERY_KEY, old => {
-          if (!old) return [];
+          if (!old) {
+            return [];
+          }
           
-          // Find the existing product
-          const existingProduct = old.find(p => p.product_id === variables.id);
-          if (!existingProduct) return old;
+          const now = new Date();
+          
+          // Update all products' secondsAgo values
+          const updatedProducts = old.map(product => {
+            if (product.product_id === variables.id) {
 
-          // Create an object with only the fields that were in the update request
-          const updates: Partial<ProductViewItem> = {};
-          Object.entries(variables.updates).forEach(([key, value]) => {
-            // Skip fields that shouldn't be updated
-            if (['id', 'created_at', 'updated_at', 'price_nok', 'price_nok_fixed', 'price_new_nok', 'price_new_nok_fixed'].includes(key)) {
-              return;
+              // This is the product being updated
+              const updates: Partial<ProductViewItem> = {};
+              Object.entries(variables.updates).forEach(([key, value]) => {
+                // Skip fields that shouldn't be updated
+                if (['id', 'created_at', 'updated_at', 'price_nok', 'price_nok_fixed', 'price_new_nok', 'price_new_nok_fixed'].includes(key)) {
+                  return;
+                }
+
+                // Map database field names to view field names
+                const viewField = key === 'product_group' ? 'product_group_name'
+                  : key === 'product_type' ? 'product_type_name'
+                  : key === 'rating' ? 'rating_name'
+                  : key === 'region' ? 'region_name'
+                  : key;
+
+                (updates as any)[viewField] = data[key as keyof Product];
+              });
+
+              // Reset the update time fields
+              const updatedProduct = {
+                ...product,
+                ...updates,
+                products_updated_at: now.toISOString(),
+                products_updated_secondsago: 0
+              };
+
+              return updatedProduct;
             }
 
-            // Map database field names to view field names
-            const viewField = key === 'product_group' ? 'product_group_name'
-              : key === 'product_type' ? 'product_type_name'
-              : key === 'rating' ? 'rating_name'
-              : key === 'region' ? 'region_name'
-              : key;
-
-            (updates as any)[viewField] = data[key as keyof Product];
+            return product;
           });
 
-          // Always update timestamps on successful save
-          updates.products_updated_at = new Date().toISOString();
-          updates.products_updated_secondsago = 0;
-
-          return old.map(product => 
-            product.product_id === variables.id 
-              ? {
-                  ...product,
-                  ...updates
-                }
-              : product
-          );
+          return updatedProducts;
         });
       },
       onError: (
@@ -83,7 +90,6 @@ export const useProductsTable = () => {
         variables?: { id: number; updates: Partial<Product> },
         context?: MutationContext
       ) => {
-        console.error('Error updating product:', error);
         if (context?.previousProducts) {
           queryClient.setQueryData(PRODUCTS_QUERY_KEY, context.previousProducts);
         }
@@ -153,7 +159,6 @@ export const useProductsTable = () => {
         variables?: NewProduct,
         context?: MutationContext
       ) => {
-        console.error('Error creating product:', error);
         if (context?.previousProducts) {
           queryClient.setQueryData(PRODUCTS_QUERY_KEY, context.previousProducts);
         }
@@ -187,7 +192,6 @@ export const useProductsTable = () => {
         variables?: number,
         context?: MutationContext
       ) => {
-        console.error('Error deleting product:', error);
         if (context?.previousProducts) {
           queryClient.setQueryData(PRODUCTS_QUERY_KEY, context.previousProducts);
         }

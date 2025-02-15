@@ -193,17 +193,17 @@ export function Table<T>({
         text: 'Time since last update'
       },
       sortable: true,
-      sortKey: `${updateAgeColumn}_secondsago`,
+      sortKey: updateAgeColumn.replace('_at', '_secondsago'),
       accessor: (row: T) => {
-        // Check for the new secondsAgo field first
-        const secondsAgo = (row as any)[`${updateAgeColumn}_secondsago`];
+        const secondsAgo = (row as any)[updateAgeColumn.replace('_at', '_secondsago')];
         const updateDate = (row as any)[updateAgeColumn];
+        const rowId = (row as any).product_id;
         
         if (!updateDate && secondsAgo === undefined) return '-';
-        
+                
         return (
           <UpdateAge 
-            key={updateDate || secondsAgo} 
+            key={`${updateDate}-${secondsAgo}-${rowId}`}
             date={updateDate}
             secondsAgo={secondsAgo}
             className="w-full h-full" 
@@ -346,9 +346,14 @@ export function Table<T>({
                       });
                     }}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className={clsx(
+                      "flex items-center",
+                      column.header && "gap-2",
+                      column.align === 'center' && "justify-center",
+                      column.align === 'right' && "justify-end"
+                    )}>
                       {column.icon}
-                      <span>{column.header}</span>
+                      {column.header && <span>{column.header}</span>}
                       {column.sortable && (
                         <span className="ml-1">
                           {isColumnSorted && (

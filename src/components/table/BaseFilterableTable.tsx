@@ -93,7 +93,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
     const secondsInHour = 60 * 60;
     
     return data.filter(item => {
-      const secondsAgo = item[`${updateAgeColumn.replace('_at', '')}_secondsago`];
+      const secondsAgo = item[updateAgeColumn.replace('_at', '_secondsago')];
       if (secondsAgo === undefined) {
         return false;
       }

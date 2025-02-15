@@ -10,7 +10,7 @@ import productGroupsData from '@/data/product_groups.json';
 import { FormElement, FormElementLabel } from '@/components/formelement';
 import { Button } from '@/components/ui/';
 import DisplayError from '@/components/ui/DisplayError';
-import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaDollarSign, FaUpload, FaChevronLeft, FaChevronRight, FaTrash, FaSave } from 'react-icons/fa';
+import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaDollarSign, FaUpload, FaChevronLeft, FaChevronRight, FaTrash, FaSave, FaGlobe } from 'react-icons/fa';
 import { getRatingDisplayInfo } from '@/utils/productUtils';
 import { useProductModal } from '@/hooks/useProductModal';
 import { ImageContainer } from '@/components/image/ImageContainer';
@@ -18,6 +18,7 @@ import { Dialog } from '@headlessui/react';
 import { useProductMetadata } from '@/hooks/useProductMetadata';
 import { deleteImage } from '@/utils/imageUtils';
 import clsx from 'clsx';
+import { FiClock } from 'react-icons/fi';
 
 interface ProductModalProps {
   product?: ProductViewItem | null;
@@ -125,26 +126,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
         const hasChanged = normalizedInitial !== normalizedCurrent;
         
-        if (hasChanged) {
-          console.log(`Field ${key} changed:`, {
-            initial: initial,
-            normalizedInitial,
-            current: current,
-            normalizedCurrent,
-          });
-        }
-
         return hasChanged;
-      });
-
-      console.log('Form changes detected:', {
-        initialState: initialFormState,
-        currentState: {
-          ...formData,
-          region: regionRating.region,
-          rating: regionRating.rating
-        },
-        hasChanges
       });
       
       setHasFormChanges(hasChanges);
@@ -230,10 +212,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   // Modify the handleSubmit to only work if there are changes
   const wrappedHandleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!hasFormChanges) {
-      e.preventDefault();
       return;
     }
+
     handleSubmit(e);
   };
 
@@ -247,13 +231,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             title={mode === 'create' ? 'New Product' : `Product: ${product?.product_title}`}
             bgColor="bg-cyan-500/50"
             rightContent={
-              <div className="shrink-0 ml-4 whitespace-nowrap">
+              <div className="shrink-0 ml-4 whitespace-nowrap flex items-center gap-4">
+                {product?.products_updated_secondsago !== undefined && 
+                 product.products_updated_secondsago <= 3600 && (
+                  <span className="text-cyan-300 text-sm flex items-center gap-2">
+                    <FiClock className="w-4 h-4" />
+                    Recently Updated
+                  </span>
+                )}
                 {product ? `ID: ${product.product_id}` : undefined}
               </div>
             }
           />
           <Card.Body>
-            <div className="h-[350px] overflow-y-auto px-6">
+            <div className="min-h-[350px] max-h-[600px] overflow-y-auto px-2">
               <form id="product-form" onSubmit={wrappedHandleSubmit} className="space-y-6">
                 <div className="grid grid-cols-12 gap-6">
                   {/* Image Column */}
@@ -263,7 +254,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                       id={product?.product_id || -1}
                       title={product?.product_title || 'New Product'}
                       onError={(message) => setErrors(prev => [...prev, message])}
-                      className="h-[250px] w-full"
+                      className="w-full"
                       pendingImage={pendingImage}
                       onPendingImageChange={handlePendingImageChange}
                       isCreateMode={mode === 'create'}
@@ -310,18 +301,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                           labelPosition="above"
                         />
                       </div>
-                      <div className="col-span-4">
-                        <FormElement
-                          key={`pricecharting-${isOpen}-${product?.product_id ?? 'new'}`}
-                          elementType="input"
-                          label="PriceCharting ID"
-                          labelIcon={<FaDollarSign />}
-                          labelIconColor="text-green-400"
-                          initialValue={formData.pricecharting_id || ''}
-                          onValueChange={(value) => handleInputChange('pricecharting_id', String(value) || null)}
-                          labelPosition="above"
-                        />
-                      </div>
                     </div>
 
                     <div className="grid grid-cols-[5fr_1fr] gap-4">
@@ -350,6 +329,82 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                 )}
                             </div>
                         </div>
+                    </div>
+
+                    {/* Pricing Section */}
+                    <div className="flex items-center gap-4">
+                      {/* PriceCharting Logo */}
+                      <img 
+                        src="/images/logos/pricecharting.webp" 
+                        alt="PriceCharting" 
+                        className="h-8 opacity-75"
+                      />
+
+                      {/* Pricing Box */}
+                      <div className="bg-gray-900/50 border border-gray-700/50 rounded-lg p-4 flex-1">
+                        <div className="grid grid-cols-12 gap-4">
+                          <div className="col-span-4">
+                            <div className="flex items-center gap-2">
+                              <FormElement
+                                key={`pricecharting-${isOpen}-${product?.product_id ?? 'new'}`}
+                                elementType="input"
+                                label="PriceCharting"
+                                labelIcon={<FaDollarSign />}
+                                labelIconColor="text-green-400"
+                                initialValue={formData.pricecharting_id || ''}
+                                onValueChange={(value) => handleInputChange('pricecharting_id', String(value) || null)}
+                                labelPosition="left"
+                                className="whitespace-nowrap flex-1"
+                              />
+                              {formData.pricecharting_id && (
+                                <a
+                                  href={`https://www.pricecharting.com/game/${formData.pricecharting_id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors mt-[2px]"
+                                  title="Open in PriceCharting"
+                                >
+                                  <FaGlobe className="text-blue-400" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                          <div className="col-span-4">
+                            <FormElement
+                              key={`price-usd-${isOpen}-${product?.product_id ?? 'new'}`}
+                              elementType="input"
+                              label="Price CIB"
+                              labelIcon={<FaDollarSign />}
+                              labelIconColor="text-green-400"
+                              initialValue={formData.price_usd?.toFixed(2) || ''}
+                              onValueChange={(value) => {
+                                const numValue = value ? Number(value) : null;
+                                handleInputChange('price_usd', numValue !== null && !isNaN(numValue) ? numValue : null);
+                              }}
+                              labelPosition="left"
+                              placeholder="0.00"
+                              className="whitespace-nowrap"
+                            />
+                          </div>
+                          <div className="col-span-4">
+                            <FormElement
+                              key={`price-new-usd-${isOpen}-${product?.product_id ?? 'new'}`}
+                              elementType="input"
+                              label="Price New"
+                              labelIcon={<FaDollarSign />}
+                              labelIconColor="text-green-400"
+                              initialValue={formData.price_new_usd?.toFixed(2) || ''}
+                              onValueChange={(value) => {
+                                const numValue = value ? Number(value) : null;
+                                handleInputChange('price_new_usd', numValue !== null && !isNaN(numValue) ? numValue : null);
+                              }}
+                              labelPosition="left"
+                              placeholder="0.00"
+                              className="whitespace-nowrap"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Product Group and Type Row */}

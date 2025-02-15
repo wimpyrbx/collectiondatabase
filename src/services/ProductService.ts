@@ -130,43 +130,48 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
         {
           queryKey: this.cacheConfig.queryKey,
           update: (oldData: ProductViewItem[]) => {
-            return oldData.map(item => {
+            const updatedData = oldData.map(item => {
               if (item.product_id === id) {
-                return {
+                const updatedItem = {
                   ...item,
-                  product_title: data.product_title ?? item.product_title,
-                  product_variant: data.product_variant ?? item.product_variant,
-                  release_year: data.release_year ? Number(data.release_year) : item.release_year,
-                  is_product_active: data.is_product_active ?? item.is_product_active,
-                  product_notes: data.product_notes ?? item.product_notes,
-                  product_group_name: data.product_group ?? item.product_group_name,
-                  product_type_name: data.product_type ?? item.product_type_name,
-                  rating_name: data.rating ?? item.rating_name,
-                  region_name: data.region ?? item.region_name,
-                  price_usd: data.price_usd ?? item.price_usd,
-                  price_new_usd: data.price_new_usd ?? item.price_new_usd,
-                  pricecharting_id: data.pricecharting_id ?? item.pricecharting_id
+                  // Handle each field explicitly, allowing empty strings and null values
+                  product_title: data.product_title !== undefined ? data.product_title : item.product_title,
+                  product_variant: data.product_variant !== undefined ? data.product_variant : item.product_variant,
+                  release_year: data.release_year !== undefined ? (data.release_year ? Number(data.release_year) : null) : item.release_year,
+                  is_product_active: data.is_product_active !== undefined ? data.is_product_active : item.is_product_active,
+                  product_notes: data.product_notes !== undefined ? data.product_notes : item.product_notes,
+                  product_group_name: data.product_group !== undefined ? data.product_group : item.product_group_name,
+                  product_type_name: data.product_type !== undefined ? data.product_type : item.product_type_name,
+                  rating_name: data.rating !== undefined ? data.rating : item.rating_name,
+                  region_name: data.region !== undefined ? data.region : item.region_name,
+                  price_usd: data.price_usd !== undefined ? data.price_usd : item.price_usd,
+                  price_new_usd: data.price_new_usd !== undefined ? data.price_new_usd : item.price_new_usd,
+                  pricecharting_id: data.pricecharting_id !== undefined ? data.pricecharting_id : item.pricecharting_id
                 };
+                return updatedItem;
               }
               return item;
             });
+            return updatedData;
           }
         }
       ],
-      // Add post-update cache operation to update timestamp only after successful server response
       postUpdate: [
         {
           queryKey: this.cacheConfig.queryKey,
           update: (oldData: ProductViewItem[]) => {
-            return oldData.map(item => {
+            const updatedData = oldData.map(item => {
               if (item.product_id === id) {
-                return {
+                const updatedItem = {
                   ...item,
-                  products_updated_at: new Date().toISOString()
+                  products_updated_at: new Date().toISOString(),
+                  products_updated_secondsago: 0
                 };
+                return updatedItem;
               }
               return item;
             });
+            return updatedData;
           }
         }
       ]
@@ -211,7 +216,6 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
       // Invalidate caches
       await this.queryClient.invalidateQueries({ queryKey: this.cacheConfig.queryKey });
     } catch (error) {
-      console.error('Error deleting product:', error);
       throw error;
     }
   }
