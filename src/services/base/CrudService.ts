@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { QueryClient, QueryKey } from '@tanstack/react-query';
+import { handleCacheInvalidation } from '@/utils/crudUtils';
 
 export interface ValidationRule<T> {
   validate: (value: T) => boolean;
@@ -89,6 +90,13 @@ export abstract class CrudService<T, CreateDTO = T, UpdateDTO = Partial<T>> {
 
       if (error) throw error;
 
+      // Check for external changes and invalidate if necessary
+      await handleCacheInvalidation(
+        this.queryClient,
+        [this.tableName],
+        [this.cacheConfig.queryKey]
+      );
+
       return { data: created as T, errors: [] };
     } catch (error) {
       // Rollback optimistic updates
@@ -104,6 +112,14 @@ export abstract class CrudService<T, CreateDTO = T, UpdateDTO = Partial<T>> {
           }
         }
       }
+
+      // On error, check for external changes
+      await handleCacheInvalidation(
+        this.queryClient,
+        [this.tableName],
+        [this.cacheConfig.queryKey]
+      );
+
       return { data: null, errors: [this.handleError(error)] };
     }
   }
@@ -136,10 +152,7 @@ export abstract class CrudService<T, CreateDTO = T, UpdateDTO = Partial<T>> {
         .select()
         .single();
 
-      if (error) {
-        console.log('Database update error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       // Apply post-update operations if any
       if (cacheOps.postUpdate) {
@@ -151,12 +164,17 @@ export abstract class CrudService<T, CreateDTO = T, UpdateDTO = Partial<T>> {
         }
       }
 
+      // Check for external changes and invalidate if necessary
+      await handleCacheInvalidation(
+        this.queryClient,
+        [this.tableName],
+        [this.cacheConfig.queryKey]
+      );
+
       return { data: updated as T, errors: [] };
     } catch (error) {
-      console.log('Error during update:', error);
       // Rollback optimistic updates
       if (cacheOps.optimistic) {
-        console.log('Rolling back optimistic updates...');
         for (const update of cacheOps.optimistic) {
           const key = JSON.stringify(update.queryKey);
           const oldData = previousValues.get(key);
@@ -168,6 +186,14 @@ export abstract class CrudService<T, CreateDTO = T, UpdateDTO = Partial<T>> {
           }
         }
       }
+
+      // On error, check for external changes
+      await handleCacheInvalidation(
+        this.queryClient,
+        [this.tableName],
+        [this.cacheConfig.queryKey]
+      );
+
       return { data: null, errors: [this.handleError(error)] };
     }
   }

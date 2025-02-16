@@ -13,6 +13,20 @@ import regionsData from '@/data/regions.json';
 import { ImageDisplay } from '@/components/image/ImageDisplay';
 import { Button } from '@/components/ui';
 import { getRatingDisplayInfo } from '@/utils/productUtils';
+import { supabase } from '@/supabaseClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { updateInventoryCache } from '@/utils/inventoryUtils';
+
+interface InventoryItem {
+  id: number;
+  product_id: number;
+  inventory_status: string;
+  created_at: string;
+  inventory_updated_at: string;
+  purchase_id?: number;
+  sale_id?: number;
+  override_price?: number;
+}
 
 const Home = () => {
   const { data, isLoading, isError, error } = useProductsCache();
@@ -20,6 +34,12 @@ const Home = () => {
   const [updatedProductId, setUpdatedProductId] = React.useState<number | null>(null);
   const [isCreating, setIsCreating] = React.useState(false);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const queryClient = useQueryClient();
+
+  const handleAddToInventory = async (productId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await updateInventoryCache(productId, queryClient);
+  };
 
   const columns: Column<ProductViewItem>[] = [
     {
@@ -69,7 +89,7 @@ const Home = () => {
       key: 'release_year',
       header: '',
       icon: <FaCalendarAlt className="w-4 h-4" />,
-      width: '20px',
+      width: '50px',
       accessor: (item: ProductViewItem) => item.release_year || '',
       align: 'center' as const
     },
@@ -139,17 +159,37 @@ const Home = () => {
       icon: <FaGlobe className="w-4 h-4 text-blue-400" />,
       width: '40px',
       accessor: (item: ProductViewItem) => item.pricecharting_id ? (
-        <a
-          href={`https://www.pricecharting.com/game/${item.pricecharting_id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-center w-6 h-6 rounded-lg hover:bg-gray-700/50 transition-colors"
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(`https://www.pricecharting.com/game/${item.pricecharting_id}`, '_blank');
+          }}
+          bgColor="bg-yellow-900/50"
+          className="w-6 h-6 !p-0 hover:bg-yellow-800 transition-colors"
+          hoverEffect='scale'
           title="Open in PriceCharting"
         >
-          <FaGlobe className="text-blue-400" />
-        </a>
+          <FaGlobe className="w-3 h-3" />
+        </Button>
       ) : '',
+      align: 'center' as const
+    },
+    {
+      key: 'add_to_inventory',
+      header: '',
+      icon: <FaPlus className="w-4 h-4 text-green-400" />,
+      width: '40px',
+      accessor: (item: ProductViewItem) => (
+        <Button
+          onClick={(e) => handleAddToInventory(item.product_id, e)}
+          bgColor="bg-green-900/50"
+          className="w-6 h-6 !p-0 hover:bg-green-800 transition-colors"
+          hoverEffect='scale'
+          title="Add to inventory"
+        >
+          <FaPlus className="w-3 h-3" />
+        </Button>
+      ),
       align: 'center' as const
     }
   ];

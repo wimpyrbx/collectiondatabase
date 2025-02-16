@@ -184,10 +184,9 @@ export function Table<T>({
     const ageColumn: Column<T> = {
       key: 'age',
       header: '',
-      icon: <FiClock className="w-4 h-4" />,
-      width: '20px',
+      width: '10px',
       align: 'center',
-      headerClassName: 'px-3',
+      headerClassName: 'px-1',
       rowClassName: '!p-0',
       tooltip: {
         text: 'Time since last update'

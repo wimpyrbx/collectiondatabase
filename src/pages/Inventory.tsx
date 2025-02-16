@@ -215,7 +215,7 @@ const Inventory = () => {
           <BaseFilterableTable<InventoryViewItem>
             columns={columns}
             data={tableState.currentPageData}
-            keyExtractor={(item) => item.inventory_id.toString()}
+            keyExtractor={(item) => item.inventory_id ? item.inventory_id.toString() : 'undefined-id'}
             isLoading={isLoading}
             error={error}
             filters={tableState.filters}

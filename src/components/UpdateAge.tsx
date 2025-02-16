@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { timeAgo } from '@/utils/dateUtils';
 import { Tooltip } from '@/components/tooltip/Tooltip';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface UpdateAgeProps {
   date?: string | Date | number;
@@ -42,6 +43,7 @@ export const UpdateAge: React.FC<UpdateAgeProps> = ({ date, secondsAgo: initialS
   const [tooltipOpen, setTooltipOpen] = React.useState(false);
   const [localSecondsAgo, setLocalSecondsAgo] = React.useState(initialSecondsAgo);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
   
   // Update localSecondsAgo when initialSecondsAgo changes (e.g., after a save)
   React.useEffect(() => {
@@ -53,27 +55,19 @@ export const UpdateAge: React.FC<UpdateAgeProps> = ({ date, secondsAgo: initialS
   
   // Set up interval for updates
   React.useEffect(() => {
-    if (date || initialSecondsAgo !== undefined) {
-      // Initial update
+    if (!date && initialSecondsAgo === undefined) return;
+
+    const updateAge = () => {
       const now = new Date();
       setCurrentTime(now);
-      if (localSecondsAgo !== undefined) {
-        setLocalSecondsAgo(prev => (prev || 0));
-      }
+      setLocalSecondsAgo(prev => prev !== undefined ? prev + 5 : prev);
       window.dispatchEvent(new Event('age-column-update'));
+    };
 
-      const tickInterval = setInterval(() => {
-        const now = new Date();
-        setCurrentTime(now);
-        setLocalSecondsAgo(prev => {
-          if (prev === undefined) return undefined;
-          return prev + 5;  // Increment by 5 seconds
-        });
-        window.dispatchEvent(new Event('age-column-update'));
-      }, 5000);  // Update every 5 seconds
-
-      return () => clearInterval(tickInterval);
-    }
+    // Initial update
+    updateAge();
+    const interval = setInterval(updateAge, 5000);
+    return () => clearInterval(interval);
   }, [date, initialSecondsAgo]);
 
   // Calculate minutes ago either from secondsAgo or date
