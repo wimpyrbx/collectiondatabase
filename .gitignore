@@ -1,3 +1,9 @@
+# python_pricechartingscraper
+python_pricechartingscraper/json/*
+*__pycache__*
+*__init__*
+python_pricechartingscraper/file*
+
 # Logs
 logs
 *.log
