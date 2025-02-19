@@ -29,10 +29,10 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
 }) => {
   const [crop, setCrop] = useState<Crop>({
     unit: '%',
-    width: undefined,
-    height: undefined,
-    x: undefined,
-    y: undefined
+    width: 0,
+    height: 0,
+    x: 0,
+    y: 0
   });
   
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);

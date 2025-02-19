@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal } from './Modal';
 import { Card } from '@/components/card';
 import { InventoryViewItem } from '@/types/inventory';
-import { FaBox, FaTimes, FaStore, FaShoppingCart, FaArchive, FaCheck, FaExclamationTriangle, FaDollarSign, FaCalendar, FaUser, FaMapMarker, FaTag } from 'react-icons/fa';
+import { FaBox, FaTimes, FaStore, FaShoppingCart, FaArchive, FaCheck, FaExclamationTriangle, FaDollarSign, FaCalendar, FaUser, FaMapMarker, FaTag, FaTags } from 'react-icons/fa';
 import { getInventoryWithFallbackUrl } from '@/utils/imageUtils';
 import { Button } from '@/components/ui';
 import { useInventoryStatusTransitionsCache } from '@/hooks/viewHooks';
@@ -12,6 +12,63 @@ import { useInventoryModal } from '@/hooks/useInventoryModal';
 import clsx from 'clsx';
 import DisplayError from '@/components/ui/DisplayError';
 import type { InventoryStatusTransitionMap } from '@/types/inventory_status';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/supabaseClient';
+import { TagWithRelationships } from '@/types/tags';
+import * as Icons from 'react-icons/fa';
+import { Tooltip } from '@/components/tooltip/Tooltip';
+import { TooltipStyle } from '@/utils/tooltip';
+
+// Add the TagButton component
+const TagButton: React.FC<{
+  tag: TagWithRelationships;
+  isSelected: boolean;
+  onToggle: (tag: TagWithRelationships) => void;
+}> = ({ tag, isSelected, onToggle }) => {
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const [isHovered, setIsHovered] = React.useState(false);
+  const { color = 'gray' } = tag;
+
+  return (
+    <div>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => onToggle(tag)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={clsx(
+          "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors",
+          isSelected ? ["bg-green-500/20", "text-green-300"] : ["bg-gray-800 hover:bg-gray-700", "text-gray-300"]
+        )}
+      >
+        {tag.display_type === 'icon' && tag.display_value ? (
+          React.createElement((Icons as any)[tag.display_value], {
+            className: clsx("w-3 h-3", "text-white", "mr-1")
+          })
+        ) : tag.display_type === 'image' && tag.display_value ? (
+          <img
+            src={tag.display_value}
+            alt={tag.name}
+            className="w-4 h-4"
+          />
+        ) : null}
+        <span className="text-sm">{tag.name}</span>
+        {isSelected && (
+          <FaCheck className="w-3 h-3" />
+        )}
+      </button>
+      <Tooltip
+        text={`Click to ${isSelected ? 'remove' : 'add'} ${tag.name} tag`}
+        isOpen={isHovered}
+        elementRef={buttonRef}
+        placement="top"
+        size="sm"
+        style={TooltipStyle.minimal}
+      />
+    </div>
+  );
+};
 
 interface InventoryModalProps {
   inventory: InventoryViewItem | null;
@@ -40,6 +97,98 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 }) => {
   const [imageSrc, setImageSrc] = React.useState<string>('');
   const { transitions, isTransitionAllowed, getRequiredSaleStatus } = useInventoryStatusTransitionsCache();
+  const queryClient = useQueryClient();
+  const [selectedTags, setSelectedTags] = React.useState<TagWithRelationships[]>([]);
+
+  // Query to fetch available inventory tags
+  const { data: availableTags = [], isLoading: isLoadingTags } = useQuery({
+    queryKey: ['inventory_tags'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('view_inventory_tags').select('*');
+      if (error) throw error;
+      return data as TagWithRelationships[] || [];
+    }
+  });
+
+  // Initialize selected tags when inventory changes
+  React.useEffect(() => {
+    if (inventory?.tags) {
+      const inventoryTags = availableTags.filter(tag => 
+        inventory.tags.some(t => t.id === tag.id)
+      );
+      setSelectedTags(inventoryTags);
+    } else {
+      setSelectedTags([]);
+    }
+  }, [inventory, availableTags]);
+
+  // Handle tag selection
+  const handleTagToggle = async (tag: TagWithRelationships) => {
+    if (!inventory) {
+      // For new inventory items, just update the local state
+      setSelectedTags(prev => {
+        const isSelected = prev.some(t => t.id === tag.id);
+        return isSelected
+          ? prev.filter(t => t.id !== tag.id)
+          : [...prev, tag];
+      });
+      return;
+    }
+
+    try {
+      const isSelected = selectedTags.some(t => t.id === tag.id);
+      
+      if (isSelected) {
+        // Remove tag relationship
+        const { error } = await supabase
+          .from('inventory_tag_relationships')
+          .delete()
+          .match({ 
+            inventory_id: inventory.inventory_id, 
+            tag_id: tag.id 
+          });
+        
+        if (error) throw error;
+      } else {
+        // Add tag relationship
+        const { error } = await supabase
+          .from('inventory_tag_relationships')
+          .insert({ 
+            inventory_id: inventory.inventory_id, 
+            tag_id: tag.id 
+          });
+        
+        if (error) throw error;
+      }
+
+      // Update local state
+      setSelectedTags(prev => {
+        return isSelected
+          ? prev.filter(t => t.id !== tag.id)
+          : [...prev, tag];
+      });
+
+      // Update cache
+      queryClient.setQueryData<InventoryViewItem[]>(['inventory'], old => {
+        if (!old) return old;
+        return old.map(i => {
+          if (i.inventory_id === inventory.inventory_id) {
+            return {
+              ...i,
+              tags: isSelected
+                ? i.tags.filter(t => t.id !== tag.id)
+                : [...i.tags, tag]
+            };
+          }
+          return i;
+        });
+      });
+
+    } catch (error) {
+      console.error('Error toggling tag:', error);
+      setErrors(prev => [...prev, 'Failed to update tag']);
+    }
+  };
 
   const {
     formData,
@@ -407,6 +556,34 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                           onValueChange={(value) => handleInputChange('purchase_notes', value)}
                         />
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Add Tags Section before Sale Information */}
+                <div className="bg-gray-900/50 rounded-lg overflow-hidden">
+                  <div className="px-4 py-2 bg-gray-800/50 border-b border-gray-700">
+                    <h3 className="font-medium text-gray-300 flex items-center gap-2">
+                      <FaTags className="text-purple-400" />
+                      Inventory Tags
+                    </h3>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex flex-wrap gap-2">
+                      {isLoadingTags ? (
+                        <div className="text-gray-400 text-sm">Loading tags...</div>
+                      ) : availableTags.length === 0 ? (
+                        <div className="text-gray-400 text-sm">No tags available</div>
+                      ) : (
+                        availableTags.map(tag => (
+                          <TagButton
+                            key={tag.id}
+                            tag={tag}
+                            isSelected={selectedTags.some(t => t.id === tag.id)}
+                            onToggle={handleTagToggle}
+                          />
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>

@@ -362,7 +362,7 @@ export const TagModal: React.FC<TagModalProps> = ({
                   label="Description"
                   labelIcon={<FaLayerGroup />}
                   labelIconColor="text-indigo-400"
-                  initialValue='{description}'
+                  initialValue={description}
                   onValueChange={(value) => setDescription(String(value))}
                   rows={2}
                   labelPosition="above"

@@ -9,6 +9,7 @@ interface ImageDisplayProps {
   title: string;
   className?: string;
   placeholderClassName?: string;
+  containerClassName?: string;
   showTooltip?: boolean;
   tooltipClassName?: string;
 }
@@ -19,6 +20,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   title,
   className,
   placeholderClassName,
+  containerClassName,
   showTooltip = false,
   tooltipClassName
 }) => {
@@ -74,20 +76,25 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
 
   // Show placeholder if there's an error
   if (hasError) {
-    return <FaImage className={clsx("text-gray-500", placeholderClassName)} />;
+    return (
+      <div className={clsx(containerClassName, "h-full flex items-center justify-center")}>
+        <FaImage className={clsx("text-gray-500", placeholderClassName)} />
+      </div>
+    );
   }
 
   const finalImageUrl = `${imageUrl}&v=${imageVersion}`;
 
   return (
-    <>
+    <div className={clsx(containerClassName, "h-full")}>
       <img
-        key={finalImageUrl} // Force React to create a new img element
+        key={finalImageUrl}
         src={finalImageUrl}
         alt={title}
         className={clsx(
+          "h-full w-full object-contain",
           className,
-          isLoading && 'invisible' // Hide while loading but keep space
+          isLoading && 'opacity-0'
         )}
         onLoad={handleLoad}
         onError={handleError}
@@ -96,6 +103,11 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
         onMouseMove={handleMouseMove}
         data-image-key={getImageCacheKey(type, id)}
       />
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-700/50">
+          <FaImage className={clsx("text-gray-500", placeholderClassName)} />
+        </div>
+      )}
       {showTooltip && showTooltipImage && !isLoading && (
         <div 
           className={clsx(
@@ -121,6 +133,6 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
           />
         </div>
       )}
-    </>
+    </div>
   );
 }; 

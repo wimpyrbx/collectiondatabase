@@ -206,7 +206,7 @@ const Inventory = () => {
           collapsible={true}
           rightContent={
             <QuickAddInventory
-              products={products}
+              products={products ?? []}
               onSuccess={handleAddSuccess}
             />
           }

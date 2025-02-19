@@ -7,6 +7,9 @@ import { getRatingDisplayInfo } from '@/utils/productUtils';
 import regionsData from '@/data/regions.json';
 import clsx from 'clsx';
 import { Button } from '@/components/ui';
+import { TagDisplay } from '@/components/tag/TagDisplay';
+import { usePopper } from 'react-popper';
+import FormElement from '@/components/formelement/FormElement';
 
 interface QuickAddInventoryProps {
   products: ProductViewItem[];
@@ -24,8 +27,23 @@ export const QuickAddInventory: React.FC<QuickAddInventoryProps> = ({
   const [errors, setErrors] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const [referenceElement, setReferenceElement] = useState<HTMLDivElement | null>(null);
+  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
   
   const { createInventory } = useInventoryTable();
+
+  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+    placement: 'bottom-start',
+    strategy: 'fixed',
+    modifiers: [
+      {
+        name: 'offset',
+        options: {
+          offset: [0, 4],
+        },
+      }
+    ],
+  });
 
   // Filter products based on search term
   const filteredProducts = React.useMemo(() => {
@@ -90,17 +108,7 @@ export const QuickAddInventory: React.FC<QuickAddInventoryProps> = ({
         inventory_status: 'NORMAL',
         purchase_id: null,
         sale_id: null,
-        override_price: null,
-        purchase_seller: null,
-        purchase_origin: null,
-        purchase_cost: null,
-        purchase_date: null,
-        purchase_notes: null,
-        sale_buyer: null,
-        sale_status: null,
-        sale_date: null,
-        sale_notes: null,
-        sold_price: null
+        override_price: null
       };
 
       await createInventory(newInventory);
@@ -124,122 +132,137 @@ export const QuickAddInventory: React.FC<QuickAddInventoryProps> = ({
   return (
     <div className="relative">
       <div className="flex items-center gap-2">
-        <div className="relative">
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
+        <div ref={setReferenceElement} className="absolute right-16">
+          <FormElement
+            elementType="input"
+            initialValue={searchTerm}
+            onValueChange={(value) => {
+              setSearchTerm(String(value));
               setSelectedIndex(-1);
               setIsOpen(true);
             }}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setIsOpen(true)}
             placeholder="Search products..."
-            className={clsx(
-              'w-[300px] px-3 py-2 bg-gray-900 text-gray-300 rounded-lg',
-              'border border-gray-700 focus:border-blue-500',
-              'placeholder-gray-500',
-              'transition-colors duration-200'
-            )}
+            bgColor="bg-gray-900"
+            textSize="xs"
+            width="w-[300px]"
+            padding="py-2 px-3"
+            disableTransitionOpacity
           />
           {isOpen && filteredProducts.length > 0 && (
             <div 
-              ref={resultsRef}
+              ref={setPopperElement}
+              style={styles.popper}
+              {...attributes.popper}
               className={clsx(
-                'absolute mt-1',
                 'bg-gray-800 rounded-lg',
                 'border border-gray-700',
-                'shadow-lg shadow-black/50',
+                'shadow-lg shadow-black/20',
                 'max-h-[80vh] overflow-y-auto',
                 'z-[9999]',
-                'w-[400px]'
+                'w-[500px]'
               )}
             >
               {filteredProducts.map((product, index) => (
-                <div
+                <div 
                   key={product.product_id}
-                  onClick={() => handleProductSelect(product)}
-                  className={clsx(
-                    'search-result-item',
-                    'py-1.5 px-2 cursor-pointer',
-                    'transition-colors duration-150',
-                    'border-b border-gray-700/50 last:border-b-0',
-                    index === selectedIndex ? 'bg-cyan-500/20' : 'hover:bg-gray-700/50',
-                    isAdding && 'opacity-50 pointer-events-none'
-                  )}
+                  className="px-1 py-0.5 bg-gray-900 overflow-hidden"
                 >
-                  <div className="flex gap-2 items-center min-h-[56px]">
-                    {/* Product Image */}
-                    <div className="w-[36px] shrink-0">
-                      <div className="aspect-[3/4] bg-gray-700/50 rounded-lg overflow-hidden flex items-center justify-center">
-                        <ImageDisplay
-                          type="product"
-                          id={product.product_id}
-                          title={product.product_title}
-                          className="w-full h-full object-contain"
-                          placeholderClassName="w-4 h-4 text-gray-500"
-                        />
+                  <div
+                    onClick={() => handleProductSelect(product)}
+                    className={clsx(
+                      'search-result-item cursor-pointer hover:translate-x-2 hover:w-[480px]',
+                      'py-2 px-3 bg-gray-800',
+                      'transition-colors duration-150',
+                      'border-b border-gray-700/50 last:border-b-0 shadow-md shadow-black/20',
+                      index === selectedIndex ? 'bg-cyan-500/20' : 'hover:bg-green-300/10',
+                      isAdding && 'opacity-50 pointer-events-none'
+                    )}
+                  >
+                    <div className="flex gap-3 items-start min-h-[50px]">
+                      {/* Product Image */}
+                      <div className="w-[50px] h-[70px] shrink-0">
+                        <div className="w-full h-full bg-gray-600/50 rounded-md overflow-hidden">
+                          <ImageDisplay
+                            type="product"
+                            id={product.product_id}
+                            title={product.product_title}
+                            className="h-full w-full"
+                            placeholderClassName="w-5 h-5"
+                            containerClassName="h-full relative"
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Product Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-200 text-xs leading-tight">
-                            {product.product_title}
-                            {product.product_variant && (
-                              <span className="text-gray-400 ml-1">({product.product_variant})</span>
-                            )}
-                          </h3>
-                          <div className="text-[9px] text-gray-400">
-                            {[
-                              product.product_type_name,
-                              product.product_group_name,
-                              product.release_year,
-                              product.region_name
-                            ].filter(Boolean).join(' • ')}
+                      {/* Product Info */}
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1">
+                            <h3 className="font-medium text-gray-200 text-sm leading-tight">
+                              {product.product_title}
+                              {product.product_variant && (
+                                <span className="text-gray-400 ml-1">({product.product_variant})</span>
+                              )}
+                            </h3>
+                            <div className="text-xs text-gray-400 mt-1">
+                              {[
+                                product.product_type_name,
+                                product.product_group_name,
+                                product.release_year,
+                                product.region_name
+                              ].filter(Boolean).join(' • ')}
+                            </div>
                           </div>
+
+                          {/* Rating Image */}
+                          {product.rating_name && product.region_name && (
+                            <div className="w-[24px] aspect-square shrink-0 bg-gray-800/50 rounded-lg overflow-hidden flex items-center justify-center p-0.5">
+                              {(() => {
+                                const ratingInfo = getRatingDisplayInfo(product.region_name, product.rating_name, regionsData.regions);
+                                return ratingInfo.imagePath ? (
+                                  <img 
+                                    src={ratingInfo.imagePath} 
+                                    alt={ratingInfo.displayName} 
+                                    className="max-w-full max-h-full object-contain" 
+                                  />
+                                ) : (
+                                  <span className="text-gray-600 text-[10px]">No Rating</span>
+                                );
+                              })()}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Rating Image */}
-                        {product.rating_name && product.region_name && (
-                          <div className="w-[20px] aspect-square shrink-0 bg-gray-800/50 rounded-lg overflow-hidden flex items-center justify-center p-0.5">
-                            {(() => {
-                              const ratingInfo = getRatingDisplayInfo(product.region_name, product.rating_name, regionsData.regions);
-                              return ratingInfo.imagePath ? (
-                                <img 
-                                  src={ratingInfo.imagePath} 
-                                  alt={ratingInfo.displayName} 
-                                  className="max-w-full max-h-full object-contain" 
-                                />
-                              ) : (
-                                <span className="text-gray-600 text-[8px]">No Rating</span>
-                              );
-                            })()}
+                        {/* Tags */}
+                        {product.tags && product.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {product.tags.map(tag => (
+                              <TagDisplay
+                                key={tag.name}
+                                tag={tag}
+                                size="xs"
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Price */}
+                        <div className="text-sm">
+                          <span className="text-gray-400">Price:</span>
+                          <span className="text-gray-200 ml-2">
+                            {product.prices?.loose?.nok_fixed ? `NOK ${product.prices.loose.nok_fixed},-` : 'N/A'}
+                          </span>
+                        </div>
+
+                        {/* Inventory Count */}
+                        {(product.normal_count > 0 || product.collection_count > 0 || product.for_sale_count > 0) && (
+                          <div className="text-xs text-orange-400">
+                            Already in inventory!
+                            {product.for_sale_count > 0 && ` (${product.for_sale_count} for sale)`}
+                            {product.normal_count > 0 && ` (${product.normal_count} normal)`}
+                            {product.collection_count > 0 && ` (${product.collection_count} collection)`}
                           </div>
                         )}
                       </div>
-
-                      {/* Price */}
-                      <div className="text-sm">
-                        <span className="text-gray-400">Price:</span>
-                        <span className="text-gray-200 ml-2">
-                          {product.prices?.loose?.nok_fixed ? `NOK ${product.prices.loose.nok_fixed},-` : 'N/A'}
-                        </span>
-                      </div>
-
-                      {/* Inventory Count */}
-                      {(product.normal_count > 0 || product.collection_count > 0 || product.for_sale_count > 0) && (
-                        <div className="text-[9px] text-orange-400">
-                          Already in inventory!
-                          {product.for_sale_count > 0 && ` (${product.for_sale_count} for sale)`}
-                          {product.normal_count > 0 && ` (${product.normal_count} normal)`}
-                          {product.collection_count > 0 && ` (${product.collection_count} collection)`}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
