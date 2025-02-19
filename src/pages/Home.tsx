@@ -1,5 +1,5 @@
 // src/pages/Home.tsx
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import Page from '@/components/page/Page';
 import { useProductsCache } from '@/hooks/viewHooks';
 import { ProductViewItem } from '@/types/product';
@@ -16,6 +16,8 @@ import { getRatingDisplayInfo } from '@/utils/productUtils';
 import { supabase } from '@/supabaseClient';
 import { useQueryClient } from '@tanstack/react-query';
 import { updateInventoryCache } from '@/utils/inventoryUtils';
+import { TagDisplay } from '@/components/tag/TagDisplay';
+import { useQuery } from '@tanstack/react-query';
 
 interface InventoryItem {
   id: number;
@@ -36,12 +38,12 @@ const Home = () => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const queryClient = useQueryClient();
 
-  const handleAddToInventory = async (productId: number, e: React.MouseEvent) => {
+  const handleAddToInventory = React.useCallback(async (productId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     await updateInventoryCache(productId, queryClient);
-  };
+  }, [queryClient]);
 
-  const columns: Column<ProductViewItem>[] = [
+  const columns = React.useMemo<Column<ProductViewItem>[]>(() => [
     {
       key: 'product_group',
       header: 'Group',
@@ -70,7 +72,24 @@ const Home = () => {
       key: 'product_title',
       header: 'Product Title',
       icon: <FaTag className="w-4 h-4" />,
-      accessor: (item: ProductViewItem) => item.product_title || '',
+      accessor: (item: ProductViewItem) => (
+        <div className="flex justify-between items-center gap-2">
+          <span>{item.product_title || ''}</span>
+          {item.tags && item.tags.length > 0 && (
+            <div className="flex gap-2 items-center">
+              {[...item.tags]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(tag => (
+                  <TagDisplay 
+                  key={tag.id} 
+                  tag={tag}
+                  className="whitespace-nowrap"
+                  />
+                ))}
+            </div>
+          )}
+        </div>
+      ),
       align: 'left' as const,
       sortable: true,
       sortKey: 'product_title'
@@ -129,20 +148,13 @@ const Home = () => {
       align: 'center' as const
     },
     {
-      key: 'price_usd',
+      key: 'CIB',
       header: 'CIB',
+      width: '80px',
+      align: 'center' as const,
       icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
-      width: '70px',
-      accessor: (item: ProductViewItem) => item.price_usd ? `$${item.price_usd.toFixed(2)}` : '',
-      align: 'center' as const
-    },
-    {
-      key: 'price_new_usd',
-      header: 'New',
-      icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
-      width: '70px',
-      accessor: (item: ProductViewItem) => item.price_new_usd ? `$${item.price_new_usd.toFixed(2)}` : '',
-      align: 'center' as const
+      sortable: true,
+      accessor: (item: ProductViewItem) => item.prices?.complete?.usd ? `$${item.prices.complete.usd.toFixed(2)}` : '',
     },
     {
       key: 'final_price',
@@ -192,39 +204,67 @@ const Home = () => {
       ),
       align: 'center' as const
     }
-  ];
+  ], [handleAddToInventory]);
 
   const getFilterConfigs = React.useCallback((data: ProductViewItem[]) => {
-    const uniqueTypes = Array.from(new Set(data.map(item => item.product_type_name ?? ''))).filter(Boolean) as string[];
-    const uniqueGroups = Array.from(new Set(data.map(item => item.product_group_name ?? ''))).filter(Boolean) as string[];
-    const uniqueVariants = Array.from(new Set(data.map(item => item.product_variant ?? ''))).filter(Boolean) as string[];
+    // Create Maps for faster lookups
+    const typeMap = new Map<string, number>();
+    const groupMap = new Map<string, number>();
+    const variantMap = new Map<string, number>();
+    const tagMap = new Map<string, number>();
+
+    // Single pass through data to count all values
+    data.forEach(item => {
+      if (item.product_type_name) {
+        typeMap.set(item.product_type_name, (typeMap.get(item.product_type_name) || 0) + 1);
+      }
+      if (item.product_group_name) {
+        groupMap.set(item.product_group_name, (groupMap.get(item.product_group_name) || 0) + 1);
+      }
+      if (item.product_variant) {
+        variantMap.set(item.product_variant, (variantMap.get(item.product_variant) || 0) + 1);
+      }
+      // Count tags
+      item.tags?.forEach(tag => {
+        tagMap.set(tag.name, (tagMap.get(tag.name) || 0) + 1);
+      });
+    });
 
     return [
       {
         key: 'product_type_name',
         label: 'Product Type',
-        options: uniqueTypes.map(type => ({
-          value: type,
-          label: type,
-          count: data.filter(item => item.product_type_name === type).length
+        options: Array.from(typeMap.entries()).map(([value, count]) => ({
+          value,
+          label: value,
+          count
         }))
       },
       {
         key: 'product_group_name',
         label: 'Product Group',
-        options: uniqueGroups.map(group => ({
-          value: group,
-          label: group,
-          count: data.filter(item => item.product_group_name === group).length
+        options: Array.from(groupMap.entries()).map(([value, count]) => ({
+          value,
+          label: value,
+          count
         }))
       },
       {
         key: 'product_variant',
         label: 'Variant',
-        options: uniqueVariants.map(variant => ({
-          value: variant,
-          label: variant,
-          count: data.filter(item => item.product_variant === variant).length
+        options: Array.from(variantMap.entries()).map(([value, count]) => ({
+          value,
+          label: value,
+          count
+        }))
+      },
+      {
+        key: 'tag_product',
+        label: 'Tags',
+        options: Array.from(tagMap.entries()).map(([value, count]) => ({
+          value,
+          label: value,
+          count
         }))
       }
     ];
@@ -265,6 +305,35 @@ const Home = () => {
     setIsModalOpen(true);
   };
 
+  const filteredData = React.useMemo(() => {
+    if (!data) return [];
+    
+    return data.filter(item => {
+      // Apply filters
+      const filtersPassed = Object.entries(tableState.selectedFilters).every(([key, values]) => {
+        if (!values || values.length === 0) return true;
+        
+        if (key === 'tag_product') {
+          // For tags, check if the item has any of the selected tags
+          return values.some(value => 
+            item.tags?.some(tag => tag.name === value)
+          );
+        }
+        
+        // For other filters, use the existing logic
+        const itemValue = item[key as keyof ProductViewItem];
+        return values.includes(String(itemValue));
+      });
+
+      // Apply search
+      const searchPassed = !tableState.searchTerm || 
+        item.product_title.toLowerCase().includes(tableState.searchTerm.toLowerCase()) ||
+        (item.product_variant && item.product_variant.toLowerCase().includes(tableState.searchTerm.toLowerCase()));
+
+      return filtersPassed && searchPassed;
+    });
+  }, [data, tableState.selectedFilters, tableState.searchTerm]);
+
   return (
     <Page
       title="Products"
@@ -294,7 +363,7 @@ const Home = () => {
         <Card.Body>
           <BaseFilterableTable<ProductViewItem>
             columns={columns}
-            data={tableState.filteredAndSortedData}
+            data={filteredData}
             keyExtractor={(item) => item.product_id.toString()}
             isLoading={isLoading}
             error={error}
@@ -328,7 +397,7 @@ const Home = () => {
         onClose={handleModalClose}
         onSuccess={handleSuccess}
         mode={isCreating ? 'create' : 'edit'}
-        tableData={tableState.filteredAndSortedData}
+        tableData={filteredData}
         onNavigate={(productId) => {
           const product = data?.find(p => p.product_id === productId);
           if (product) {

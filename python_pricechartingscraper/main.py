@@ -16,33 +16,41 @@ from src.scraper import PriceChartingScraper
 from src.formatters import get_formatter
 from src.utils.image_utils import download_image
 
-def extract_game_id_from_html(url: str, headers: dict) -> int:
-    """Fetch the page and extract the PriceCharting ID from the HTML"""
+def extract_game_id_from_html(url: str, headers: dict) -> tuple[int, str]:
+    """Fetch the page and extract the PriceCharting ID and canonical URL from the HTML"""
     response = requests.get(url, headers=headers, timeout=10)
     if response.status_code != 200:
         raise ValueError(f"Failed to fetch URL: {url}")
         
     soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Get canonical URL if available
+    canonical_url = url  # Default to original URL
+    canonical_tag = soup.find('link', rel='canonical')
+    if canonical_tag and canonical_tag.get('href'):
+        canonical_url = canonical_tag['href']
+    
+    # Get PriceCharting ID
     id_row = soup.find('td', string='PriceCharting ID:')
     if id_row and (details := id_row.find_next_sibling('td')):
         try:
-            return int(details.text.strip())
+            return int(details.text.strip()), canonical_url
         except ValueError:
             pass
             
     raise ValueError("Could not find PriceCharting ID in the page")
 
-def extract_game_id(url: str, headers: dict) -> int:
-    """Extract game ID from either numeric ID or full URL"""
+def extract_game_id(url: str, headers: dict) -> tuple[int, str]:
+    """Extract game ID from either numeric ID or full URL, returns (id, canonical_url)"""
     # Try direct numeric ID first
     if url.isdigit():
-        return int(url)
+        return int(url), ""  # No canonical URL for direct IDs
         
     # Try to extract from URL
     # Handle both full URLs and relative paths
     match = re.search(r'/game/(?:[^/]+/)*(\d+)(?:/[^/]*)?$', url)
     if match:
-        return int(match.group(1))
+        return int(match.group(1)), url  # Use original URL if ID found directly
         
     # If URL parsing fails, try to fetch the page and get ID from HTML
     if url.startswith(('http://', 'https://', 'www.')):
@@ -53,17 +61,21 @@ def extract_game_id(url: str, headers: dict) -> int:
         
     raise ValueError("Could not extract game ID. Please provide either a numeric ID or a valid pricecharting.com game URL")
 
-def process_url(url: str, scraper: PriceChartingScraper, scrape_variants: bool) -> bool:
+def process_url(url: str, scraper: PriceChartingScraper, scrape_variants: bool, download_images: bool = True) -> bool:
     """Process a single URL and return success status"""
     try:
         # Extract game ID from URL or numeric input
-        game_id = extract_game_id(url.strip(), scraper.headers)
+        game_id, canonical_url = extract_game_id(url.strip(), scraper.headers)
         
         # Fetch data and track saved files
         result = scraper.fetch_game_data(game_id, scrape_variants)
         
-        # Download image if available
-        if result['success'] and result.get('image_url'):
+        # Add canonical URL to result if available
+        if canonical_url:
+            result['pricecharting_url'] = canonical_url
+        
+        # Download image if available and enabled
+        if download_images and result['success'] and result.get('image_url'):
             download_image(result['image_url'], game_id, scraper.output_dir, scraper.headers)
             
         return result['success']
@@ -81,6 +93,7 @@ def main():
     parser.add_argument('--config', type=str, help='Path to config file')
     parser.add_argument('--format', choices=['json', 'csv'], default='json', help='Output format')
     parser.add_argument('--scrapevariants', action='store_true', help='Fetch variant data')
+    parser.add_argument('--noimages', action='store_true', help='Skip downloading of images')
     
     try:
         args = parser.parse_args()
@@ -94,7 +107,7 @@ def main():
         success = True
         if args.url:
             # Process single URL
-            success = process_url(args.url, scraper, args.scrapevariants)
+            success = process_url(args.url, scraper, args.scrapevariants, not args.noimages)
         else:
             # Process URLs from file
             try:
@@ -107,7 +120,7 @@ def main():
                 # Process each URL
                 results = []
                 for url in urls:
-                    results.append(process_url(url, scraper, args.scrapevariants))
+                    results.append(process_url(url, scraper, args.scrapevariants, not args.noimages))
                 success = all(results)
                     
             except IOError as e:

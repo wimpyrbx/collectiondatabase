@@ -1,18 +1,11 @@
 import { CrudService, type ValidationResult, type CacheOperation } from './base/CrudService';
 import type { Product } from '@/types/tables';
-import type { ProductViewItem } from '@/types/product';
+import type { ProductViewItem, ProductCreateDTO, ProductUpdateDTO, ProductPrices } from '@/types/product';
 import { deleteImage } from '@/utils/imageUtils';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { QueryClient } from '@tanstack/react-query';
-
-// Base DTO without the release_year to avoid type conflicts
-type BaseProductDTO = Omit<Product, 'id' | 'created_at' | 'updated_at' | 'release_year'>;
-
-export interface ProductCreateDTO extends BaseProductDTO {
-  release_year?: string | number | null;
-}
-
-export interface ProductUpdateDTO extends Partial<ProductCreateDTO> {}
+import { invalidateAndRefetch } from '@/utils/queryUtils';
+import type { InventoryViewItem } from '@/types/inventory';
 
 export class ProductService extends CrudService<Product, ProductCreateDTO, ProductUpdateDTO> {
   private readonly baseUrl = '/api/products';
@@ -93,17 +86,21 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
               product_notes: data.product_notes ?? null,
               product_created_at: new Date().toISOString(),
               products_updated_at: new Date().toISOString(),
+              products_updated_secondsago: 0,
               product_group_name: data.product_group ?? null,
               product_type_name: data.product_type,
               rating_name: data.rating ?? null,
               region_name: data.region ?? null,
-              price_usd: data.price_usd ?? null,
-              price_nok: null,
-              price_nok_fixed: null,
-              price_new_usd: data.price_new_usd ?? null,
-              price_new_nok: null,
-              price_new_nok_fixed: null,
+              prices: null,
               final_price: null,
+              publisher: data.publisher ?? null,
+              developer: data.developer ?? null,
+              genre: data.genre ?? null,
+              image_url: null,
+              ean_gtin: data.ean_gtin ?? null,
+              asin: data.asin ?? null,
+              epid: data.epid ?? null,
+              pricecharting_id: data.pricecharting_id ?? null,
               normal_count: 0,
               for_sale_count: 0,
               collection_count: 0,
@@ -113,8 +110,7 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
               unique_buyers: 0,
               avg_sale_price: null,
               max_sale_price: null,
-              min_sale_price: null,
-              pricecharting_id: data.pricecharting_id ?? null
+              min_sale_price: null
             };
 
             return [optimisticProduct, ...oldData];
@@ -134,7 +130,6 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
               if (item.product_id === id) {
                 const updatedItem = {
                   ...item,
-                  // Handle each field explicitly, allowing empty strings and null values
                   product_title: data.product_title !== undefined ? data.product_title : item.product_title,
                   product_variant: data.product_variant !== undefined ? data.product_variant : item.product_variant,
                   release_year: data.release_year !== undefined ? (data.release_year ? Number(data.release_year) : null) : item.release_year,
@@ -144,8 +139,12 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
                   product_type_name: data.product_type !== undefined ? data.product_type : item.product_type_name,
                   rating_name: data.rating !== undefined ? data.rating : item.rating_name,
                   region_name: data.region !== undefined ? data.region : item.region_name,
-                  price_usd: data.price_usd !== undefined ? data.price_usd : item.price_usd,
-                  price_new_usd: data.price_new_usd !== undefined ? data.price_new_usd : item.price_new_usd,
+                  publisher: data.publisher !== undefined ? data.publisher : item.publisher,
+                  developer: data.developer !== undefined ? data.developer : item.developer,
+                  genre: data.genre !== undefined ? data.genre : item.genre,
+                  ean_gtin: data.ean_gtin !== undefined ? data.ean_gtin : item.ean_gtin,
+                  asin: data.asin !== undefined ? data.asin : item.asin,
+                  epid: data.epid !== undefined ? data.epid : item.epid,
                   pricecharting_id: data.pricecharting_id !== undefined ? data.pricecharting_id : item.pricecharting_id
                 };
                 return updatedItem;
@@ -192,8 +191,25 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
   }
 
   async refreshRelatedCaches(): Promise<void> {
-    // Invalidate inventory cache if it exists
-    await this.queryClient.invalidateQueries({ queryKey: ['inventory'] });
+    // Invalidate and refetch products with pagination support
+    await invalidateAndRefetch<ProductViewItem>(
+      this.queryClient,
+      this.cacheConfig.queryKey,
+      {
+        tableName: 'view_products',
+        orderBy: { column: 'product_title', ascending: true }
+      }
+    );
+
+    // Invalidate and refetch inventory since it depends on products
+    await invalidateAndRefetch<InventoryViewItem>(
+      this.queryClient,
+      ['inventory'],
+      {
+        tableName: 'view_inventory',
+        orderBy: { column: 'inventory_created_at', ascending: false }
+      }
+    );
   }
 
   public async create(data: ProductCreateDTO): Promise<{ data: Product | null; errors: string[] }> {

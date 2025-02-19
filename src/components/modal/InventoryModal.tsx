@@ -340,15 +340,13 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                       />
                       <div className="space-y-1 pt-6">
                         <p className="text-sm">
-                          <span className="text-gray-400">Base Price:</span>
+                          <span className="text-gray-400">Price:</span>
                           <span className="text-gray-200 ml-2">
-                            {inventory?.price_nok_fixed ? `NOK ${inventory.price_nok_fixed},-` : 'N/A'}
-                          </span>
-                        </p>
-                        <p className="text-sm">
-                          <span className="text-gray-400">Final Price:</span>
-                          <span className="text-gray-200 ml-2">
-                            {inventory?.final_price ? `NOK ${inventory.final_price},-` : 'N/A'}
+                            {inventory?.override_price 
+                              ? `NOK ${inventory.override_price},-` 
+                              : inventory?.prices?.loose?.nok_fixed 
+                                ? `NOK ${inventory.prices.loose.nok_fixed},-` 
+                                : 'N/A'}
                           </span>
                         </p>
                       </div>

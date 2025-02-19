@@ -160,6 +160,29 @@ export const FormElement: React.FC<For3mElementProps> = ({
     };
 
     switch (elementType) {
+      case 'select':
+        return (
+          <select
+            {...commonProps}
+            value={String(initialValue)}
+            onChange={(e) => handleChange(e.target.value)}
+            className={`${commonProps.className} appearance-none bg-[length:0] !bg-none cursor-pointer pr-8 relative`}
+          >
+            {placeholder && (
+              <option value="" disabled>{placeholder}</option>
+            )}
+            {options.map((item: SelectItem) => (
+              <option 
+                key={item.value} 
+                value={item.value}
+                className={truncate ? 'truncate' : ''}
+              >
+                {item.label}
+              </option>
+            ))}
+          </select>
+        );
+
       case 'listsingle':
       case 'listmultiple':
         return (

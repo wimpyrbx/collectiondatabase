@@ -1,4 +1,7 @@
 // src/types/inventory.ts
+import type { ProductPrices } from './product';
+import type { TagInfo } from './tags';
+
 export interface InventoryViewItem {
     inventory_id: number;
     product_id: number;
@@ -18,8 +21,7 @@ export interface InventoryViewItem {
     rating_name: string | null;
     region_name: string | null;
     override_price: number | null;
-    price_nok_fixed: number | null;
-    price_new_nok_fixed: number | null;
+    prices: ProductPrices | null;
     final_price: number | null;
     purchase_seller: string | null;
     purchase_origin: string | null;
@@ -31,7 +33,9 @@ export interface InventoryViewItem {
     sale_date: string | null;
     sale_notes: string | null;
     sold_price: number | null;
-  }
+    barcodes?: string[];
+    tags: TagInfo[];
+}
 
 export interface Inventory {
   id: number;
@@ -51,6 +55,7 @@ export interface Inventory {
   sale_date: string | null;
   sale_notes: string | null;
   sold_price: number | null;
+  barcodes?: string[];
 }
 
 export type NewInventory = Omit<Inventory, 'id' | 'created_at'>;

@@ -3,7 +3,7 @@ import { cardStyles } from './styles';
 import type { CardFooterProps } from './types';
 import clsx from 'clsx';
 
-const CardFooter: React.FC<CardFooterProps> = ({ children, isCollapsed }) => {
+const CardFooter: React.FC<CardFooterProps> = ({ children, isCollapsed, className }) => {
   return (
     <div 
       className={clsx(
@@ -11,7 +11,7 @@ const CardFooter: React.FC<CardFooterProps> = ({ children, isCollapsed }) => {
         isCollapsed ? cardStyles.collapsed : cardStyles.expanded
       )}
     >
-      <div className={cardStyles.footer}>
+      <div className={clsx(cardStyles.footer, className)}>
         {children}
       </div>
     </div>

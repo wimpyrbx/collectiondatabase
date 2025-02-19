@@ -31,136 +31,141 @@ export function useTableState<T extends Record<string, any>>({
     setPageSize(newPageSize);
   }, [page, pageSize]);
 
-  // Filter data
-  const filtered = React.useMemo(() => {
-    return data.filter((item: T) => {
-      // Search term filter
-      const matchesSearch = !searchTerm || Object.values(item).some(value => 
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  // Create memoized filter functions
+  const searchFilter = React.useCallback((item: T) => {
+    if (!searchTerm) return true;
 
-      // Custom filters - exclude current filter when calculating available options
-      const matchesFilters = Object.entries(selectedFilters).every(([key, values]) => {
-        if (!values || values.length === 0) return true;
+    // Split search term into individual words and filter out empty strings
+    const searchTerms = searchTerm.toLowerCase().split(' ').filter(Boolean);
+    
+    // Fields to search through
+    const searchFields = [
+      'product_title',
+      'product_variant',
+      'product_type_name',
+      'release_year',
+      'region_name',
+      'rating_name'
+    ];
 
-        // Handle recent updates filter
-        if (key === 'recent_updates') {
-          const secondsAgo = (item as any).products_updated_secondsago;
-          if (values.includes('recent')) {
-            return typeof secondsAgo === 'number' && secondsAgo <= 3600;
+    // Get all searchable text from the item
+    const itemText = searchFields
+      .map(field => {
+        const value = item[field];
+        // Handle null, undefined, and empty strings consistently
+        if (value === null || value === undefined || value === '') {
+          return '';
+        }
+        return String(value).toLowerCase();
+      })
+      .filter(Boolean)  // Remove empty strings before joining
+      .join(' ');
+
+    // All search terms must be found somewhere in the item's text
+    return searchTerms.every(term => itemText.includes(term));
+  }, [searchTerm]);
+
+  const customFilter = React.useCallback((item: T) => {
+    return Object.entries(selectedFilters).every(([key, values]) => {
+      if (!values || values.length === 0) return true;
+
+      // Handle recent updates filter
+      if (key === 'recent_updates') {
+        const secondsAgo = (item as any).products_updated_secondsago;
+        if (values.includes('recent')) {
+          return typeof secondsAgo === 'number' && secondsAgo <= 3600;
+        }
+        return true;
+      }
+
+      // Handle tag filters
+      if (key.startsWith('tag_')) {
+        const tagName = key.replace('tag_', '');
+        const tags = (item as any).tags || [];
+        return values.every(filterValue => {
+          const [tagName, tagValue] = filterValue.split('=');
+          if (tagValue) {
+            return tags.includes(`${tagName}=${tagValue}`);
+          } else {
+            return tags.includes(tagName);
           }
-          return true;
-        }
+        });
+      }
 
-        // Handle tag filters
-        if (key.startsWith('tag_')) {
-          const tagName = key.replace('tag_', '');
-          const tags = (item as any).tags || [];
-          return values.every(filterValue => {
-            const [tagName, tagValue] = filterValue.split('=');
-            if (tagValue) {
-              return tags.includes(`${tagName}=${tagValue}`);
-            } else {
-              return tags.includes(tagName);
-            }
-          });
-        }
-
-        // Handle regular filters
-        const itemValue = item[key];
-        // Handle empty values specially
-        if (values.includes('')) {
-          return !itemValue || String(itemValue).trim() === '';
-        }
-        return values.includes(String(itemValue));
-      });
-
-      return matchesSearch && matchesFilters;
+      // Handle regular filters
+      const itemValue = item[key];
+      // Handle empty values specially
+      if (values.includes('')) {
+        return itemValue === null || itemValue === undefined || String(itemValue).trim() === '';
+      }
+      // Handle null/undefined values in comparison
+      if (itemValue === null || itemValue === undefined) {
+        return false;
+      }
+      return values.includes(String(itemValue));
     });
-  }, [data, searchTerm, selectedFilters]);
+  }, [selectedFilters]);
+
+  // Filter data with memoized functions
+  const filtered = React.useMemo(() => {
+    return data.filter(item => searchFilter(item) && customFilter(item));
+  }, [data, searchFilter, customFilter]);
 
   // Get filter configurations with dynamic counts based on currently filtered data
   const filterConfigs = React.useMemo(() => {
     const baseConfigs = getFilterConfigs(data);
     
+    // Create a Map for faster lookups of filtered items
+    const filteredSet = new Set(filtered.map(item => JSON.stringify(item)));
+    
     return baseConfigs.map(config => {
-      // For each filter option, calculate count based on items that would match if this option was selected
-      const options = config.options.map(option => {
-        // Create a temporary filter state excluding the current filter
-        const otherFilters = { ...selectedFilters };
-        delete otherFilters[config.key];
-
-        // Count items that match other filters and would match this option
-        const count = data.filter(item => {
-          // Check if item matches search
-          const matchesSearch = !searchTerm || Object.values(item).some(value => 
-            String(value).toLowerCase().includes(searchTerm.toLowerCase())
-          );
-
-          // Check if item matches other filters
-          const matchesOtherFilters = Object.entries(otherFilters).every(([key, values]) => {
-            if (!values || values.length === 0) return true;
-            
-            const itemValue = item[key];
-            // Handle empty values specially
-            if (values.includes('')) {
-              return !itemValue || String(itemValue).trim() === '';
-            }
-            return values.includes(itemValue);
-          });
-
-          // Check if item matches this option
-          const matchesThisOption = option.value === '' 
-            ? !item[config.key] || String(item[config.key]).trim() === ''
-            : item[config.key] === option.value;
-
-          return matchesSearch && matchesOtherFilters && matchesThisOption;
-        }).length;
-
-        return {
-          ...option,
-          count
-        };
+      const optionCounts = new Map<string, number>();
+      
+      // Pre-calculate counts for all options
+      filtered.forEach(item => {
+        const value = String(item[config.key] || '');
+        optionCounts.set(value, (optionCounts.get(value) || 0) + 1);
       });
+      
+      const options = config.options.map(option => ({
+        ...option,
+        count: optionCounts.get(option.value) || 0
+      }));
 
       return {
         ...config,
         options
       };
     });
-  }, [data, selectedFilters, searchTerm, getFilterConfigs]);
+  }, [data, filtered, getFilterConfigs]);
 
-  // Sort data
+  // Sort data with stable sort
   const sorted = React.useMemo(() => {
-    // Create a map of original indices to maintain order during animations
-    const indexMap = new Map(data.map((item, index) => [item[sortBy], index]));
+    const indexMap = new Map(filtered.map((item, index) => [item, index]));
     
     return [...filtered].sort((a, b) => {
-      // Get the values, handling nested fields with _secondsago
-      let valA = sortBy.endsWith('_secondsago') ? Number(a[sortBy] ?? 0) : (a[sortBy] ?? '');
-      let valB = sortBy.endsWith('_secondsago') ? Number(b[sortBy] ?? 0) : (b[sortBy] ?? '');
+      const valA = sortBy.endsWith('_secondsago') ? Number(a[sortBy] ?? 0) : (a[sortBy] ?? '');
+      const valB = sortBy.endsWith('_secondsago') ? Number(b[sortBy] ?? 0) : (b[sortBy] ?? '');
       
       // If values are equal, maintain original order
       if (valA === valB) {
-        const indexA = indexMap.get(valA) ?? 0;
-        const indexB = indexMap.get(valB) ?? 0;
-        return indexA - indexB;
+        return (indexMap.get(a) ?? 0) - (indexMap.get(b) ?? 0);
       }
 
-      // Handle numeric sorting (including secondsago fields)
+      // Handle numeric sorting
       if (typeof valA === 'number' && typeof valB === 'number') {
         return sortDirection === 'asc' ? valA - valB : valB - valA;
       }
       
-      // Convert to strings for string comparison
+      // String comparison
       const strA = String(valA).toLowerCase();
       const strB = String(valB).toLowerCase();
       
-      if (strA < strB) return sortDirection === 'asc' ? -1 : 1;
-      if (strA > strB) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
+      return sortDirection === 'asc' 
+        ? strA.localeCompare(strB)
+        : strB.localeCompare(strA);
     });
-  }, [filtered, sortBy, sortDirection, data]);
+  }, [filtered, sortBy, sortDirection]);
 
   // Calculate pagination
   const startIndex = (page - 1) * pageSize;

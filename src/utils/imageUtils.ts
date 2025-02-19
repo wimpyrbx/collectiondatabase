@@ -82,79 +82,67 @@ export interface UploadResult {
   imagePath?: string;
 }
 
-export async function uploadImage(file: File, type: 'product' | 'inventory', id: number): Promise<UploadResult> {
+export const uploadImage = async (type: 'product' | 'inventory', id: number, file: File): Promise<UploadResult> => {
   const formData = new FormData();
+  
+  // Ensure correct order and explicitly convert values to strings
+  formData.append('type', String(type));
+  formData.append('id', String(id));
   formData.append('image', file);
-  formData.append('type', type);
-  formData.append('id', id.toString());
 
   try {
-    console.log('Starting upload:', { type, id, fileName: file.name });
-    
-    const response = await fetch(`${BASE_URL}/api/upload.php${DEV_MODE ? '?devmode=true' : ''}`, {
+
+    const response = await fetch(`${BASE_URL}/api/upload.php`, {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: {
+        'Accept': 'application/json'
+      }
     });
 
-    let result: UploadResponse;
     let responseText: string;
-    
     try {
       responseText = await response.text();
-      console.log('Raw response:', responseText);
       
+      // Try to parse as JSON
       try {
-        result = JSON.parse(responseText);
-      } catch (error) {
-        console.error('Failed to parse response:', responseText);
+        const result = JSON.parse(responseText);
+        if (!result.success) {
+          console.error('Upload failed:', {
+            result,
+            debug: result.debug
+          });
+        }
+        return {
+          success: result.success,
+          message: result.message,
+          imagePath: result.data?.path
+        };
+      } catch (parseError) {
+        console.error('Failed to parse response as JSON:', {
+          responseText,
+          error: parseError
+        });
         return {
           success: false,
-          message: `Server returned invalid JSON response: ${responseText.substring(0, 100)}...`
+          message: `Server returned invalid response: ${responseText.substring(0, 100)}...`
         };
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Failed to read response:', error);
       return {
         success: false,
-        message: `Failed to read server response: ${message}`
+        message: 'Failed to read server response'
       };
     }
-
-    if (!response.ok || !result.success) {
-      console.error('Upload failed:', { result, status: response.status });
-      return {
-        success: false,
-        message: result.message || `Upload failed with status ${response.status}. ${result.data ? JSON.stringify(result.data) : ''}`
-      };
-    }
-
-    if (!result.data?.path) {
-      console.error('Upload succeeded but no path returned:', result);
-      return {
-        success: false,
-        message: 'Server did not return image path'
-      };
-    }
-
-    console.log('Upload successful:', result);
-    // Invalidate the image cache after successful upload
-    invalidateImage(type, id);
-    return {
-      success: true,
-      message: result.message,
-      imagePath: result.data.path
-    };
-
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Upload error:', error);
     return {
       success: false,
-      message: `Network or system error: ${message}`
+      message: error instanceof Error ? error.message : 'Failed to upload image'
     };
   }
-} 
+};
 
 export interface ImageUploadHandlers {
   handleDragEnter: (e: React.DragEvent) => void;
@@ -189,7 +177,7 @@ export function useImageUpload(
         return;
       }
 
-      const result = await uploadImage(file, type, id);
+      const result = await uploadImage(type, id, file);
       
       if (!result.success) {
         onUploadError?.(result.message);
@@ -257,7 +245,6 @@ export async function deleteImage(type: 'product' | 'inventory', id: number): Pr
   formData.append('id', id.toString());
 
   try {
-    console.log('Deleting image:', { type, id });
     
     const response = await fetch(`${BASE_URL}/api/delete.php${DEV_MODE ? '?devmode=true' : ''}`, {
       method: 'POST',
@@ -267,7 +254,6 @@ export async function deleteImage(type: 'product' | 'inventory', id: number): Pr
     let result;
     try {
       const responseText = await response.text();
-      console.log('Raw response:', responseText);
       
       try {
         result = JSON.parse(responseText);
@@ -288,14 +274,12 @@ export async function deleteImage(type: 'product' | 'inventory', id: number): Pr
     }
 
     if (!response.ok || !result.success) {
-      console.error('Delete failed:', { result, status: response.status });
       return {
         success: false,
         message: result.message || `Delete failed with status ${response.status}`
       };
     }
 
-    console.log('Delete successful:', result);
     invalidateImage(type, id);
     return {
       success: true,

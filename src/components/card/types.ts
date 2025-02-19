@@ -15,11 +15,13 @@ export interface CardCompositionProps {
 export interface CardBodyProps {
   children: React.ReactNode;
   isCollapsed?: boolean;
+  className?: string;
 }
 
 export interface CardFooterProps {
   children: React.ReactNode;
   isCollapsed?: boolean;
+  className?: string;
 }
 
 export interface CardHeaderProps {

@@ -140,6 +140,7 @@ class PriceChartingScraper:
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         self.saved_files.append(str(output_path))
+        print(f"Saved game data to {output_path}")
 
     def _check_existing_file(self, game_id: int) -> Tuple[bool, Optional[Dict]]:
         """
@@ -172,8 +173,13 @@ class PriceChartingScraper:
         # First, check if we have valid cached data
         should_use_cache, cached_data = self._check_existing_file(game_id)
         
+        # If we have valid cache and aren't scraping variants, return cached data immediately
+        if should_use_cache and not scrape_variants:
+            print(f"Using cached data for game {game_id}")
+            return cached_data
+        
         try:
-            # Always fetch the page first to check for variants
+            # Fetch the page (needed for variants or if no valid cache)
             self.rate_limiter.wait()
             response = requests.get(
                 f"{self.base_url}/{game_id}",
@@ -225,7 +231,7 @@ class PriceChartingScraper:
                                     from src.utils.image_utils import download_image
                                     download_image(variant_data['image_url'], variant_id, self.output_dir, self.headers)
 
-            # If we have valid cached data for the original game, use it
+            # If we have valid cached data and we only needed to check variants, return cached data
             if should_use_cache:
                 print(f"Using cached data for game {game_id}")
                 return cached_data
@@ -252,6 +258,11 @@ class PriceChartingScraper:
             'prices': self._get_initialized_prices(),
             'details': {}
         }
+
+        # Get canonical URL if available
+        canonical_tag = soup.find('link', rel='canonical')
+        if canonical_tag and canonical_tag.get('href'):
+            results['pricecharting_url'] = canonical_tag['href']
 
         # Get product name
         self._parse_product_name(soup, results)
@@ -280,10 +291,17 @@ class PriceChartingScraper:
             if platform_link:
                 platform_link.extract()  # Temporarily remove platform text
             name = title_elem.get_text(strip=True)
-            # Stop at '[' if it exists
+            
+            # Extract variant from square brackets if present
             if '[' in name:
-                name = name.split('[')[0].strip()
-            results['product_name'] = self._propercase(name) if name else None
+                parts = name.split('[', 1)
+                base_name = parts[0].strip()
+                if len(parts) == 2 and ']' in parts[1]:
+                    variant = parts[1].split(']')[0].strip()
+                    results['variant_name'] = self._propercase(variant)
+                results['product_name'] = self._propercase(base_name)
+            else:
+                results['product_name'] = self._propercase(name)
 
     def _parse_prices(self, soup: BeautifulSoup, results: Dict):
         prices_div = soup.find('div', id='full-prices')
@@ -370,6 +388,7 @@ class PriceChartingScraper:
         return {
             'success': False,
             'image_url': None,
+            'pricecharting_url': None,
             'prices': {},
             'details': {}
         }

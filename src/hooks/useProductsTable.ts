@@ -16,18 +16,36 @@ export const useProductsTable = () => {
   const updateProductMutation = useMutation(
     createMutationOptions<{data: Product}, unknown, { id: number; updates: Partial<Product> }, MutationContext>({
       mutationFn: async ({ id, updates }) => {
-        // Remove fields that should not be updated directly
-        const { id: _, created_at, updated_at, price_nok, price_nok_fixed, price_new_nok, price_new_nok_fixed, ...validUpdates } = updates;
+        // Create a clean update object that explicitly includes null values
+        const updateData: Record<string, any> = {};
+        
+        // Explicitly set fields that should be updated, including null values
+        Object.entries(updates).forEach(([key, value]) => {
+          // Skip fields that should not be updated directly
+          if (['id', 'created_at', 'updated_at', 'price_nok', 'price_nok_fixed', 'price_new_nok', 'price_new_nok_fixed'].includes(key)) {
+            return;
+          }
+          // Explicitly include the value, even if it's null
+          updateData[key] = value;
+        });
+
+        console.log('Updating product with ID:', id);
+        console.log('Update data being sent to Supabase:', updateData);
 
         // Do the update
         const { data, error } = await supabase
           .from('products')
-          .update(validUpdates)
+          .update(updateData)
           .eq('id', id)
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase update error:', error);
+          throw error;
+        }
+
+        console.log('Update successful, received data:', data);
         return { data };
       },
       onMutate: async ({ id, updates }) => {
@@ -198,6 +216,88 @@ export const useProductsTable = () => {
       }
     })
   );
+
+  const handleUpdate = async (id: number, updates: Partial<Product>) => {
+    // Remove computed fields that shouldn't be sent to the server
+    const { id: _, created_at, updated_at, ...validUpdates } = updates;
+
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .update(validUpdates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Invalidate the products cache to trigger a refetch
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating product:', error);
+      return { data: null, error: error as Error };
+    }
+  };
+
+  const validateUpdates = (updates: Partial<Product>) => {
+    const errors: string[] = [];
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      // Skip validation for computed fields
+      if (['id', 'created_at', 'updated_at'].includes(key)) {
+        return;
+      }
+
+      // Add your validation rules here
+      if (key === 'release_year' && value !== null) {
+        const year = Number(value);
+        if (isNaN(year) || year < 1900 || year > new Date().getFullYear()) {
+          errors.push('Invalid release year');
+        }
+      }
+    });
+
+    return errors;
+  };
+
+  const handleCreate = async (newProduct: ProductCreateDTO) => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          product_title: newProduct.product_title,
+          product_variant: newProduct.product_variant ?? null,
+          release_year: newProduct.release_year ? Number(newProduct.release_year) : null,
+          is_product_active: newProduct.is_product_active ?? true,
+          product_notes: newProduct.product_notes ?? null,
+          product_group: newProduct.product_group ?? null,
+          product_type: newProduct.product_type,
+          rating: newProduct.rating ?? null,
+          region: newProduct.region ?? null,
+          publisher: newProduct.publisher ?? null,
+          developer: newProduct.developer ?? null,
+          genre: newProduct.genre ?? null,
+          ean_gtin: newProduct.ean_gtin ?? null,
+          asin: newProduct.asin ?? null,
+          epid: newProduct.epid ?? null,
+          pricecharting_id: newProduct.pricecharting_id ?? null
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Invalidate the products cache to trigger a refetch
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error creating product:', error);
+      return { data: null, error: error as Error };
+    }
+  };
 
   return {
     updateProduct: updateProductMutation.mutate,

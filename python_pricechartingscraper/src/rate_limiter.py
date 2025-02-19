@@ -13,7 +13,7 @@ class RateLimiter:
     def wait(self, is_variant: bool = False):
         """Wait appropriate time between requests"""
         # Add random delay between 5-10 seconds
-        random_delay = random.uniform(5.0, 10.0)
+        random_delay = random.uniform(2.0, 4.0)
         delay = random_delay + (self.variant_delay if is_variant else self.delay)
         
         now = time.time()

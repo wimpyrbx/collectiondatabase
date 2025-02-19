@@ -1,18 +1,22 @@
 <?php
 header("Access-Control-Allow-Origin: http://localhost:5173");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, Accept");
 header('Content-Type: application/json');
 
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('html_errors', 0); // Prevent HTML in error messages
 
-// Debug mode can be enabled via query parameter or hardcoded
-$debugMode = isset($_GET['debug']) && $_GET['debug'] === 'true';
-if (!isset($debugMode)) {
-    $debugMode = false;
-}
+// These won't work via ini_set, they're just for reference
+ini_set('upload_max_filesize', '200M');
+ini_set('post_max_size', '200M');
+ini_set('memory_limit', '256M');
+ini_set('max_execution_time', 300);
+
+// Debug mode is always on for now
+$debugMode = true;
 
 // Debug log collection
 $debugLog = [];
@@ -21,45 +25,64 @@ function add_debug_log($message, $data = []) {
     $debugLog[] = [
         'message' => $message,
         'data' => $data,
-        'time' => microtime(true)
+        'time' => microtime(true),
+        'memory' => memory_get_usage(),
+        'error' => error_get_last()
     ];
 }
 
+// Log ALL request information immediately
+add_debug_log('Complete request information', [
+    'POST' => $_POST,
+    'FILES' => $_FILES,
+    'SERVER' => [
+        'CONTENT_TYPE' => $_SERVER['CONTENT_TYPE'] ?? 'not set',
+        'CONTENT_LENGTH' => $_SERVER['CONTENT_LENGTH'] ?? 'not set',
+        'REQUEST_METHOD' => $_SERVER['REQUEST_METHOD'],
+        'HTTP_ACCEPT' => $_SERVER['HTTP_ACCEPT'] ?? 'not set',
+        'HTTP_CONTENT_TYPE' => $_SERVER['HTTP_CONTENT_TYPE'] ?? 'not set'
+    ],
+    'PHP Settings' => [
+        'file_uploads' => ini_get('file_uploads'),
+        'upload_max_filesize' => ini_get('upload_max_filesize'),
+        'post_max_size' => ini_get('post_max_size'),
+        'max_input_time' => ini_get('max_input_time'),
+        'memory_limit' => ini_get('memory_limit'),
+        'max_execution_time' => ini_get('max_execution_time'),
+        'max_file_uploads' => ini_get('max_file_uploads')
+    ],
+    'Raw POST Data Length' => strlen(file_get_contents('php://input'))
+]);
+
 function output_debug_log() {
     global $debugLog;
-    header('Content-Type: text/plain');
-    echo "DEBUG LOG:\n";
-    echo "==========\n\n";
-    foreach ($debugLog as $entry) {
-        echo "TIME: " . date('H:i:s', (int)$entry['time']) . "." . sprintf("%03d", ($entry['time'] - floor($entry['time'])) * 1000) . "\n";
-        echo "MESSAGE: {$entry['message']}\n";
-        if (!empty($entry['data'])) {
-            echo "DATA:\n";
-            foreach ($entry['data'] as $key => $value) {
-                echo "  $key: " . print_r($value, true) . "\n";
-            }
-        }
-        echo "\n" . str_repeat("-", 50) . "\n\n";
-    }
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'message' => 'Debug information',
+        'debug_log' => $debugLog
+    ], JSON_PRETTY_PRINT);
     exit;
 }
 
 // Response helper function
 function send_response($success, $message, $data = null) {
-    global $debugMode;
-    if ($debugMode) {
-        add_debug_log($message, $data);
-        output_debug_log();
-    } else {
-        header('Content-Type: application/json');
-        header('Cache-Control: no-cache, must-revalidate');
-        echo json_encode([
-            'success' => $success,
-            'message' => $message,
-            'data' => $data
-        ]);
-        exit;
-    }
+    global $debugLog;
+    
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => $success,
+        'message' => $message,
+        'data' => $data,
+        'debug' => [
+            'log' => $debugLog,
+            'post' => $_POST,
+            'files' => $_FILES,
+            'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not set',
+            'content_length' => $_SERVER['CONTENT_LENGTH'] ?? 'not set'
+        ]
+    ], JSON_PRETTY_PRINT);
+    exit;
 }
 
 // Validate request
@@ -71,17 +94,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     send_response(false, 'Invalid request method: ' . $_SERVER['REQUEST_METHOD']);
 }
 
-// Log request details
-add_debug_log('Request details', [
-    'method' => $_SERVER['REQUEST_METHOD'],
-    'post_data' => $_POST,
-    'files' => isset($_FILES) ? array_keys($_FILES) : 'No files'
-]);
-
 // Required parameters
-if (!isset($_POST['type']) || !isset($_POST['id'])) {
+if (empty($_POST['type']) || empty($_POST['id'])) {
     send_response(false, 'Missing required parameters', [
-        'received_post' => $_POST
+        'received_post' => $_POST,
+        'files' => $_FILES,
+        'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not set',
+        'raw_post_size' => strlen(file_get_contents('php://input')),
+        'max_post_size' => ini_get('post_max_size'),
+        'upload_max_filesize' => ini_get('upload_max_filesize')
     ]);
 }
 
@@ -208,12 +229,67 @@ try {
         ]);
     }
 
+    // Get original dimensions
+    $originalWidth = imagesx($image);
+    $originalHeight = imagesy($image);
+
+    // Calculate new dimensions if height exceeds 800px
+    $newWidth = $originalWidth;
+    $newHeight = $originalHeight;
+    if ($originalHeight > 800) {
+        $newHeight = 800;
+        $newWidth = floor($originalWidth * (800 / $originalHeight));
+        
+        // Create new resized image
+        $resized = imagecreatetruecolor($newWidth, $newHeight);
+        
+        // Preserve transparency for PNG images
+        if ($imageInfo[2] === IMAGETYPE_PNG) {
+            imagealphablending($resized, false);
+            imagesavealpha($resized, true);
+            $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
+            imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
+        }
+        
+        // Resize the image
+        imagecopyresampled(
+            $resized,        // destination image
+            $image,          // source image
+            0, 0,           // destination x, y
+            0, 0,           // source x, y
+            $newWidth,      // destination width
+            $newHeight,     // destination height
+            $originalWidth, // source width
+            $originalHeight // source height
+        );
+        
+        // Free the original image
+        imagedestroy($image);
+        $image = $resized;
+    }
+
     // Convert to WebP
-    if (!imagewebp($image, $targetFile, 80)) {
-        send_response(false, 'Failed to convert and save image', [
-            'last_error' => error_get_last(),
-            'target_file' => $targetFile
-        ]);
+    if (function_exists('imagewebp')) {
+        // WebP is supported, try to convert
+        if (!imagewebp($image, $targetFile, 80)) {
+            // If WebP conversion fails, fall back to PNG
+            $targetFile = "{$targetDir}/{$id}.png";
+            if (!imagepng($image, $targetFile, 9)) {
+                send_response(false, 'Failed to convert and save image', [
+                    'last_error' => error_get_last(),
+                    'target_file' => $targetFile
+                ]);
+            }
+        }
+    } else {
+        // WebP not supported, use PNG
+        $targetFile = "{$targetDir}/{$id}.png";
+        if (!imagepng($image, $targetFile, 9)) {
+            send_response(false, 'Failed to save image', [
+                'last_error' => error_get_last(),
+                'target_file' => $targetFile
+            ]);
+        }
     }
 
     imagedestroy($image);
@@ -226,8 +302,10 @@ try {
         ]);
     }
 
+    // Get the file extension from the actual saved file
+    $extension = pathinfo($targetFile, PATHINFO_EXTENSION);
     send_response(true, 'Image uploaded successfully', [
-        'path' => "/images/{$type}s/{$folder}/{$id}.webp",
+        'path' => "/images/{$type}s/{$folder}/{$id}.{$extension}",
         'size' => filesize($targetFile)
     ]);
 

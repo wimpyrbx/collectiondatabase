@@ -24,18 +24,37 @@ def extract_links(html_file):
             # Convert relative URLs to absolute
             if href.startswith('/'):
                 href = f"https://www.pricecharting.com{href}"
-            target_links.append(href)
+            
+            # Find canonical URL for this game page
+            canonical_url = None
+            if href.startswith('https://www.pricecharting.com/game/'):
+                # Make a temporary soup for this link to find its canonical URL
+                link_soup = BeautifulSoup(f'<link rel="canonical" href="{href}" />', 'html.parser')
+                canonical_tag = link_soup.find('link', rel='canonical')
+                if canonical_tag:
+                    canonical_url = canonical_tag['href']
+            
+            target_links.append({
+                'url': href,
+                'canonical_url': canonical_url or href  # Use original URL if no canonical found
+            })
     
     print(f"Found {len(target_links)} pricecharting game links")
     
     # Remove duplicates while preserving order
-    unique_links = list(dict.fromkeys(target_links))
+    seen = set()
+    unique_links = []
+    for link in target_links:
+        if link['canonical_url'] not in seen:
+            seen.add(link['canonical_url'])
+            unique_links.append(link)
+    
     print(f"Found {len(unique_links)} unique pricecharting game links")
     
     # Write links to file.txt
     with open('file.txt', 'w', encoding='utf-8') as f:
         for link in unique_links:
-            f.write(link + '\n')
+            f.write(f"{link['url']}\t{link['canonical_url']}\n")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

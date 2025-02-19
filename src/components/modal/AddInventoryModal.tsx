@@ -233,7 +233,9 @@ export const AddInventoryModal: React.FC<AddInventoryModalProps> = ({
                       <div className="col-span-2">
                         <span className="text-gray-400">Price:</span>
                         <span className="text-gray-200 ml-2">
-                          {selectedProduct?.price_nok_fixed ? `NOK ${selectedProduct.price_nok_fixed},-` : '-'}
+                          {selectedProduct?.prices?.loose?.nok_fixed 
+                            ? `NOK ${selectedProduct.prices.loose.nok_fixed},-` 
+                            : '-'}
                         </span>
                       </div>
                     </div>

@@ -10,6 +10,7 @@ const Contact = lazy(() => import('@/pages/Contact'));
 const FormElementsShowcase = lazy(() => import('@/pages/FormElementsShowcase'));
 const CardShowcase = lazy(() => import('@/pages/CardShowcase'));
 const Inventory = lazy(() => import('@/pages/Inventory'));
+const TagAdmin = lazy(() => import('@/pages/TagAdmin'));
 
 const App = () => {
   return (
@@ -21,6 +22,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/inventory" element={<Inventory />} />
+              <Route path="/tags" element={<TagAdmin />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/form-elements-showcase" element={<FormElementsShowcase />} />

@@ -1,12 +1,12 @@
 import { useRef, useCallback, useState } from 'react';
 import { useModalForm } from './useModalForm';
 import { useProductService } from './useProductService';
-import type { ProductViewItem } from '@/types/product';
+import type { ProductViewItem, ProductCreateDTO, ProductUpdateDTO } from '@/types/product';
 import type { RegionRatingValue } from '@/components/product/RegionRatingSelector';
-import type { ProductUpdateDTO, ProductCreateDTO } from '@/services/ProductService';
 import regionsData from '@/data/regions.json';
 import type { Region, RatingSystem, Rating } from '@/types/data';
 import { uploadImage } from '@/utils/imageUtils';
+import { supabase } from '@/supabaseClient';
 
 interface UseProductModalOptions {
   product: ProductViewItem | null | undefined;
@@ -144,36 +144,64 @@ export function useProductModal({
       rating: regionRating.rating || null
     };
 
-    if (mode === 'create') {
-      const { data: createdProduct, errors: createErrors } = await productService.create(data as ProductCreateDTO);
-      if (createErrors.length > 0) {
-        setErrors(createErrors);
-        return;
-      }
-
-      // If we have a pending image, upload it now that we have the product ID
-      if (pendingImage && createdProduct) {
-        try {
-          const { success, message } = await uploadImage(pendingImage, 'product', createdProduct.id);
-          if (!success) {
-            setErrors(prev => [...prev, `Image upload failed: ${message}`]);
-          }
-        } catch (error) {
-          setErrors(prev => [...prev, 'Failed to upload image']);
+    try {
+      if (mode === 'create') {
+        const { data: createdProduct, errors: createErrors } = await productService.create(data as ProductCreateDTO);
+        if (createErrors.length > 0) {
+          setErrors(createErrors);
+          return;
         }
+
+        if (!createdProduct) {
+          setErrors(['Failed to create product']);
+          return;
+        }
+
+        // If we have a pending image, upload it now that we have the product ID
+        if (pendingImage) {
+          try {
+            const { success, message } = await uploadImage(pendingImage, 'product', createdProduct.id);
+            if (!success) {
+              setErrors(prev => [...prev, `Image upload failed: ${message}`]);
+            }
+          } catch (error) {
+            setErrors(prev => [...prev, 'Failed to upload image']);
+          }
+        }
+
+        // Create tag relationships for new product if tags are provided
+        if (formData.tags?.length > 0) {
+          try {
+            const { error: tagError } = await supabase
+              .from('product_tag_relationships')
+              .insert(
+                formData.tags.map((tagId: number) => ({
+                  product_id: createdProduct.id,
+                  tag_id: tagId
+                }))
+              );
+            if (tagError) throw tagError;
+          } catch (error) {
+            setErrors(prev => [...prev, 'Failed to create tag relationships']);
+            return;
+          }
+        }
+
+        onSuccess?.(createdProduct.id);
+      } else if (product) {
+        const { data: updatedProduct, errors: updateErrors } = await productService.update(product.product_id, data as ProductUpdateDTO);
+        if (updateErrors.length > 0) {
+          setErrors(updateErrors);
+          return;
+        }
+
+        onSuccess?.(product.product_id);
       }
 
-      onSuccess?.(createdProduct!.id);
-    } else if (product) {
-      const { data: updatedProduct, errors: updateErrors } = await productService.update(product.product_id, data as ProductUpdateDTO);
-      if (updateErrors.length > 0) {
-        setErrors(updateErrors);
-        return;
-      }
-      onSuccess?.(product.product_id);
+      handleClose();
+    } catch (error) {
+      setErrors(['Failed to save changes']);
     }
-
-    handleClose();
   };
 
   const handlePendingImageChange = (file: File | null) => {
@@ -199,7 +227,7 @@ export function useProductModal({
     handleInputChange,
     handleClose,
     handleSubmit,
-    isUpdating: productService.isUpdating,
+    isUpdating: false,
     setErrors,
     pendingImage,
     handlePendingImageChange,

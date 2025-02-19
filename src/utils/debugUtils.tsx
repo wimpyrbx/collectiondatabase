@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 const DEBUG_CONFIG = {
     enabled: process.env.NODE_ENV === 'development',
     categories: {
-        cache: true,
-        changes: true,
-        api: true,
+        cache: false,
+        changes: false,
+        api: false,
         components: false
     }
 } as const;

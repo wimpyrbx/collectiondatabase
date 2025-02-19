@@ -85,7 +85,41 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
   updateAgeColumn
 }: BaseFilterableTableProps<T>) => {
   const [isFiltersExpanded, setIsFiltersExpanded] = React.useState(false);
+  const [localSearchTerm, setLocalSearchTerm] = React.useState(searchTerm);
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout>();
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
   const { className: animationClass } = useUpdateAnimation(updatedId || '');
+
+  // Focus input when search is cleared
+  React.useEffect(() => {
+    if (localSearchTerm === '' && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [localSearchTerm]);
+
+  // Debounced search handler
+  React.useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      if (onSearchChange) {
+        onSearchChange(localSearchTerm);
+      }
+    }, 300); // 300ms debounce delay
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [localSearchTerm, onSearchChange]);
+
+  // Sync local search term with prop
+  React.useEffect(() => {
+    setLocalSearchTerm(searchTerm);
+  }, [searchTerm]);
 
   // Calculate if we have any recent updates (< 1 hour)
   const recentUpdatesCount = React.useMemo(() => {
@@ -182,18 +216,37 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
       <div className="flex justify-between items-start gap-4">
         {/* Left side: Search */}
         {onSearchChange && (
-          <div className="w-1/4">
+          <div className="w-1/8 relative">
             <input
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full p-2 text-sm border border-gray-700 rounded-lg bg-gray-900 text-gray-300"
+              ref={searchInputRef}
+              value={localSearchTerm}
+              onChange={(e) => setLocalSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setLocalSearchTerm('');
+                  if (onSearchChange) onSearchChange('');
+                }
+              }}
+              className="w-full p-2 text-sm border border-gray-700 rounded-lg bg-gray-900 text-gray-300 pr-8"
               placeholder={searchPlaceholder}
             />
+            {localSearchTerm && (
+              <button
+                onClick={() => {
+                  setLocalSearchTerm('');
+                  if (onSearchChange) onSearchChange('');
+                }}
+                type="button"
+                title="Clear search"
+                className="absolute bg-transparent border-none right-[-5px] top-[-1px] text-red-600 hover:text-red-400 transition-colors"
+              >X
+              </button>
+            )}
           </div>
         )}
 
         {/* Right side: Filters */}
-        <div className={onSearchChange ? "w-3/4" : "w-full"}>
+        <div className={onSearchChange ? "w-5/6" : "w-full"}>
           <button
             onClick={() => {
               setIsFiltersExpanded(!isFiltersExpanded);
