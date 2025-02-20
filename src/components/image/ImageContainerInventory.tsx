@@ -234,10 +234,12 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
         {/* Action Buttons */}
         {hasRealImage && !isFallbackImage && (
           <div className={clsx(
-            "absolute bottom-4 left-1/2 -translate-x-1/2",
-            "z-[60] flex gap-1",
+            "absolute bottom-0 p-4 left-1/2 -translate-x-1/2",
+            "z-[60] w-full items-center justify-center flex gap-4",
             "transition-all duration-200",
-            "opacity-0 group-hover:opacity-100"
+            "opacity-0 group-hover:opacity-100",
+            "animate-in fade-in-0 duration-1000",
+            "bg-gradient-to-t from-black/100 to-transparent"
           )}>
             <Button
               onClick={() => {
@@ -247,7 +249,7 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
               bgColor="bg-blue-600/80"
               iconLeft={<FaEye />}
               size="xs"
-              className="!px-2 !py-1"
+              hoverEffect='scale'
             >
               View
             </Button>
@@ -259,7 +261,7 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
               bgColor="bg-green-600/80"
               iconLeft={<FaCrop />}
               size="xs"
-              className="!px-2 !py-1"
+              hoverEffect='scale'
             >
               Crop
             </Button>
@@ -268,7 +270,7 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
               bgColor="bg-red-600/80"
               iconLeft={<FaTrash />}
               size="xs"
-              className="!px-2 !py-1"
+              hoverEffect='scale'
               disabled={isDeleting}
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
@@ -279,14 +281,15 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
         {/* Fallback Image Indicator */}
         {isFallbackImage && imageSrc && (
           <div className={clsx(
-            "absolute bottom-4 left-1/2 -translate-x-1/2",
-            "bg-orange-500/90 text-white px-3 py-1 rounded-full",
-            "text-xs font-medium shadow-lg",
-            "flex items-center gap-2",
-            "z-[70]"
+            "absolute top-4 w-[75%] left-1/2 -translate-x-1/2",
+            "bg-orange-600 text-white px-4 py-3 rounded-xl",
+            "text-sm font-bold shadow-lg",
+            "flex items-center justify-center gap-2",
+            "shadow-lg shadow-black/50",
+            "z-[70] cursor-default"
           )}>
-            <FaImage className="w-3 h-3" />
-            Using Product Image
+            <FaImage className="w-4 h-4 text-cyan-500" />
+            Displaying Product Image!
           </div>
         )}
       </div>

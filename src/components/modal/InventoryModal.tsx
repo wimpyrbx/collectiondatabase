@@ -463,20 +463,20 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
             }
           />
           <Card.Body>
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-12 gap-4">
               {/* Left Column - Image and Product Info */}
               <div className="col-span-3">
-                <div className="sticky top-0 space-y-4">
+                <div className="space-y-4">
                   <ImageContainerInventory
                     id={inventory?.inventory_id || -1}
                     title={inventory?.product_title || 'New Inventory'}
                     onError={(message) => setErrors(prev => [...prev, message])}
-                    className="w-full"
+                    className="w-full h-full"
                     productId={inventory?.product_id}
                   />
                   
                   {/* Product Information Display */}
-                  <div className="bg-gray-900/50 rounded-lg overflow-hidden">
+                  <div className="bg-gray-900/50 rounded-lg overflow-hidden shadow-md shadow-black/40">
                     <div className="px-4 py-2 bg-gray-800/50 border-b border-gray-700">
                       <h3 className="font-medium text-gray-300 flex items-center gap-2">
                         <FaBox className="text-cyan-400" />

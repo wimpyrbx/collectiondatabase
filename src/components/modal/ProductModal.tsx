@@ -262,6 +262,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     if (mode === 'create') return; // Don't track changes for new products
     
     if (initialFormState && formData) {
+      const compareValues = (initial: any, current: any) => {
+        const normalizedInitial = initial === null || initial === undefined ? '' : initial.toString();
+        const normalizedCurrent = current === null || current === undefined ? '' : current.toString();
+        return normalizedInitial !== normalizedCurrent;
+      };
+
       const hasChanges = Object.keys(initialFormState).some(key => {
         const initial = initialFormState[key];
         let current = '';
@@ -269,28 +275,27 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         // Handle special cases for region, rating, and tags
         if (key === 'region') {
           current = regionRating.region || '';
-        } else if (key === 'rating') {
+          return compareValues(initial, current);
+        } 
+        if (key === 'rating') {
           current = regionRating.rating || '';
-        } else if (key === 'tags') {
-          const initialTags = product?.tags?.map(t => t.id) || [];
-          const currentTags = selectedTags.map(t => t.id);
-          return JSON.stringify(initialTags.sort()) !== JSON.stringify(currentTags.sort());
-        } else {
-          current = formData[key as keyof typeof formData]?.toString() || '';
+          return compareValues(initial, current);
+        } 
+        if (key === 'tags') {
+          const initialTags = product?.tags?.map(t => t.id).sort() || [];
+          const currentTags = selectedTags.map(t => t.id).sort();
+          return JSON.stringify(initialTags) !== JSON.stringify(currentTags);
         }
-
-        // Normalize values for comparison (treat null, undefined, and empty string as equivalent)
-        const normalizedInitial = initial === null || initial === undefined ? '' : initial.toString();
-        const normalizedCurrent = current === null || current === undefined ? '' : current.toString();
-
-        const hasChanged = normalizedInitial !== normalizedCurrent;
         
-        return hasChanged;
+        current = formData[key as keyof typeof formData]?.toString() || '';
+        return compareValues(initial, current);
       });
       
-      setHasFormChanges(hasChanges);
+      if (hasFormChanges !== hasChanges) {
+        setHasFormChanges(hasChanges);
+      }
     }
-  }, [formData, initialFormState, mode, regionRating, selectedTags, product]);
+  }, [formData, initialFormState, mode, regionRating.region, regionRating.rating, selectedTags, product?.tags, hasFormChanges]);
 
   // Initialize selected tags when product changes
   useEffect(() => {
@@ -537,9 +542,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           <Card.Body>
             <div className="min-h-[350px] max-h-[600px] overflow-y-auto px-2">
               <form id="product-form" onSubmit={wrappedHandleSubmit} className="space-y-6">
-                <div className="grid grid-cols-12 gap-6">
-                  {/* Image Column */}
-                  <div className="col-span-3">
+                <div className="grid grid-cols-[255px_1fr] gap-6">
+                  {/* Image Column - 255px */}
+                  <div className="col-span-1">
                     <ImageContainerProduct
                       id={product?.product_id || -1}
                       title={product?.product_title || 'New Product'}
@@ -552,7 +557,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   </div>
 
                   {/* Form Column */}
-                  <div className="col-span-9 space-y-4">
+                  <div className="col-span-1 space-y-4">
                     {/* Title, Variant, and Year Row */}
                     <div className="grid grid-cols-12 gap-2">
                       <div className="col-span-6">

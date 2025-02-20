@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FaImage, FaTrash, FaUpload, FaCrop, FaEye } from 'react-icons/fa';
 import clsx from 'clsx';
 import { getProductImageUrl, useImageUpload, deleteImage, checkImageExists, invalidateImage } from '@/utils/imageUtils';
@@ -25,6 +25,23 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
   onPendingImageChange,
   isCreateMode = false
 }) => {
+  // Constants
+  const IMAGE_HEIGHT = 350;
+  const IMAGE_CONTAINER_CLASSES = clsx(
+    "relative w-full",
+    `h-[${IMAGE_HEIGHT}px]`,
+    "rounded-xl overflow-hidden",
+    "bg-gray-900/50 border border-gray-700",
+    "flex items-center justify-center",
+    "group",
+    className
+  );
+  const IMAGE_CLASSES = clsx(
+    "max-w-full max-h-full object-contain p-5",
+    "transition-opacity duration-200"
+  );
+
+  // State
   const [imageSrc, setImageSrc] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -32,6 +49,17 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
   const [hasImage, setHasImage] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCropMode, setIsCropMode] = useState(false);
+
+  // Memoize the image style to prevent recreating object on every render
+  const imageStyle = useMemo(() => ({
+    height: `${IMAGE_HEIGHT}px`,
+    width: '100%',
+    objectFit: 'contain' as const
+  }), [IMAGE_HEIGHT]);
+
+  // Memoize handlers to prevent recreating functions on every render
+  const handleImageError = useCallback(() => setImageSrc(''), []);
+  const handleImageClick = useCallback(() => setIsModalOpen(true), []);
 
   // Use the centralized image upload hook
   const {
@@ -60,7 +88,7 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
     }
   );
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -70,9 +98,9 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
     }
 
     baseHandleFileInputChange(e);
-  };
+  }, [isCreateMode, onPendingImageChange, baseHandleFileInputChange]);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (!file) return;
@@ -83,7 +111,54 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
     }
 
     onDrop(e);
-  };
+  }, [isCreateMode, onPendingImageChange, onDrop]);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    setIsDragging(true);
+    onDragEnter(e);
+  }, [onDragEnter]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    setIsDragging(false);
+    onDragLeave(e);
+  }, [onDragLeave]);
+
+  // Combine image source management effects
+  useEffect(() => {
+    if (pendingImage) {
+      const url = URL.createObjectURL(pendingImage);
+      setImageSrc(url);
+      setHasImage(true);
+      return () => URL.revokeObjectURL(url);
+    } else if (id > 0) {
+      const checkImage = async () => {
+        try {
+          const exists = await checkImageExists(id, 'product');
+          setHasImage(exists);
+          setImageSrc(exists ? getProductImageUrl(id) : '');
+        } catch (error) {
+          console.error('Error refreshing image:', error);
+          onError?.('Failed to load image');
+        }
+      };
+      checkImage();
+    }
+  }, [id, pendingImage, onError]);
+
+  // Cache invalidation listener
+  useEffect(() => {
+    const handleCacheInvalidated = (event: CustomEvent) => {
+      const { type, id: invalidatedId } = event.detail;
+      if (type === 'product' && invalidatedId === id && !pendingImage) {
+        refreshImage();
+      }
+    };
+
+    window.addEventListener('image-cache-invalidated', handleCacheInvalidated as EventListener);
+    return () => {
+      window.removeEventListener('image-cache-invalidated', handleCacheInvalidated as EventListener);
+    };
+  }, [id, pendingImage]);
 
   const refreshImage = async () => {
     if (id <= 0) return;
@@ -98,46 +173,7 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
     }
   };
 
-  useEffect(() => {
-    refreshImage();
-  }, [id]);
-
-  // Listen for cache invalidation events
-  useEffect(() => {
-    const handleCacheInvalidated = (event: CustomEvent) => {
-      const { type, id: invalidatedId } = event.detail;
-      if (type === 'product' && invalidatedId === id) {
-        refreshImage();
-      }
-    };
-
-    window.addEventListener('image-cache-invalidated', handleCacheInvalidated as EventListener);
-    return () => {
-      window.removeEventListener('image-cache-invalidated', handleCacheInvalidated as EventListener);
-    };
-  }, [id]);
-
-  // Update image source when pendingImage changes
-  useEffect(() => {
-    if (pendingImage) {
-      const url = URL.createObjectURL(pendingImage);
-      setImageSrc(url);
-      setHasImage(true);
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [pendingImage]);
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    setIsDragging(true);
-    onDragEnter(e);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    setIsDragging(false);
-    onDragLeave(e);
-  };
-
-  const handleCropSave = async (crop: Crop) => {
+  const handleCropSave = useCallback(async (crop: Crop) => {
     try {
       const img = document.querySelector(`img[src="${imageSrc}"]`) as HTMLImageElement;
       if (!img) throw new Error('Could not find image element');
@@ -166,9 +202,9 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
     } catch (error) {
       onError?.(error instanceof Error ? error.message : 'Failed to crop image');
     }
-  };
+  }, [id, imageSrc, onError]);
 
-  const handleDeleteImage = async () => {
+  const handleDeleteImage = useCallback(async () => {
     if (!id || isDeleting) return;
     
     if (!confirm('Are you sure you want to delete this image?')) return;
@@ -190,19 +226,24 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [id, isDeleting, onError]);
+
+  const handleCropClick = useCallback(() => {
+    setIsCropMode(true);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleViewClick = useCallback(() => {
+    setIsCropMode(false);
+    setIsModalOpen(true);
+  }, []);
 
   return (
     <>
       <div 
         className={clsx(
-          "relative w-full h-[350px] rounded-xl overflow-hidden",
-          "bg-gray-900/50 border border-gray-700",
-          isDragging && "border-blue-500 border-4",
-          "transition-all duration-200",
-          "flex items-center justify-center",
-          "group",
-          className
+          IMAGE_CONTAINER_CLASSES,
+          isDragging && "border-green-600/50 border-4"
         )}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
@@ -215,12 +256,12 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
               src={imageSrc}
               alt={title}
               className={clsx(
-                "max-w-full max-h-full object-contain p-5",
+                IMAGE_CLASSES,
                 isDragging && "opacity-50"
               )}
-              onClick={() => setIsModalOpen(true)}
-              onError={() => setImageSrc('')}
-              style={{ height: '350px', width: '100%', objectFit: 'contain' }}
+              onClick={handleImageClick}
+              onError={handleImageError}
+              style={imageStyle}
             />
           </div>
         ) : (
@@ -263,32 +304,27 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
         {/* Action Buttons */}
         {hasImage && (
           <div className={clsx(
-            "absolute bottom-4 left-1/2 -translate-x-1/2",
-            "z-[60] flex gap-1",
+            "absolute bottom-0 p-4 left-1/2 -translate-x-1/2",
+            "z-[60] flex gap-4",
             "transition-all duration-200",
-            "opacity-0 group-hover:opacity-100"
+            "opacity-0 group-hover:opacity-100 items-center justify-center w-full bg-gradient-to-t from-black/100 to-transparent",
+            "animate-in fade-in-0 duration-500"
           )}>
             <Button
-              onClick={() => {
-                setIsCropMode(false);
-                setIsModalOpen(true);
-              }}
+              onClick={handleViewClick}
               bgColor="bg-blue-600/80"
               iconLeft={<FaEye />}
+              hoverEffect='scale'
               size="xs"
-              className="!px-2 !py-1"
             >
               View
             </Button>
             <Button
-              onClick={() => {
-                setIsCropMode(true);
-                setIsModalOpen(true);
-              }}
+              onClick={handleCropClick}
               bgColor="bg-green-600/80"
               iconLeft={<FaCrop />}
               size="xs"
-              className="!px-2 !py-1"
+              hoverEffect='scale'
             >
               Crop
             </Button>
@@ -297,8 +333,8 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
               bgColor="bg-red-600/80"
               iconLeft={<FaTrash />}
               size="xs"
-              className="!px-2 !py-1"
               disabled={isDeleting}
+              hoverEffect='scale'
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
             </Button>
