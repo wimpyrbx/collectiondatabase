@@ -15,7 +15,7 @@ import DisplayError from '@/components/ui/DisplayError';
 import { FaBox, FaTag, FaBoxes, FaCalendar, FaStickyNote, FaLayerGroup, FaCubes, FaTimes, FaCheck, FaExclamationTriangle, FaDollarSign, FaUpload, FaChevronLeft, FaChevronRight, FaTrash, FaSave, FaGlobe, FaTags } from 'react-icons/fa';
 import { getRatingDisplayInfo } from '@/utils/productUtils';
 import { useProductModal } from '@/hooks/useProductModal';
-import { ImageContainer } from '@/components/image/ImageContainer';
+import { ImageContainerProduct } from '@/components/image/ImageContainerProduct';
 import { Dialog } from '@headlessui/react';
 import { useProductMetadata } from '@/hooks/useProductMetadata';
 import { deleteImage } from '@/utils/imageUtils';
@@ -540,8 +540,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 <div className="grid grid-cols-12 gap-6">
                   {/* Image Column */}
                   <div className="col-span-3">
-                    <ImageContainer
-                      type="product"
+                    <ImageContainerProduct
                       id={product?.product_id || -1}
                       title={product?.product_title || 'New Product'}
                       onError={(message) => setErrors(prev => [...prev, message])}

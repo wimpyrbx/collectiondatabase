@@ -88,7 +88,7 @@ export const AddInventoryModal: React.FC<AddInventoryModalProps> = ({
     try {
       const newInventory = {
         product_id: selectedProduct.product_id,
-        inventory_status: 'NORMAL',
+        inventory_status: 'Normal',
         purchase_id: null,
         sale_id: null,
         override_price: null,

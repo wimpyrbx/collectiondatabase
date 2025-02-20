@@ -121,24 +121,37 @@ export const useInventoryStatusTransitionsCache = () => {
       if (error) throw error;
 
       // Convert array to map for easier lookup
-      const transitionMap: Record<string, Record<string, boolean>> = {};
+      const transitionMap: InventoryStatusTransitionMap = {};
       data?.forEach((transition: InventoryStatusTransition) => {
         if (!transitionMap[transition.from_status]) {
           transitionMap[transition.from_status] = {};
         }
-        transitionMap[transition.from_status][transition.to_status] = true;
+        transitionMap[transition.from_status][transition.to_status] = {
+          requires_sale_status: transition.requires_sale_status
+        };
       });
       return transitionMap;
     }
   });
 
-  const isTransitionAllowed = (fromStatus: string, toStatus: string): boolean => {
+  const isTransitionAllowed = (fromStatus: string, toStatus: string, currentSaleStatus?: string | null): boolean => {
     if (!transitions) return false;
-    return !!transitions[fromStatus]?.[toStatus];
+    const transition = transitions[fromStatus]?.[toStatus];
+    if (!transition) return false;
+    
+    // Only check sale status for Sold -> For Sale transition
+    if (fromStatus === "Sold" && toStatus === "For Sale") {
+      return currentSaleStatus === "Reserved";
+    }
+    
+    return true;
   };
 
   const getRequiredSaleStatus = (fromStatus: string, toStatus: string): string | null => {
-    // Add logic to get required sale status if needed
+    // Only return required sale status for Sold -> For Sale transition
+    if (fromStatus === "Sold" && toStatus === "For Sale") {
+      return "Reserved";
+    }
     return null;
   };
 

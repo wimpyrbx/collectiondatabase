@@ -2,7 +2,7 @@ import React from 'react';
 import Page from '@/components/page/Page';
 import { useInventoryCache, useProductsCache } from '@/hooks/viewHooks';
 import { InventoryViewItem } from '@/types/inventory';
-import { FaBoxes, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaStar, FaPlus, FaImage, FaStore } from 'react-icons/fa';
+import { FaBoxes, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaStar, FaPlus, FaImage, FaStore, FaClock, FaTags } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
@@ -14,6 +14,7 @@ import { getRatingDisplayInfo, getProductTypeInfo } from '@/utils/productUtils';
 import { ImageDisplay } from '@/components/image/ImageDisplay';
 import { DisplayError, Button } from '@/components/ui';
 import { QuickAddInventory } from '@/components/inventory/QuickAddInventory';
+import { TagDisplay } from '@/components/tag/TagDisplay';
 
 const Inventory = () => {
   const { data, isLoading, isError, error } = useInventoryCache();
@@ -50,7 +51,8 @@ const Inventory = () => {
           type="inventory" 
           id={item.inventory_id} 
           title={item.product_title} 
-          className="object-contain p-0 h-[20px]" 
+          className="object-contain p-0 h-[20px]"
+          productId={item.product_id}
         />
       ),
       align: 'center' as const
@@ -108,6 +110,34 @@ const Inventory = () => {
       sortable: true
     },
     {
+      key: 'tags',
+      header: 'Tags',
+      icon: <FaTags className="w-4 h-4" />,
+      width: '200px',
+      accessor: (item: InventoryViewItem) => {
+        // Combine both inventory and product tags, ensuring no duplicates by id
+        const allTags = [
+          ...(item.tags || []),
+          ...(item.product_tags || [])
+        ].filter((tag, index, self) => 
+          index === self.findIndex(t => t.id === tag.id)
+        ).sort((a, b) => a.name.localeCompare(b.name));
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {allTags.map(tag => (
+              <TagDisplay
+                key={`${tag.id}-${tag.name}`}
+                tag={tag}
+                size="xs"
+              />
+            ))}
+          </div>
+        );
+      },
+      align: 'left' as const
+    },
+    {
       key: 'final_price',
       header: 'Price',
       icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
@@ -120,36 +150,78 @@ const Inventory = () => {
   ];
 
   const getFilterConfigs = React.useCallback((data: InventoryViewItem[]) => {
-    const uniqueTypes = Array.from(new Set(data.map(item => item.product_type_name ?? ''))).filter(Boolean) as string[];
-    const uniqueGroups = Array.from(new Set(data.map(item => item.product_group_name ?? ''))).filter(Boolean) as string[];
-    const uniqueStatuses = Array.from(new Set(data.map(item => item.inventory_status))).filter(Boolean) as string[];
+    // Create Maps for faster lookups
+    const typeMap = new Map<string, number>();
+    const groupMap = new Map<string, number>();
+    const statusMap = new Map<string, number>();
+    const inventoryTagMap = new Map<string, number>();
+    const productTagMap = new Map<string, number>();
+
+    // Single pass through data to count all values
+    data.forEach(item => {
+      if (item.product_type_name) {
+        typeMap.set(item.product_type_name, (typeMap.get(item.product_type_name) || 0) + 1);
+      }
+      if (item.product_group_name) {
+        groupMap.set(item.product_group_name, (groupMap.get(item.product_group_name) || 0) + 1);
+      }
+      if (item.inventory_status) {
+        statusMap.set(item.inventory_status, (statusMap.get(item.inventory_status) || 0) + 1);
+      }
+      // Count inventory tags
+      item.tags?.forEach(tag => {
+        inventoryTagMap.set(tag.name, (inventoryTagMap.get(tag.name) || 0) + 1);
+      });
+      // Count product tags
+      item.product_tags?.forEach(tag => {
+        productTagMap.set(tag.name, (productTagMap.get(tag.name) || 0) + 1);
+      });
+    });
 
     return [
       {
         key: 'product_type_name',
         label: 'Product Type',
-        options: uniqueTypes.map(type => ({
-          value: type,
-          label: type,
-          count: data.filter(item => item.product_type_name === type).length
+        options: Array.from(typeMap.entries()).map(([value, count]) => ({
+          value,
+          label: value,
+          count
         }))
       },
       {
         key: 'product_group_name',
         label: 'Product Group',
-        options: uniqueGroups.map(group => ({
-          value: group,
-          label: group,
-          count: data.filter(item => item.product_group_name === group).length
+        options: Array.from(groupMap.entries()).map(([value, count]) => ({
+          value,
+          label: value,
+          count
         }))
       },
       {
         key: 'inventory_status',
         label: 'Status',
-        options: uniqueStatuses.map(status => ({
-          value: status,
-          label: status.replace('_', ' '),
-          count: data.filter(item => item.inventory_status === status).length
+        options: Array.from(statusMap.entries()).map(([value, count]) => ({
+          value,
+          label: value.replace('_', ' '),
+          count
+        }))
+      },
+      {
+        key: 'tag_inventory',
+        label: 'Inventory Tags',
+        options: Array.from(inventoryTagMap.entries()).map(([value, count]) => ({
+          value,
+          label: value,
+          count
+        }))
+      },
+      {
+        key: 'tag_product',
+        label: 'Product Tags',
+        options: Array.from(productTagMap.entries()).map(([value, count]) => ({
+          value,
+          label: value,
+          count
         }))
       }
     ];
@@ -190,6 +262,42 @@ const Inventory = () => {
     }
   };
 
+  const filteredData = React.useMemo(() => {
+    if (!data) return [];
+    
+    return data.filter(item => {
+      // Apply filters
+      const filtersPassed = Object.entries(tableState.selectedFilters).every(([key, values]) => {
+        if (!values || values.length === 0) return true;
+        
+        if (key === 'tag_inventory') {
+          // For inventory tags, check if the item has any of the selected tags
+          return values.some(value => 
+            item.tags?.some(tag => tag.name === value)
+          );
+        }
+        
+        if (key === 'tag_product') {
+          // For product tags, check if the item has any of the selected tags
+          return values.some(value => 
+            item.product_tags?.some(tag => tag.name === value)
+          );
+        }
+        
+        // For other filters, use the existing logic
+        const itemValue = item[key as keyof InventoryViewItem];
+        return values.includes(String(itemValue));
+      });
+
+      // Apply search
+      const searchPassed = !tableState.searchTerm || 
+        item.product_title.toLowerCase().includes(tableState.searchTerm.toLowerCase()) ||
+        (item.product_variant && item.product_variant.toLowerCase().includes(tableState.searchTerm.toLowerCase()));
+
+      return filtersPassed && searchPassed;
+    });
+  }, [data, tableState.selectedFilters, tableState.searchTerm]);
+
   return (
     <Page
       title="Inventory"
@@ -214,7 +322,7 @@ const Inventory = () => {
         <Card.Body>
           <BaseFilterableTable<InventoryViewItem>
             columns={columns}
-            data={tableState.currentPageData}
+            data={filteredData}
             keyExtractor={(item) => item.inventory_id ? item.inventory_id.toString() : 'undefined-id'}
             isLoading={isLoading}
             error={error}
@@ -232,6 +340,7 @@ const Inventory = () => {
             isModalOpen={isModalOpen}
             fixedHeight="h-[36px]"
             navigationLocation="top"
+            updateAgeColumn="inventory_updated_at"
             rowClassName={(item: InventoryViewItem) => 
               selectedInventory?.inventory_id === item.inventory_id && isModalOpen 
                 ? '!bg-cyan-500/20 transition-colors duration-200' 
@@ -247,7 +356,7 @@ const Inventory = () => {
         onClose={handleModalClose}
         onUpdateSuccess={handleSuccess}
         mode={isCreating ? 'create' : 'edit'}
-        tableData={tableState.filteredAndSortedData}
+        tableData={filteredData}
         onNavigate={(inventoryId) => {
           const inventory = data?.find(i => i.inventory_id === inventoryId);
           if (inventory) {

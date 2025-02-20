@@ -4,29 +4,74 @@
  * @param type - The type of the inventory or product
  * @returns a string of the image path based on the rule of 3 digits for the folder and the id for the file
  * example: id=123456789, type=inventory -> images/inventory/123/123456789.webp
- * example: id=123456789, type=product -> images/products/123/123456789.webp
+ * example: id=123456789, type=product -> images/product/123/123456789.webp
  */
 export const getImagePath = (id: number, type: 'inventory' | 'product'): string => {
-  return `images/${type}/${String(id).slice(0, 3)}/${id}.webp`;
+  const folder = String(id).slice(0, 3);
+  const pluralType = type === 'product' ? 'product' : 'inventory';
+  const path = `images/${pluralType}/${folder}/${id}.webp`;
+  return path;
 }; 
 
 // Configuration
 const DEV_MODE = true; // Toggle this for development/production
-const BASE_URL = DEV_MODE ? 'http://localhost' : '';
+const BASE_URL = DEV_MODE ? 'http://localhost:80' : ''; // Explicitly use port 80 for PHP backend
 
-type ImageType = 'inventory' | 'products';
+// Debug mode for logging
+const DEBUG = false;
+
+type ImageType = 'inventory' | 'product';
 
 // Centralized image version cache
 const imageVersions = new Map<string, number>();
 
+// Helper function for logging
+const logDebug = (...args: any[]) => {
+  if (DEBUG) {
+    console.log('[ImageUtils]', ...args);
+  }
+};
+
+// Enhanced debug logging for image operations
+const logImageOperation = (operation: string, data: any) => {
+  if (DEBUG) {
+    console.group(`[ImageUtils] ${operation}`);
+    console.log('Time:', new Date().toISOString());
+    Object.entries(data).forEach(([key, value]) => {
+      console.log(`${key}:`, value);
+    });
+    console.groupEnd();
+  }
+};
+
+export interface ImageInvalidationDetail {
+  type: 'product' | 'inventory';
+  id: number;
+  relatedIds?: number[]; // For cases like inventory fallback to product
+}
+
 export const getImageCacheKey = (type: 'product' | 'inventory', id: number) => `${type}-${id}`;
 
-export const invalidateImage = (type: 'product' | 'inventory', id: number) => {
+export const invalidateImage = (type: 'product' | 'inventory', id: number, relatedIds?: number[]) => {
+  // Update version for the main image
   const key = getImageCacheKey(type, id);
   imageVersions.set(key, Date.now());
-  // Force a re-render of all components using this image
+
+  // Update versions for any related images
+  if (relatedIds) {
+    relatedIds.forEach(relatedId => {
+      const relatedKey = getImageCacheKey(type, relatedId);
+      imageVersions.set(relatedKey, Date.now());
+    });
+  }
+
+  // Dispatch event with all affected IDs
   window.dispatchEvent(new CustomEvent('image-cache-invalidated', { 
-    detail: { key }
+    detail: {
+      type,
+      id,
+      relatedIds
+    } as ImageInvalidationDetail
   }));
 };
 
@@ -45,7 +90,14 @@ export const getImageVersion = (type: 'product' | 'inventory', id: number) => {
  */
 export const getProductImageUrl = (productId: number): string => {
   const version = getImageVersion('product', productId);
-  return `${BASE_URL}/api/image.php?mode=products&id=${productId}&t=${version}${DEV_MODE ? '&devmode=true' : ''}`;
+  const url = `${BASE_URL}/api/image.php?mode=product&id=${productId}&v=${version}${DEV_MODE ? '&devmode=true' : ''}&fresh=true`;
+  logImageOperation('getProductImageUrl', {
+    productId,
+    version,
+    url,
+    type: 'product'
+  });
+  return url;
 };
 
 /**
@@ -55,7 +107,14 @@ export const getProductImageUrl = (productId: number): string => {
  */
 export const getInventoryImageUrl = (inventoryId: number): string => {
   const version = getImageVersion('inventory', inventoryId);
-  return `${BASE_URL}/api/image.php?mode=inventory&id=${inventoryId}&t=${version}${DEV_MODE ? '&devmode=true' : ''}`;
+  const url = `${BASE_URL}/api/image.php?mode=inventory&id=${inventoryId}&v=${version}${DEV_MODE ? '&devmode=true' : ''}&fresh=true`;
+  logImageOperation('getInventoryImageUrl', {
+    inventoryId,
+    version,
+    url,
+    type: 'inventory'
+  });
+  return url;
 };
 
 /**
@@ -65,7 +124,18 @@ export const getInventoryImageUrl = (inventoryId: number): string => {
  * @param productId - The ID of the product (for fallback)
  */
 export const getInventoryWithFallbackUrl = (inventoryId: number, productId: number): string => {
-  return `${BASE_URL}/api/image.php?mode=inventory-with-fallback&id=${inventoryId}&product_id=${productId}${DEV_MODE ? '&devmode=true' : ''}`;
+  const inventoryVersion = getImageVersion('inventory', inventoryId);
+  const productVersion = getImageVersion('product', productId);
+  const url = `${BASE_URL}/api/image.php?mode=inventory-with-fallback&id=${inventoryId}&product_id=${productId}&v=${inventoryVersion}_${productVersion}${DEV_MODE ? '&devmode=true' : ''}&fresh=true`;
+  logImageOperation('getInventoryWithFallbackUrl', {
+    inventoryId,
+    productId,
+    inventoryVersion,
+    productVersion,
+    url,
+    type: 'inventory-with-fallback'
+  });
+  return url;
 }; 
 
 interface UploadResponse {
@@ -85,13 +155,11 @@ export interface UploadResult {
 export const uploadImage = async (type: 'product' | 'inventory', id: number, file: File): Promise<UploadResult> => {
   const formData = new FormData();
   
-  // Ensure correct order and explicitly convert values to strings
   formData.append('type', String(type));
   formData.append('id', String(id));
   formData.append('image', file);
 
   try {
-
     const response = await fetch(`${BASE_URL}/api/upload.php`, {
       method: 'POST',
       body: formData,
@@ -104,10 +172,12 @@ export const uploadImage = async (type: 'product' | 'inventory', id: number, fil
     try {
       responseText = await response.text();
       
-      // Try to parse as JSON
       try {
         const result = JSON.parse(responseText);
-        if (!result.success) {
+        if (result.success) {
+          // Invalidate the cache for this image
+          invalidateImage(type, id);
+        } else {
           console.error('Upload failed:', {
             result,
             debug: result.debug
@@ -297,21 +367,68 @@ export async function deleteImage(type: 'product' | 'inventory', id: number): Pr
 } 
 
 /**
- * Checks if a real image exists (not a placeholder) for the given product
- * @param productId - The ID of the product
+ * Checks if a real image exists (not a placeholder) for the given product or inventory
+ * @param id - The ID of the product or inventory
+ * @param type - The type of image to check
+ * @param productId - Optional product ID for inventory fallback
  * @returns Promise<boolean> - true if a real image exists, false if it's a placeholder
  */
-export async function checkProductImageExists(productId: number): Promise<boolean> {
+export async function checkImageExists(
+  id: number, 
+  type: 'product' | 'inventory',
+  productId?: number
+): Promise<boolean> {
+  const mode = type === 'inventory' && productId 
+    ? 'inventory-with-fallback'
+    : type === 'product' ? 'product' : type;
+
+  const url = `${BASE_URL}/api/image.php?mode=${mode}&id=${id}${productId ? `&product_id=${productId}` : ''}&check=true&fresh=true${DEV_MODE ? '&devmode=true' : ''}`;
+
   try {
-    const response = await fetch(
-      `${BASE_URL}/api/image.php?mode=products&id=${productId}&check=true${DEV_MODE ? '&devmode=true' : ''}`,
-      { method: 'HEAD' }
-    );
+    const startTime = performance.now();
+    const response = await fetch(url);
+    const endTime = performance.now();
+    const responseText = await response.text();
     
-    // 200 means real image exists, 204 means placeholder
+    logImageOperation('checkImageExists Response', {
+      url,
+      requestDuration: `${(endTime - startTime).toFixed(2)}ms`,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      responseText,
+      mode,
+      type,
+      id,
+      success: response.ok && response.status === 200
+    });
+
+    if (!response.ok) {
+      console.error('[ImageUtils] Image check failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        response: responseText,
+        url
+      });
+      return false;
+    }
+
     return response.status === 200;
   } catch (error) {
-    // Don't log errors for image checks as they are expected when no image exists
+    console.error('[ImageUtils] Error checking image:', {
+      type,
+      id,
+      productId,
+      error,
+      url,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return false;
   }
+}
+
+// Keep for backward compatibility
+export async function checkProductImageExists(productId: number): Promise<boolean> {
+  return checkImageExists(productId, 'product');
 } 

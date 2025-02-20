@@ -1,4 +1,54 @@
 <?php
+/**
+ * Image API Endpoint
+ * 
+ * Handles dynamic image serving with multiple fallback strategies. Supports three operation modes
+ * with caching headers and development features.
+ *
+ * Modes:
+ * 1. product
+ *    - Fetches product-specific image
+ *    - Parameters: id=[numeric product ID]
+ *    - Path: /images/product/xxx/[id].webp
+ * 
+ * 2. inventory
+ *    - Fetcks inventory-specific image
+ *    - Parameters: id=[numeric inventory ID]
+ *    - Path: /images/inventory/xxx/[id].webp
+ * 
+ * 3. inventory-with-fallback
+ *    - Attempts inventory image first, falls back to product image
+ *    - Parameters:
+ *      - id=[numeric inventory ID]
+ *      - product_id=[numeric product ID]
+ *    - Failure cascade:
+ *      1. Inventory image
+ *      2. Product image
+ *      3. Placeholder.webp
+ *      4. Hardcoded SVG error image
+ *
+ * Status Codes:
+ * - 200 OK: Successful image response (actual image or error SVG)
+ * - 204 No Content: Check request (check=true) and image not found
+ * - 400 Bad Request: Invalid parameters or missing required values
+ *
+ * Query Parameters:
+ * - mode: Operation mode (required)
+ * - id: Item ID (required)
+ * - check: Set to 'true' for existence check (returns 200/204 only)
+ * - debug: Set to 'true' for debug output (disables image output)
+ * - devmode: Set to 'true' for CORS headers and development access
+ *
+ * Examples:
+ * - Production image: ?mode=product&id=12345
+ * - Inventory check: ?mode=inventory&id=67890&check=true
+ * - Fallback flow: ?mode=inventory-with-fallback&id=67890&product_id=12345
+ *
+ * Error Handling:
+ * - All errors return 200 status with SVG error image to prevent broken image icons
+ * - Actual error details available through debug mode
+ */
+
 // Debug log collection
 $debugLog = [];
 function add_debug_log($message, $data = []) {
@@ -31,7 +81,7 @@ function output_debug_log() {
 }
 
 // Set debug mode - can be overridden here
-$debugMode = false; // Override debug mode
+$debugMode = true; // Override debug mode
 
 // Or check URL parameter if not overridden
 if (!isset($debugMode)) {
@@ -63,10 +113,17 @@ if (isset($_GET['devmode']) && $_GET['devmode'] === 'true') {
     }
 }
 
+// Disable caching headers at the top
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Cache-Control: post-check=0, pre-check=0', false);
+header('Pragma: no-cache');
+
 // Only set content type header if not checking
 if (!isset($_GET['check']) || $_GET['check'] !== 'true') {
     header('Content-Type: image/webp');
+    // Enable caching for actual images
     header('Cache-Control: public, max-age=31536000'); // Cache for 1 year
+    header('Expires: ' . gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT');
 }
 
 // Helper function to return error image
@@ -80,7 +137,9 @@ function return_error_image() {
     // Ensure we send 200 status since we're successfully serving a fallback image
     http_response_code(200);
     header('Content-Type: image/svg+xml');
-    header('Cache-Control: no-cache, must-revalidate'); // Don't cache error images
+    // Don't cache error/placeholder images
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
     
     // Using game cover proportions (170x240 - standard game case size)
     echo '<svg xmlns="http://www.w3.org/2000/svg" width="170" height="240" viewBox="0 0 170 240">'
@@ -99,7 +158,7 @@ $check = isset($_GET['check']) && $_GET['check'] === 'true';
 $devmode = isset($_GET['devmode']) && $_GET['devmode'] === 'true';
 
 // Validate mode
-if (!in_array($mode, ['products', 'inventory', 'inventory-with-fallback'])) {
+if (!in_array($mode, ['product', 'inventory', 'inventory-with-fallback'])) {
     http_response_code(400);
     die('Invalid mode');
 }
@@ -116,42 +175,100 @@ $base_path = $devmode ? '/home/ltg/collectiondatabase/public' : $_SERVER['DOCUME
 // Function to get image path
 function getImagePath($id, $type) {
     $folder = substr($id, 0, 3);
-    return "images/$type/$folder/$id.webp";
+    $path = "images/{$type}/{$folder}/{$id}.webp";
+    if ($GLOBALS['debugMode']) {
+        add_debug_log("Generated image path", [
+            'id' => $id,
+            'type' => $type,
+            'folder' => $folder,
+            'path' => $path,
+            'absolute_path' => $GLOBALS['base_path'] . '/' . $path,
+            'exists' => file_exists($GLOBALS['base_path'] . '/' . $path),
+            'directory_exists' => is_dir(dirname($GLOBALS['base_path'] . '/' . $path))
+        ]);
+    }
+    return $path;
 }
 
-// Function to serve image or placeholder
-function serveImage($path, $placeholder_path, $check = false) {
-    if (file_exists($path)) {
-        if ($check) {
-            http_response_code(200);
-            die('Image exists');
-        }
-        header('Content-Type: image/webp');
-        readfile($path);
-        exit;
+// Centralized header configuration
+function set_image_headers($cache = false) {
+    header('Content-Type: image/webp');
+    if ($cache) {
+        header('Cache-Control: public, max-age=31536000');
+        header('Expires: ' . gmdate('D, d M Y H:i:s', time() + 31536000) . ' GMT');
     } else {
-        if ($check) {
-            http_response_code(204);
-            exit;
-        }
-        header('Content-Type: image/webp');
-        readfile($placeholder_path);
-        exit;
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
     }
 }
 
-// Handle different modes
+// Unified image serving logic
+function serve_file($path, $check) {
+    global $debugMode;
+    
+    if ($check) {
+        http_response_code(file_exists($path) ? 200 : 204);
+        exit;
+    }
+    
+    if (file_exists($path)) {
+        set_image_headers(true);
+        readfile($path);
+        exit;
+    }
+    return false;
+}
+
+// Consolidated validation
+function validate_request($mode, $id) {
+    if (!in_array($mode, ['product', 'inventory', 'inventory-with-fallback'])) {
+        http_response_code(400);
+        die('Invalid mode');
+    }
+    
+    if (!is_numeric($id)) {
+        http_response_code(400);
+        die('Invalid ID');
+    }
+}
+
+// Simplified fallback handling
+function handle_fallback($paths, $check) {
+    global $debugMode, $base_path;
+    
+    foreach ($paths as $path) {
+        if (serve_file($path, $check)) return;
+    }
+    
+    $placeholder = "{$base_path}/images/placeholder.webp";
+    if (serve_file($placeholder, $check)) return;
+    
+    return_error_image();
+}
+
+if ($debugMode) {
+    add_debug_log("Base path and environment info", [
+        'base_path' => $base_path,
+        'document_root' => $_SERVER['DOCUMENT_ROOT'],
+        'script_filename' => $_SERVER['SCRIPT_FILENAME'],
+        'current_dir' => __DIR__,
+        'devmode' => $devmode,
+        'base_path_exists' => file_exists($base_path),
+        'base_path_is_dir' => is_dir($base_path),
+        'base_path_permissions' => file_exists($base_path) ? substr(sprintf('%o', fileperms($base_path)), -4) : 'N/A',
+        'images_dir_exists' => is_dir($base_path . '/images'),
+        'images_dir_contents' => is_dir($base_path . '/images') ? scandir($base_path . '/images') : 'directory not found'
+    ]);
+}
+
+// Simplified mode handling
 switch ($mode) {
-    case 'products':
-        $image_path = $base_path . '/' . getImagePath($id, 'products');
-        $placeholder_path = $base_path . '/images/placeholder.webp';
-        serveImage($image_path, $placeholder_path, $check);
+    case 'product':
+        handle_fallback([$base_path . '/' . getImagePath($id, 'product')], $check);
         break;
 
     case 'inventory':
-        $image_path = $base_path . '/' . getImagePath($id, 'inventory');
-        $placeholder_path = $base_path . '/images/placeholder.webp';
-        serveImage($image_path, $placeholder_path, $check);
+        handle_fallback([$base_path . '/' . getImagePath($id, 'inventory')], $check);
         break;
 
     case 'inventory-with-fallback':
@@ -160,64 +277,13 @@ switch ($mode) {
             http_response_code(400);
             die('Invalid product ID');
         }
-
-        $inventory_path = $base_path . '/' . getImagePath($id, 'inventory');
-        $product_path = $base_path . '/' . getImagePath($product_id, 'products');
-        $placeholder_path = $base_path . '/images/placeholder.webp';
-
-        // Try inventory image first
-        if (file_exists($inventory_path)) {
-            if ($check) {
-                http_response_code(200);
-                die('Image exists');
-            }
-            header('Content-Type: image/webp');
-            readfile($inventory_path);
-            exit;
-        }
-
-        // Try product image next
-        if (file_exists($product_path)) {
-            if ($check) {
-                http_response_code(200);
-                die('Image exists');
-            }
-            header('Content-Type: image/webp');
-            readfile($product_path);
-            exit;
-        }
-
-        // Fall back to placeholder
-        if ($check) {
-            http_response_code(204); // No Content
-            exit;
-        }
-        header('Content-Type: image/webp');
-        readfile($placeholder_path);
+        
+        handle_fallback([
+            $base_path . '/' . getImagePath($id, 'inventory'),
+            $base_path . '/' . getImagePath($product_id, 'product')
+        ], $check);
         break;
 }
 
-// If we get here, no image was found
-// Don't send 404 since we'll serve a placeholder or error image
-if ($debugMode) {
-    add_debug_log("No requested image found, checking placeholder", [
-        'Placeholder Path' => $placeholderPath,
-        'Placeholder Exists' => file_exists($placeholderPath)
-    ]);
-}
-
-// Return placeholder if available
-$placeholderPath = "{$base_path}/images/placeholder.webp";
-if (file_exists($placeholderPath)) {
-    if ($debugMode) {
-        add_debug_log("Using placeholder image");
-        output_debug_log();
-    }
-    readfile($placeholderPath);
-} else {
-    if ($debugMode) {
-        add_debug_log("No placeholder found, returning error image");
-        output_debug_log();
-    }
-    return_error_image();
-} 
+// Final fallback
+handle_fallback(["{$base_path}/images/placeholder.webp"], $check); 

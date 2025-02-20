@@ -65,7 +65,14 @@ const Home = () => {
       header: '',
       icon: <FaImage className="w-4 h-4" />,
       width: '30px',
-      accessor: (item: ProductViewItem) => item.product_id ? <ImageDisplay type="product" id={item.product_id} title={item.product_title} className="object-contain p-0 h-[20px]" /> : '',
+      accessor: (item: ProductViewItem) => item.product_id ? (
+        <ImageDisplay 
+          type="product" 
+          id={item.product_id} 
+          title={item.product_title} 
+          className="object-contain p-0 h-[20px]" 
+        />
+      ) : '',
       align: 'center' as const
     },
     {

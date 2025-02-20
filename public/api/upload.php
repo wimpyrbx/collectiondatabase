@@ -157,24 +157,39 @@ add_debug_log('Base path configuration', [
     ]
 ]);
 
-// Create folder structure
+// Get file path
 $folder = substr($id, 0, 3);
 $targetDir = "{$basePath}/images/{$type}s/{$folder}";
+$targetFile = "{$targetDir}/{$id}.webp";
 
-// Ensure target directory exists
+// Create target directory if it doesn't exist
 if (!file_exists($targetDir)) {
     if (!mkdir($targetDir, 0755, true)) {
         send_response(false, 'Failed to create target directory', [
             'target_dir' => $targetDir,
-            'parent_writable' => is_writable(dirname($targetDir))
+            'last_error' => error_get_last()
         ]);
     }
 }
 
-// Process uploaded file
+// Ensure target directory is writable
+if (!is_writable($targetDir)) {
+    send_response(false, 'Target directory is not writable', [
+        'target_dir' => $targetDir,
+        'permissions' => substr(sprintf('%o', fileperms($targetDir)), -4)
+    ]);
+}
+
+// Get uploaded file
 $uploadedFile = $_FILES['image'];
 $sourceFile = $uploadedFile['tmp_name'];
-$targetFile = "{$targetDir}/{$id}.webp";
+
+// Validate file
+if (!file_exists($sourceFile)) {
+    send_response(false, 'Uploaded file not found', [
+        'uploaded_file' => $uploadedFile
+    ]);
+}
 
 add_debug_log('Processing upload', [
     'type' => $type,

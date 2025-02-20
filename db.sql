@@ -1,4 +1,4 @@
--- Backup created at 2025-02-19 12:34:08
+-- Backup created at 2025-02-19 13:40:51
 
 BEGIN;
 
@@ -1280,6 +1280,14 @@ INSERT INTO currency_rates (id, rate, updated_at) VALUES (20, 11.3, '2025-02-17T
 INSERT INTO currency_rates (id, rate, updated_at) VALUES (21, 11.1, '2025-02-17T17:08:34.414106+00:00');
 INSERT INTO currency_rates (id, rate, updated_at) VALUES (26, 9.5, '2025-02-17T21:47:44.977077+00:00');
 
+-- Data for inventory
+INSERT INTO inventory (id, product_id, purchase_id, sale_id, override_price, created_at, inventory_status, inventory_updated_at) VALUES (1032, 1634, NULL, NULL, NULL, '2025-02-19T11:50:35.476784+00:00', 'NORMAL', '2025-02-19T11:50:35.476784+00:00');
+INSERT INTO inventory (id, product_id, purchase_id, sale_id, override_price, created_at, inventory_status, inventory_updated_at) VALUES (1033, 1634, NULL, NULL, NULL, '2025-02-19T11:50:41.849768+00:00', 'NORMAL', '2025-02-19T11:50:41.849768+00:00');
+INSERT INTO inventory (id, product_id, purchase_id, sale_id, override_price, created_at, inventory_status, inventory_updated_at) VALUES (1034, 1591, NULL, NULL, NULL, '2025-02-19T12:00:36.805725+00:00', 'NORMAL', '2025-02-19T12:00:36.805725+00:00');
+INSERT INTO inventory (id, product_id, purchase_id, sale_id, override_price, created_at, inventory_status, inventory_updated_at) VALUES (1035, 1597, NULL, NULL, NULL, '2025-02-19T12:17:46.752855+00:00', 'NORMAL', '2025-02-19T12:17:46.752855+00:00');
+INSERT INTO inventory (id, product_id, purchase_id, sale_id, override_price, created_at, inventory_status, inventory_updated_at) VALUES (1036, 2787, NULL, NULL, NULL, '2025-02-19T12:18:20.651854+00:00', 'NORMAL', '2025-02-19T12:18:20.651854+00:00');
+INSERT INTO inventory (id, product_id, purchase_id, sale_id, override_price, created_at, inventory_status, inventory_updated_at) VALUES (1037, 1685, NULL, NULL, NULL, '2025-02-19T12:26:25.562075+00:00', 'NORMAL', '2025-02-19T12:26:25.562075+00:00');
+
 -- Data for inventory_status_transitions
 INSERT INTO inventory_status_transitions (id, from_status, to_status, requires_sale_status) VALUES (1, 'Normal', 'For Sale', NULL);
 INSERT INTO inventory_status_transitions (id, from_status, to_status, requires_sale_status) VALUES (2, 'Normal', 'Collection', NULL);
@@ -1289,9 +1297,17 @@ INSERT INTO inventory_status_transitions (id, from_status, to_status, requires_s
 INSERT INTO inventory_status_transitions (id, from_status, to_status, requires_sale_status) VALUES (7, 'Collection', 'Normal', NULL);
 INSERT INTO inventory_status_transitions (id, from_status, to_status, requires_sale_status) VALUES (8, 'Collection', 'For Sale', NULL);
 
+-- Data for inventory_tag_relationships
+INSERT INTO inventory_tag_relationships (inventory_id, tag_id, created_at) VALUES (1033, 3, '2025-02-19T12:21:04.943485+00:00');
+INSERT INTO inventory_tag_relationships (inventory_id, tag_id, created_at) VALUES (1033, 5, '2025-02-19T12:21:24.318751+00:00');
+INSERT INTO inventory_tag_relationships (inventory_id, tag_id, created_at) VALUES (1034, 3, '2025-02-19T12:21:27.252172+00:00');
+INSERT INTO inventory_tag_relationships (inventory_id, tag_id, created_at) VALUES (1032, 2, '2025-02-19T12:25:45.208276+00:00');
+
 -- Data for inventory_tags
 INSERT INTO inventory_tags (id, name, product_groups, product_types, description, display_type, display_value, created_at, color) VALUES (2, 'New/Sealed', ['Xbox 360', 'Xbox', 'Playstation 3', 'Playstation 4'], ['Game', 'Console', 'Peripheral'], 'Is the item new/sealed?', 'text', 'New', '2025-02-18T14:54:39.595749+00:00', 'green');
-INSERT INTO inventory_tags (id, name, product_groups, product_types, description, display_type, display_value, created_at, color) VALUES (3, 'Box Issue', ['Xbox 360', 'Xbox', 'Playstation 3', 'Playstation 4'], ['Game', 'Console', 'Peripheral'], 'Does item have box damage or issue?', 'text', 'Box', '2025-02-18T15:37:06.633894+00:00', 'red');
+INSERT INTO inventory_tags (id, name, product_groups, product_types, description, display_type, display_value, created_at, color) VALUES (3, 'Box Issue', [], ['Game'], 'Does item have box damage or issue?', 'text', 'B', '2025-02-18T15:37:06.633894+00:00', 'red');
+INSERT INTO inventory_tags (id, name, product_groups, product_types, description, display_type, display_value, created_at, color) VALUES (5, 'Disc Issue', [], ['Game'], 'Does item have disc damage or issue?', 'text', 'D', '2025-02-19T11:36:43.271198+00:00', 'red');
+INSERT INTO inventory_tags (id, name, product_groups, product_types, description, display_type, display_value, created_at, color) VALUES (4, 'Manual Issue', [], ['Game'], 'Does item have manual damage or issue?', 'text', 'M', '2025-02-19T11:35:28.390338+00:00', 'red');
 
 -- Data for product_prices
 INSERT INTO product_prices (id, product_id, price_type, price_usd, price_nok, price_nok_fixed, updated_at) VALUES (1586, 1455, 'loose', 8.86, 84.17, 84.17, '2025-02-17T21:48:54.087441+00:00');
@@ -3479,7 +3495,7 @@ INSERT INTO products (id, product_type, region, product_title, product_variant, 
 INSERT INTO sales (id, buyer_name, sale_total, sale_date, sale_notes, created_at, number_of_items, sale_status) VALUES (3, 'Johnny', NULL, NULL, NULL, '2025-01-03T19:49:41.003554+00:00', 0, NULL);
 
 -- Data for site_settings
-INSERT INTO site_settings (key, last_updated, value) VALUES ('master_timestamp', '2025-02-19T10:33:03.927+00:00', '2025-02-19 10:33:04.30386+00');
+INSERT INTO site_settings (key, last_updated, value) VALUES ('master_timestamp', '2025-02-19T12:26:25.562075+00:00', '2025-02-19 12:26:25.562075+00');
 
 -- ============================
 -- VIEWS
@@ -3495,17 +3511,27 @@ CREATE VIEW view_inventory AS
                   WHERE pp.product_id = i_1.product_id) AS prices,
             ( SELECT pp.price_nok_fixed
                    FROM product_prices pp
-                  WHERE pp.product_id = i_1.product_id AND pp.price_type = 'loose'::price_type) AS loose_price_nok_fixed,
-            ( SELECT pp.price_nok
+                  WHERE pp.product_id = i_1.product_id AND pp.price_type = 'complete'::price_type) AS complete_price_nok_fixed,
+            ( SELECT pp.price_nok_fixed
                    FROM product_prices pp
-                  WHERE pp.product_id = i_1.product_id AND pp.price_type = 'loose'::price_type) AS loose_price_nok
+                  WHERE pp.product_id = i_1.product_id AND pp.price_type = 'new'::price_type) AS new_price_nok_fixed,
+            ( SELECT (EXISTS ( SELECT 1
+                           FROM inventory_tag_relationships itr
+                          WHERE itr.inventory_id = i_1.id AND itr.tag_id = 2)) AS "exists") AS has_new_sealed_tag
            FROM inventory i_1
         ), inventory_tags_agg AS (
          SELECT itr.inventory_id,
-            jsonb_agg(jsonb_build_object('id', it.id, 'name', it.name, 'display_type', it.display_type, 'display_value', it.display_value, 'description', it.description)) AS tags
+            jsonb_agg(jsonb_build_object('id', it.id, 'name', it.name, 'display_type', it.display_type, 'display_value', it.display_value, 'description', it.description, 'color', it.color)) AS tags
            FROM inventory_tag_relationships itr
              JOIN inventory_tags it ON it.id = itr.tag_id
           GROUP BY itr.inventory_id
+        ), product_tags_agg AS (
+         SELECT p_1.id AS product_id,
+            jsonb_agg(jsonb_build_object('id', pt.id, 'name', pt.name, 'display_type', pt.display_type, 'display_value', pt.display_value, 'description', pt.description, 'color', pt.color)) AS product_tags
+           FROM products p_1
+             JOIN product_tag_relationships ptr ON ptr.product_id = p_1.id
+             JOIN product_tags pt ON pt.id = ptr.tag_id
+          GROUP BY p_1.id
         )
  SELECT i.id AS inventory_id,
     i.product_id,
@@ -3528,7 +3554,13 @@ CREATE VIEW view_inventory AS
     p.region AS region_name,
     ip.override_price,
     ip.prices,
-    COALESCE(ip.override_price, ip.loose_price_nok_fixed, ip.loose_price_nok) AS final_price,
+    ip.complete_price_nok_fixed,
+    ip.new_price_nok_fixed,
+        CASE
+            WHEN ip.override_price IS NOT NULL THEN ip.override_price
+            WHEN ip.has_new_sealed_tag THEN ip.new_price_nok_fixed
+            ELSE ip.complete_price_nok_fixed
+        END AS final_price,
     p.publisher,
     p.developer,
     p.genre,
@@ -3551,14 +3583,16 @@ CREATE VIEW view_inventory AS
     ( SELECT array_agg(ib.barcode) AS array_agg
            FROM inventory_barcodes ib
           WHERE ib.inventory_id = i.id) AS barcodes,
-    COALESCE(ita.tags, '[]'::jsonb) AS tags
+    COALESCE(ita.tags, '[]'::jsonb) AS tags,
+    COALESCE(pta.product_tags, '[]'::jsonb) AS product_tags
    FROM inventory i
      JOIN products p ON i.product_id = p.id
      LEFT JOIN inventory_prices ip ON ip.inventory_id = i.id
      LEFT JOIN purchases pu ON i.purchase_id = pu.id
      LEFT JOIN sales s ON i.sale_id = s.id
      LEFT JOIN sale_items si ON si.inventory_id = i.id
-     LEFT JOIN inventory_tags_agg ita ON ita.inventory_id = i.id;;
+     LEFT JOIN inventory_tags_agg ita ON ita.inventory_id = i.id
+     LEFT JOIN product_tags_agg pta ON pta.product_id = i.product_id;;
 
 DROP VIEW IF EXISTS view_inventory_tags CASCADE;
 

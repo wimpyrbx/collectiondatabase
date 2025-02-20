@@ -108,7 +108,17 @@ export const QuickAddInventory: React.FC<QuickAddInventoryProps> = ({
         inventory_status: 'NORMAL',
         purchase_id: null,
         sale_id: null,
-        override_price: null
+        override_price: null,
+        purchase_seller: null,
+        purchase_origin: null,
+        purchase_cost: null,
+        purchase_date: null,
+        purchase_notes: null,
+        sale_buyer: null,
+        sale_status: null,
+        sale_date: null,
+        sale_notes: null,
+        sold_price: null
       };
 
       await createInventory(newInventory);
@@ -163,108 +173,106 @@ export const QuickAddInventory: React.FC<QuickAddInventoryProps> = ({
               )}
             >
               {filteredProducts.map((product, index) => (
-                <div 
+                <div className="px-1 py-0.5 bg-gray-900 overflow-hidden">
+                <div
                   key={product.product_id}
-                  className="px-1 py-0.5 bg-gray-900 overflow-hidden"
+                  onClick={() => handleProductSelect(product)}
+                  className={clsx(
+                    'search-result-item cursor-pointer hover:translate-x-2 hover:w-[480px]',
+                    'py-2 px-3 bg-gray-800',
+                    'transition-colors duration-150',
+                    'border-b border-gray-700/50 last:border-b-0 shadow-md shadow-black/20',
+                    index === selectedIndex ? 'bg-cyan-500/20' : 'hover:bg-green-300/10',
+                    isAdding && 'opacity-50 pointer-events-none'
+                  )}
                 >
-                  <div
-                    onClick={() => handleProductSelect(product)}
-                    className={clsx(
-                      'search-result-item cursor-pointer hover:translate-x-2 hover:w-[480px]',
-                      'py-2 px-3 bg-gray-800',
-                      'transition-colors duration-150',
-                      'border-b border-gray-700/50 last:border-b-0 shadow-md shadow-black/20',
-                      index === selectedIndex ? 'bg-cyan-500/20' : 'hover:bg-green-300/10',
-                      isAdding && 'opacity-50 pointer-events-none'
-                    )}
-                  >
-                    <div className="flex gap-3 items-start min-h-[50px]">
-                      {/* Product Image */}
-                      <div className="w-[50px] h-[70px] shrink-0">
-                        <div className="w-full h-full bg-gray-600/50 rounded-md overflow-hidden">
-                          <ImageDisplay
-                            type="product"
-                            id={product.product_id}
-                            title={product.product_title}
-                            className="h-full w-full"
-                            placeholderClassName="w-5 h-5"
-                            containerClassName="h-full relative"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Product Info */}
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex items-start gap-2">
-                          <div className="flex-1">
-                            <h3 className="font-medium text-gray-200 text-sm leading-tight">
-                              {product.product_title}
-                              {product.product_variant && (
-                                <span className="text-gray-400 ml-1">({product.product_variant})</span>
-                              )}
-                            </h3>
-                            <div className="text-xs text-gray-400 mt-1">
-                              {[
-                                product.product_type_name,
-                                product.product_group_name,
-                                product.release_year,
-                                product.region_name
-                              ].filter(Boolean).join(' • ')}
-                            </div>
-                          </div>
-
-                          {/* Rating Image */}
-                          {product.rating_name && product.region_name && (
-                            <div className="w-[24px] aspect-square shrink-0 bg-gray-800/50 rounded-lg overflow-hidden flex items-center justify-center p-0.5">
-                              {(() => {
-                                const ratingInfo = getRatingDisplayInfo(product.region_name, product.rating_name, regionsData.regions);
-                                return ratingInfo.imagePath ? (
-                                  <img 
-                                    src={ratingInfo.imagePath} 
-                                    alt={ratingInfo.displayName} 
-                                    className="max-w-full max-h-full object-contain" 
-                                  />
-                                ) : (
-                                  <span className="text-gray-600 text-[10px]">No Rating</span>
-                                );
-                              })()}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Tags */}
-                        {product.tags && product.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {product.tags.map(tag => (
-                              <TagDisplay
-                                key={tag.name}
-                                tag={tag}
-                                size="xs"
-                              />
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Price */}
-                        <div className="text-sm">
-                          <span className="text-gray-400">Price:</span>
-                          <span className="text-gray-200 ml-2">
-                            {product.prices?.loose?.nok_fixed ? `NOK ${product.prices.loose.nok_fixed},-` : 'N/A'}
-                          </span>
-                        </div>
-
-                        {/* Inventory Count */}
-                        {(product.normal_count > 0 || product.collection_count > 0 || product.for_sale_count > 0) && (
-                          <div className="text-xs text-orange-400">
-                            Already in inventory!
-                            {product.for_sale_count > 0 && ` (${product.for_sale_count} for sale)`}
-                            {product.normal_count > 0 && ` (${product.normal_count} normal)`}
-                            {product.collection_count > 0 && ` (${product.collection_count} collection)`}
-                          </div>
-                        )}
+                  <div className="flex gap-3 items-start min-h-[50px]">
+                    {/* Product Image */}
+                    <div className="w-[50px] h-[70px] shrink-0">
+                      <div className="w-full h-full bg-gray-600/50 rounded-md overflow-hidden">
+                        <ImageDisplay
+                          type="product"
+                          id={product.product_id}
+                          title={product.product_title}
+                          className="h-full w-full"
+                          placeholderClassName="w-5 h-5"
+                          containerClassName="h-full relative"
+                        />
                       </div>
                     </div>
+
+                    {/* Product Info */}
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-200 text-sm leading-tight">
+                            {product.product_title}
+                            {product.product_variant && (
+                              <span className="text-gray-400 ml-1">({product.product_variant})</span>
+                            )}
+                          </h3>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {[
+                              product.product_type_name,
+                              product.product_group_name,
+                              product.release_year,
+                              product.region_name
+                            ].filter(Boolean).join(' • ')}
+                          </div>
+                        </div>
+
+                        {/* Rating Image */}
+                        {product.rating_name && product.region_name && (
+                          <div className="w-[24px] aspect-square shrink-0 bg-gray-800/50 rounded-lg overflow-hidden flex items-center justify-center p-0.5">
+                            {(() => {
+                              const ratingInfo = getRatingDisplayInfo(product.region_name, product.rating_name, regionsData.regions);
+                              return ratingInfo.imagePath ? (
+                                <img 
+                                  src={ratingInfo.imagePath} 
+                                  alt={ratingInfo.displayName} 
+                                  className="max-w-full max-h-full object-contain" 
+                                />
+                              ) : (
+                                <span className="text-gray-600 text-[10px]">No Rating</span>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tags */}
+                      {product.tags && product.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {product.tags.map(tag => (
+                            <TagDisplay
+                              key={tag.name}
+                              tag={tag}
+                              size="xs"
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Price */}
+                      <div className="text-sm">
+                        <span className="text-gray-400">Price:</span>
+                        <span className="text-gray-200 ml-2">
+                          {product.prices?.loose?.nok_fixed ? `NOK ${product.prices.loose.nok_fixed},-` : 'N/A'}
+                        </span>
+                      </div>
+
+                      {/* Inventory Count */}
+                      {(product.normal_count > 0 || product.collection_count > 0 || product.for_sale_count > 0) && (
+                        <div className="text-xs text-orange-400">
+                          Already in inventory!
+                          {product.for_sale_count > 0 && ` (${product.for_sale_count} for sale)`}
+                          {product.normal_count > 0 && ` (${product.normal_count} normal)`}
+                          {product.collection_count > 0 && ` (${product.collection_count} collection)`}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                </div>
                 </div>
               ))}
             </div>

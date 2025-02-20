@@ -3,6 +3,8 @@ import { useModalForm } from './useModalForm';
 import { useInventoryTable } from './useInventoryTable';
 import type { InventoryViewItem } from '@/types/inventory';
 import { uploadImage } from '@/utils/imageUtils';
+import { supabase } from '@/supabaseClient';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface UseInventoryModalOptions {
   inventory: InventoryViewItem | null | undefined;
@@ -21,6 +23,7 @@ export function useInventoryModal({
 }: UseInventoryModalOptions) {
   const inventoryTable = useInventoryTable();
   const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const queryClient = useQueryClient();
 
   // Reset all form state
   const resetForm = useCallback(() => {
@@ -31,7 +34,7 @@ export function useInventoryModal({
   const transformInitialData = useCallback((inventory: InventoryViewItem | null) => {
     if (!inventory) {
       return {
-        inventory_status: 'NORMAL',
+        inventory_status: 'Normal',
         override_price: '',
         purchase_seller: '',
         purchase_origin: '',
@@ -87,48 +90,61 @@ export function useInventoryModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Prepare data
-    const data = {
-      inventory_status: formData.inventory_status,
-      override_price: formData.override_price ? Number(formData.override_price) : null,
-      purchase_seller: formData.purchase_seller || null,
-      purchase_origin: formData.purchase_origin || null,
-      purchase_cost: formData.purchase_cost ? Number(formData.purchase_cost) : null,
-      purchase_date: formData.purchase_date || null,
-      purchase_notes: formData.purchase_notes || null,
-      sale_buyer: formData.sale_buyer || null,
-      sale_status: formData.sale_status || null,
-      sale_date: formData.sale_date || null,
-      sale_notes: formData.sale_notes || null,
-      sold_price: formData.sold_price ? Number(formData.sold_price) : null
-    };
-
     try {
       if (mode === 'create') {
-        // TODO: Implement create functionality
         setErrors(['Create functionality not implemented yet']);
         return;
       } else if (inventory) {
+        // Split data into inventory and purchase updates
+        const inventoryUpdates = {
+          inventory_status: formData.inventory_status,
+          override_price: formData.override_price ? Number(formData.override_price) : null
+        };
+
+        // Only update purchase if we have a purchase_id
+        if (inventory.purchase_id) {
+          const purchaseUpdates = {
+            seller_name: formData.purchase_seller || null,
+            origin: formData.purchase_origin || null,
+            purchase_cost: formData.purchase_cost ? Number(formData.purchase_cost) : null,
+            purchase_date: formData.purchase_date || null,
+            purchase_notes: formData.purchase_notes || null
+          };
+
+          // Update purchase first
+          const { error: purchaseError } = await supabase
+            .from('purchases')
+            .update(purchaseUpdates)
+            .eq('id', inventory.purchase_id);
+
+          if (purchaseError) {
+            throw purchaseError;
+          }
+        }
+
+        // Then update inventory
         await inventoryTable.updateInventory({
           id: inventory.inventory_id,
-          updates: data
+          updates: inventoryUpdates
         });
-      }
 
-      // If we have a pending image, upload it
-      if (pendingImage && inventory) {
-        try {
-          const { success, message } = await uploadImage(pendingImage, 'inventory', inventory.inventory_id);
-          if (!success) {
-            setErrors(prev => [...prev, `Image upload failed: ${message}`]);
+        // If we have a pending image, upload it
+        if (pendingImage) {
+          try {
+            const { success, message } = await uploadImage('inventory', inventory.inventory_id, pendingImage);
+            if (!success) {
+              setErrors(prev => [...prev, `Image upload failed: ${message}`]);
+            }
+            // Clear the pending image after successful upload
+            setPendingImage(null);
+          } catch (error) {
+            setErrors(prev => [...prev, 'Failed to upload image']);
           }
-        } catch (error) {
-          setErrors(prev => [...prev, 'Failed to upload image']);
         }
-      }
 
-      onSuccess?.(inventory!.inventory_id);
-      handleClose();
+        onSuccess?.(inventory.inventory_id);
+        handleClose();
+      }
     } catch (error) {
       setErrors(['Failed to save changes']);
     }
@@ -136,6 +152,36 @@ export function useInventoryModal({
 
   const handlePendingImageChange = (file: File | null) => {
     setPendingImage(file);
+    
+    // If we have a file and an inventory item, upload it immediately
+    if (file && inventory) {
+      uploadImage('inventory', inventory.inventory_id, file)
+        .then(({ success, message }) => {
+          if (!success) {
+            setErrors(prev => [...prev, `Image upload failed: ${message}`]);
+          } else {
+            // Clear the pending image after successful upload
+            setPendingImage(null);
+            
+            // Update the cache to trigger a re-render
+            queryClient.setQueryData<InventoryViewItem[]>(['inventory'], (old: InventoryViewItem[] | undefined) => {
+              if (!old) return old;
+              return old.map((item: InventoryViewItem) => {
+                if (item.inventory_id === inventory.inventory_id) {
+                  return {
+                    ...item,
+                    inventory_updated_at: new Date().toISOString()
+                  };
+                }
+                return item;
+              });
+            });
+          }
+        })
+        .catch(error => {
+          setErrors(prev => [...prev, 'Failed to upload image']);
+        });
+    }
   };
 
   return {

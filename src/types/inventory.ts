@@ -39,6 +39,7 @@ export interface InventoryViewItem {
     sale_id: number | null;
     inventory_status: string;
     inventory_created_at: string;
+    inventory_updated_at: string;
     product_title: string;
     product_variant: string | null;
     release_year: number | null;
@@ -65,4 +66,5 @@ export interface InventoryViewItem {
     sold_price: number | null;
     barcodes?: string[];
     tags: TagInfo[];
+    product_tags: TagInfo[];
 }
