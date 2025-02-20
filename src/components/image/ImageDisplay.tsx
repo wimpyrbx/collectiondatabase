@@ -123,7 +123,6 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = (props) => {
         src={imageUrl}
         alt={props.title}
         className={clsx(
-          "h-full w-full object-contain",
           props.className,
           isLoading && 'opacity-0'
         )}

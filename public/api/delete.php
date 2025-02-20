@@ -108,7 +108,7 @@ add_debug_log('Base path configuration', [
 
 // Get file path
 $folder = substr($id, 0, 3);
-$targetFile = "{$basePath}/images/{$type}s/{$folder}/{$id}.webp";
+$targetFile = "{$basePath}/images/{$type}/{$folder}/{$id}.webp";
 
 add_debug_log('File details', [
     'type' => $type,

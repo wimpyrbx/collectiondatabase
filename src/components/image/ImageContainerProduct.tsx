@@ -39,17 +39,51 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
     handleDragLeave: onDragLeave,
     handleDragOver,
     handleDrop: onDrop,
-    handleFileInputChange
+    handleFileInputChange: baseHandleFileInputChange
   } = useImageUpload(
     'product',
     id,
     {
-      onUploadStart: () => setIsUploading(true),
-      onUploadSuccess: () => refreshImage(),
+      onUploadStart: () => {
+        setIsUploading(true);
+        if (isCreateMode && onPendingImageChange) {
+          onPendingImageChange(null);
+        }
+      },
+      onUploadSuccess: () => {
+        if (!isCreateMode) {
+          refreshImage();
+        }
+      },
       onUploadError: (message: string) => onError?.(message),
       onUploadComplete: () => setIsUploading(false)
     }
   );
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (isCreateMode && onPendingImageChange) {
+      onPendingImageChange(file);
+      return;
+    }
+
+    baseHandleFileInputChange(e);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+
+    if (isCreateMode && onPendingImageChange) {
+      onPendingImageChange(file);
+      return;
+    }
+
+    onDrop(e);
+  };
 
   const refreshImage = async () => {
     if (id <= 0) return;
@@ -83,6 +117,16 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
     };
   }, [id]);
 
+  // Update image source when pendingImage changes
+  useEffect(() => {
+    if (pendingImage) {
+      const url = URL.createObjectURL(pendingImage);
+      setImageSrc(url);
+      setHasImage(true);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [pendingImage]);
+
   const handleDragEnter = (e: React.DragEvent) => {
     setIsDragging(true);
     onDragEnter(e);
@@ -91,11 +135,6 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
   const handleDragLeave = (e: React.DragEvent) => {
     setIsDragging(false);
     onDragLeave(e);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    setIsDragging(false);
-    onDrop(e);
   };
 
   const handleCropSave = async (crop: Crop) => {
@@ -140,9 +179,9 @@ export const ImageContainerProduct: React.FC<ImageContainerProductProps> = ({
       const result = await deleteImage('product', id);
       
       if (result.success) {
+        setHasImage(false);
         setImageSrc('');
         invalidateImage('product', id);
-        refreshImage();
       } else {
         onError?.(result.message);
       }

@@ -159,7 +159,7 @@ add_debug_log('Base path configuration', [
 
 // Get file path
 $folder = substr($id, 0, 3);
-$targetDir = "{$basePath}/images/{$type}s/{$folder}";
+$targetDir = "{$basePath}/images/{$type}/{$folder}";
 $targetFile = "{$targetDir}/{$id}.webp";
 
 // Create target directory if it doesn't exist
@@ -320,7 +320,7 @@ try {
     // Get the file extension from the actual saved file
     $extension = pathinfo($targetFile, PATHINFO_EXTENSION);
     send_response(true, 'Image uploaded successfully', [
-        'path' => "/images/{$type}s/{$folder}/{$id}.{$extension}",
+        'path' => "/images/{$type}/{$folder}/{$id}.{$extension}",
         'size' => filesize($targetFile)
     ]);
 

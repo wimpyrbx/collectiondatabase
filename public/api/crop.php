@@ -143,7 +143,7 @@ try {
     // Get base path and construct file paths
     $basePath = dirname(__DIR__);
     $folder = substr($id, 0, 3);
-    $imagePath = "{$basePath}/images/{$type}s/{$folder}/{$id}";
+    $imagePath = "{$basePath}/images/{$type}/{$folder}/{$id}";
 
     // Find the actual image file (webp or png)
     $sourceFile = null;
@@ -301,7 +301,7 @@ try {
         }
 
         send_response(true, 'Image cropped successfully', [
-            'path' => "/images/{$type}s/{$folder}/{$id}.{$extension}",
+            'path' => "/images/{$type}/{$folder}/{$id}.{$extension}",
             'dimensions' => [
                 'width' => $cropWidth,
                 'height' => $cropHeight

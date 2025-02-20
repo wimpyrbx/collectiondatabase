@@ -155,15 +155,6 @@ const Home = () => {
       align: 'center' as const
     },
     {
-      key: 'CIB',
-      header: 'CIB',
-      width: '80px',
-      align: 'center' as const,
-      icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
-      sortable: true,
-      accessor: (item: ProductViewItem) => item.prices?.complete?.usd ? `$${item.prices.complete.usd.toFixed(2)}` : '',
-    },
-    {
       key: 'final_price',
       header: 'Price',
       icon: <FaDollarSign className="w-4 h-4 text-green-500" />,

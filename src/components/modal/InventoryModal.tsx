@@ -472,9 +472,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     title={inventory?.product_title || 'New Inventory'}
                     onError={(message) => setErrors(prev => [...prev, message])}
                     className="w-full"
-                    pendingImage={pendingImage}
-                    onPendingImageChange={handlePendingImageChange}
-                    isCreateMode={mode === 'create'}
                     productId={inventory?.product_id}
                   />
                   
