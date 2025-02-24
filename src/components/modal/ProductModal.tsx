@@ -261,41 +261,44 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   useEffect(() => {
     if (mode === 'create') return; // Don't track changes for new products
     
-    if (initialFormState && formData) {
-      const compareValues = (initial: any, current: any) => {
-        const normalizedInitial = initial === null || initial === undefined ? '' : initial.toString();
-        const normalizedCurrent = current === null || current === undefined ? '' : current.toString();
-        return normalizedInitial !== normalizedCurrent;
-      };
+    if (!initialFormState || !formData) return;
 
-      const hasChanges = Object.keys(initialFormState).some(key => {
-        const initial = initialFormState[key];
-        let current = '';
+    const compareValues = (initial: any, current: any) => {
+      if (initial === current) return false;
+      const normalizedInitial = initial === null || initial === undefined ? '' : initial.toString();
+      const normalizedCurrent = current === null || current === undefined ? '' : current.toString();
+      return normalizedInitial !== normalizedCurrent;
+    };
 
-        // Handle special cases for region, rating, and tags
-        if (key === 'region') {
-          current = regionRating.region || '';
-          return compareValues(initial, current);
-        } 
-        if (key === 'rating') {
-          current = regionRating.rating || '';
-          return compareValues(initial, current);
-        } 
-        if (key === 'tags') {
-          const initialTags = product?.tags?.map(t => t.id).sort() || [];
-          const currentTags = selectedTags.map(t => t.id).sort();
-          return JSON.stringify(initialTags) !== JSON.stringify(currentTags);
-        }
-        
-        current = formData[key as keyof typeof formData]?.toString() || '';
-        return compareValues(initial, current);
-      });
-      
-      if (hasFormChanges !== hasChanges) {
-        setHasFormChanges(hasChanges);
+    const hasChanges = Object.keys(initialFormState).some(key => {
+      if (key === 'region') {
+        return compareValues(initialFormState[key], regionRating.region);
       }
+      if (key === 'rating') {
+        return compareValues(initialFormState[key], regionRating.rating);
+      }
+      if (key === 'tags') {
+        const initialTags = product?.tags?.map(t => t.id).sort().join(',') || '';
+        const currentTags = selectedTags.map(t => t.id).sort().join(',') || '';
+        return initialTags !== currentTags;
+      }
+      return compareValues(initialFormState[key], formData[key as keyof typeof formData]);
+    });
+
+    // Only update if the value has actually changed
+    if (hasChanges !== hasFormChanges) {
+      setHasFormChanges(hasChanges);
     }
-  }, [formData, initialFormState, mode, regionRating.region, regionRating.rating, selectedTags, product?.tags, hasFormChanges]);
+  }, [
+    mode,
+    initialFormState,
+    formData,
+    regionRating.region,
+    regionRating.rating,
+    selectedTags,
+    product?.tags,
+    hasFormChanges
+  ]);
 
   // Initialize selected tags when product changes
   useEffect(() => {
