@@ -350,23 +350,25 @@ const Inventory = () => {
         </Card.Body>
       </Card>
 
-      <InventoryModal
-        inventory={selectedInventory}
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        onUpdateSuccess={handleSuccess}
-        mode={isCreating ? 'create' : 'edit'}
-        tableData={filteredData}
-        onNavigate={(inventoryId) => {
-          const inventory = data?.find(i => i.inventory_id === inventoryId);
-          if (inventory) {
-            setSelectedInventory(inventory);
-          }
-        }}
-        currentPage={tableState.pagination.currentPage}
-        onPageChange={tableState.pagination.onPageChange}
-        pageSize={tableState.pagination.pageSize}
-      />
+      {isModalOpen && (
+        <InventoryModal
+          inventory={selectedInventory}
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          onUpdateSuccess={handleSuccess}
+          mode={isCreating ? 'create' : 'edit'}
+          tableData={filteredData}
+          onNavigate={(inventoryId) => {
+            const inventory = data?.find(i => i.inventory_id === inventoryId);
+            if (inventory) {
+              setSelectedInventory(inventory);
+            }
+          }}
+          currentPage={tableState.pagination.currentPage}
+          onPageChange={tableState.pagination.onPageChange}
+          pageSize={tableState.pagination.pageSize}
+        />
+      )}
     </Page>
   );
 }

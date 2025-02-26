@@ -17,10 +17,20 @@ module.exports = {
           '15%': { backgroundColor: 'rgb(22 101 52 / 0.5)' }, // bg-green-800/50
           '85%': { backgroundColor: 'rgb(22 101 52 / 0.5)' }, // bg-green-800/50
           '100%': { backgroundColor: 'transparent' }
-        }
+        },
+        slideInFromTop: {
+          '0%': { transform: 'translateY(-2rem)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideOutToTop: {
+          '0%': { transform: 'translateY(0)', opacity: '1' },
+          '100%': { transform: 'translateY(-2rem)', opacity: '0' },
+        },
       },
       animation: {
         'flash-green': 'flash-green 1.2s ease-in-out',
+        'slide-in-from-top': 'slide-in-from-top 0.3s ease-out',
+        'slide-out-to-top': 'slide-out-to-top 0.3s ease-out',
       }
     },
   },

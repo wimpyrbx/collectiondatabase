@@ -1,6 +1,7 @@
 import { useRef, useCallback, useState } from 'react';
 import { useModalForm } from './useModalForm';
 import { useProductService } from './useProductService';
+import { useProductsTable } from './useProductsTable';
 import type { ProductViewItem, ProductCreateDTO, ProductUpdateDTO } from '@/types/product';
 import type { RegionRatingValue } from '@/components/product/RegionRatingSelector';
 import regionsData from '@/data/regions.json';
@@ -24,6 +25,7 @@ export function useProductModal({
   mode = 'edit'
 }: UseProductModalOptions) {
   const productService = useProductService();
+  const { deleteProduct } = useProductsTable();
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [regionRating, setRegionRating] = useState<RegionRatingValue>({
     region: '',
@@ -212,8 +214,7 @@ export function useProductModal({
     if (!product) return;
 
     try {
-      await productService.deleteProduct(product.product_id);
-      onSuccess?.(product.product_id);
+      await deleteProduct(product.product_id);
     } catch (error) {
       throw error;
     }

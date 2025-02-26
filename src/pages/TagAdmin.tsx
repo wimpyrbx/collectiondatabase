@@ -186,24 +186,21 @@ const TagAdmin = () => {
     {
       key: 'actions',
       header: '',
-      width: '100px',
+      width: '60px',
       accessor: (item) => {
         const type = modalType;
+        const isDisabled = item.relationships_count > 0;
         return (
-          <div className="flex gap-2">
+          <div className="flex justify-end">
             <Button
-              onClick={() => handleEdit(item, type)}
-              bgColor="bg-blue-900/50"
-              className="w-8 h-8 !p-0"
-              title="Edit tag"
-            >
-              ✏️
-            </Button>
-            <Button
-              onClick={() => handleDelete(item.id, type)}
-              disabled={item.relationships_count > 0}
-              title={item.relationships_count > 0 ? 'Cannot delete tag that is in use' : 'Delete tag'}
-              bgColor="bg-red-900/50"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(item.id, type);
+              }}
+              disabled={isDisabled}
+              title={isDisabled ? 'Cannot delete tag that is in use' : 'Delete tag'}
+              bgColor={isDisabled ? 'bg-gray-800/50' : 'bg-red-900/50'}
+              textColor={isDisabled ? 'text-gray-500' : 'text-red-400'}
               className="w-8 h-8 !p-0"
             >
               🗑️
@@ -252,136 +249,60 @@ const TagAdmin = () => {
       iconColor="text-purple-500"
     >
       <div className="grid grid-cols-2 gap-4">
-        {/* Product Tags */}
         <Card>
           <Card.Header
             title="Product Tags"
             icon={<FaTags />}
             iconColor="text-purple-500"
+            bgColor="bg-purple-500/50"
             rightContent={
               <Button
                 onClick={() => handleCreate('product')}
-                bgColor="bg-green-900"
-                iconLeft={<FaPlus />}
+                bgColor="bg-purple-900/50"
+                className="flex items-center gap-2"
               >
-                New Product Tag
+                <FaPlus />
+                New Tag
               </Button>
             }
           />
           <Card.Body>
-            <BaseFilterableTable<TagWithRelationships>
-              columns={columns.map(col => {
-                if (col.key === 'actions') {
-                  return {
-                    ...col,
-                    accessor: (item) => {
-                      return (
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => handleEdit(item, 'product')}
-                            bgColor="bg-blue-900/50"
-                            className="w-8 h-8 !p-0"
-                            title="Edit tag"
-                          >
-                            ✏️
-                          </Button>
-                          <Button
-                            onClick={() => handleDelete(item.id, 'product')}
-                            disabled={item.relationships_count > 0}
-                            title={item.relationships_count > 0 ? 'Cannot delete tag that is in use' : 'Delete tag'}
-                            bgColor="bg-red-900/50"
-                            className="w-8 h-8 !p-0"
-                          >
-                            🗑️
-                          </Button>
-                        </div>
-                      );
-                    }
-                  };
-                }
-                return col;
-              })}
-              data={productTableState.filteredAndSortedData}
+            <BaseFilterableTable
+              {...productTableState}
+              columns={columns}
+              data={productTags}
               keyExtractor={(item) => item.id.toString()}
               isLoading={isLoadingProductTags}
-              filters={productTableState.filters}
-              selectedFilters={productTableState.selectedFilters}
-              onFilterChange={productTableState.onFilterChange}
-              searchTerm={productTableState.searchTerm}
-              onSearchChange={productTableState.onSearchChange}
-              sortBy={productTableState.sortBy}
-              sortDirection={productTableState.sortDirection}
-              onSort={productTableState.onSort}
-              pagination={productTableState.pagination}
-              fixedHeight="h-[36px]"
-              navigationLocation="top"
+              onRowClick={(item) => handleEdit(item, 'product')}
             />
           </Card.Body>
         </Card>
 
-        {/* Inventory Tags */}
         <Card>
           <Card.Header
             title="Inventory Tags"
             icon={<FaTags />}
-            iconColor="text-purple-500"
+            iconColor="text-indigo-500"
+            bgColor="bg-indigo-500/50"
             rightContent={
               <Button
                 onClick={() => handleCreate('inventory')}
-                bgColor="bg-green-900"
-                iconLeft={<FaPlus />}
+                bgColor="bg-indigo-900/50"
+                className="flex items-center gap-2"
               >
-                New Inventory Tag
+                <FaPlus />
+                New Tag
               </Button>
             }
           />
           <Card.Body>
-            <BaseFilterableTable<TagWithRelationships>
-              columns={columns.map(col => {
-                if (col.key === 'actions') {
-                  return {
-                    ...col,
-                    accessor: (item) => {
-                      return (
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => handleEdit(item, 'inventory')}
-                            bgColor="bg-blue-900/50"
-                            className="w-8 h-8 !p-0"
-                            title="Edit tag"
-                          >
-                            ✏️
-                          </Button>
-                          <Button
-                            onClick={() => handleDelete(item.id, 'inventory')}
-                            disabled={item.relationships_count > 0}
-                            title={item.relationships_count > 0 ? 'Cannot delete tag that is in use' : 'Delete tag'}
-                            bgColor="bg-red-900/50"
-                            className="w-8 h-8 !p-0"
-                          >
-                            🗑️
-                          </Button>
-                        </div>
-                      );
-                    }
-                  };
-                }
-                return col;
-              })}
-              data={inventoryTableState.filteredAndSortedData}
+            <BaseFilterableTable
+              {...inventoryTableState}
+              columns={columns}
+              data={inventoryTags}
               keyExtractor={(item) => item.id.toString()}
               isLoading={isLoadingInventoryTags}
-              filters={inventoryTableState.filters}
-              selectedFilters={inventoryTableState.selectedFilters}
-              onFilterChange={inventoryTableState.onFilterChange}
-              searchTerm={inventoryTableState.searchTerm}
-              onSearchChange={inventoryTableState.onSearchChange}
-              sortBy={inventoryTableState.sortBy}
-              sortDirection={inventoryTableState.sortDirection}
-              onSort={inventoryTableState.onSort}
-              pagination={inventoryTableState.pagination}
-              fixedHeight="h-[36px]"
-              navigationLocation="top"
+              onRowClick={(item) => handleEdit(item, 'inventory')}
             />
           </Card.Body>
         </Card>

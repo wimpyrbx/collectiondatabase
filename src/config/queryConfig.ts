@@ -125,4 +125,14 @@ export function createQueryConfig<
   config: QueryConfig<TQueryFnData, TError, TData, TQueryKey>
 ): QueryConfig<TQueryFnData, TError, TData, TQueryKey> {
   return config;
+}
+
+/**
+ * Utility to create mutation keys with consistent format
+ * @param type The type of mutation (e.g., 'createProduct', 'updateInventory')
+ * @param params Additional parameters for the mutation key
+ * @returns A readonly array representing the mutation key
+ */
+export function createMutationKey<T extends string>(type: T, ...params: unknown[]): readonly [T, ...unknown[]] {
+  return Object.freeze([type, ...params]);
 } 

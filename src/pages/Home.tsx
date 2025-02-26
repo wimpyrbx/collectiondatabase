@@ -18,6 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { updateInventoryCache } from '@/utils/inventoryUtils';
 import { TagDisplay } from '@/components/tag/TagDisplay';
 import { useQuery } from '@tanstack/react-query';
+import { notify } from '@/utils/notifications';
 
 interface InventoryItem {
   id: number;
@@ -40,7 +41,12 @@ const Home = () => {
 
   const handleAddToInventory = React.useCallback(async (productId: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    await updateInventoryCache(productId, queryClient);
+    try {
+      await updateInventoryCache(productId, queryClient);
+      notify('success', 'Added to inventory');
+    } catch (error) {
+      notify('error', 'Failed to add to inventory');
+    }
   }, [queryClient]);
 
   const columns = React.useMemo<Column<ProductViewItem>[]>(() => [
@@ -291,6 +297,7 @@ const Home = () => {
     setSelectedProduct(null);
     setIsCreating(false);
     setUpdatedProductId(productId);
+    notify('info', `Product ${isCreating ? 'created' : 'updated'}`);
     setTimeout(() => {
       setUpdatedProductId(null);
     }, 1500);

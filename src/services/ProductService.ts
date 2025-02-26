@@ -215,24 +215,4 @@ export class ProductService extends CrudService<Product, ProductCreateDTO, Produ
   public async create(data: ProductCreateDTO): Promise<{ data: Product | null; errors: string[] }> {
     return super.create(data);
   }
-
-  async deleteProduct(productId: number): Promise<void> {
-    try {
-      // Delete from database first
-      const { error } = await this.supabaseClient
-        .from('products')
-        .delete()
-        .eq('id', productId);
-
-      if (error) throw error;
-
-      // If database deletion was successful, delete the image
-      await deleteImage('product', productId);
-
-      // Invalidate caches
-      await this.queryClient.invalidateQueries({ queryKey: this.cacheConfig.queryKey });
-    } catch (error) {
-      throw error;
-    }
-  }
 } 

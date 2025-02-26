@@ -105,20 +105,10 @@ export const QuickAddInventory: React.FC<QuickAddInventoryProps> = ({
     try {
       const newInventory = {
         product_id: product.product_id,
-        inventory_status: 'NORMAL',
+        inventory_status: 'Normal',
         purchase_id: null,
         sale_id: null,
-        override_price: null,
-        purchase_seller: null,
-        purchase_origin: null,
-        purchase_cost: null,
-        purchase_date: null,
-        purchase_notes: null,
-        sale_buyer: null,
-        sale_status: null,
-        sale_date: null,
-        sale_notes: null,
-        sold_price: null
+        override_price: null
       };
 
       await createInventory(newInventory);
@@ -140,42 +130,43 @@ export const QuickAddInventory: React.FC<QuickAddInventoryProps> = ({
   };
 
   return (
-    <div className="relative">
-      <div className="flex items-center gap-2">
-        <div ref={setReferenceElement} className="absolute right-16">
-          <FormElement
-            elementType="input"
-            initialValue={searchTerm}
-            onValueChange={(value) => {
-              setSearchTerm(String(value));
-              setSelectedIndex(-1);
-              setIsOpen(true);
-            }}
-            placeholder="Search products..."
-            bgColor="bg-gray-900"
-            textSize="xs"
-            width="w-[300px]"
-            padding="py-2 px-3"
-            disableTransitionOpacity
-          />
-          {isOpen && filteredProducts.length > 0 && (
-            <div 
-              ref={setPopperElement}
-              style={styles.popper}
-              {...attributes.popper}
-              className={clsx(
-                'bg-gray-800 rounded-lg',
-                'border border-gray-700',
-                'shadow-lg shadow-black/20',
-                'max-h-[80vh] overflow-y-auto',
-                'z-[9999]',
-                'w-[500px]'
-              )}
-            >
-              {filteredProducts.map((product, index) => (
-                <div className="px-1 py-0.5 bg-gray-900 overflow-hidden">
+    <div className="flex items-center">
+      <div ref={setReferenceElement} className="absolute right-20">
+        <FormElement
+          elementType="input"
+          initialValue={searchTerm}
+          onValueChange={(value) => {
+            setSearchTerm(String(value));
+            setSelectedIndex(-1);
+            setIsOpen(true);
+          }}
+          placeholder="Search products..."
+          bgColor="bg-gray-900"
+          textSize="xs"
+          width="w-[300px]"
+          padding="py-2 px-3"
+          disableTransitionOpacity
+        />
+        {isOpen && filteredProducts.length > 0 && (
+          <div 
+            ref={setPopperElement}
+            style={styles.popper}
+            {...attributes.popper}
+            className={clsx(
+              'bg-gray-800 rounded-lg',
+              'border border-gray-700',
+              'shadow-lg shadow-black/20',
+              'max-h-[80vh] overflow-y-auto',
+              'z-[9999]',
+              'w-[500px]'
+            )}
+          >
+            {filteredProducts.map((product, index) => (
+              <div 
+                key={product.product_id}
+                className="px-1 py-0.5 bg-gray-900 overflow-hidden"
+              >
                 <div
-                  key={product.product_id}
                   onClick={() => handleProductSelect(product)}
                   className={clsx(
                     'search-result-item cursor-pointer hover:translate-x-2 hover:w-[480px]',
@@ -273,21 +264,10 @@ export const QuickAddInventory: React.FC<QuickAddInventoryProps> = ({
                     </div>
                   </div>
                 </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <Button
-          onClick={() => {
-            setIsOpen(true);
-            searchInputRef.current?.focus();
-          }}
-          bgColor="bg-cyan-600"
-          iconLeft={<FaPlus />}
-        >
-          Add
-        </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Error Display */}

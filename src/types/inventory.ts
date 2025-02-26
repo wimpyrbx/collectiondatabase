@@ -67,4 +67,10 @@ export interface InventoryViewItem {
     barcodes?: string[];
     tags: TagInfo[];
     product_tags: TagInfo[];
+    // Count properties
+    normal_count?: number;
+    collection_count?: number;
+    for_sale_count?: number;
+    sold_count?: number;
+    total_count?: number;
 }

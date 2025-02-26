@@ -66,10 +66,12 @@ export const IconGrid: React.FC<IconGridProps> = ({
             onClick={() => onChange(option.value)}
             className={clsx(
               'flex items-center justify-center rounded-lg transition-all',
-              'hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500',
+              'hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500',
+              'duration-200',
               sizeClasses[size],
               isSelected ? selectedBgColor : bgColor,
-              isSelected ? selectedIconColor : iconColor
+              isSelected ? selectedIconColor : iconColor,
+              'hover:text-blue-400'
             )}
             title={option.label}
           >

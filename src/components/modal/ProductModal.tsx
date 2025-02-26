@@ -28,6 +28,8 @@ import Pill from '@/components/ui/Pill';
 import * as Icons from 'react-icons/fa';
 import { Tooltip } from '@/components/tooltip/Tooltip';
 import { TooltipStyle } from '@/utils/tooltip';
+import { useProductTags } from '@/hooks/useProductTags';
+import { notify } from '@/utils/notifications';
 
 interface ProductModalProps {
   product?: ProductViewItem | null;
@@ -47,7 +49,8 @@ const TagButton: React.FC<{
   tag: TagWithRelationships;
   isSelected: boolean;
   onToggle: (tag: TagWithRelationships) => void;
-}> = ({ tag, isSelected, onToggle }) => {
+  isProcessing?: boolean;
+}> = ({ tag, isSelected, onToggle, isProcessing }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const { color = 'gray' } = tag;
@@ -60,9 +63,11 @@ const TagButton: React.FC<{
         onClick={() => onToggle(tag)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        disabled={isProcessing}
         className={clsx(
-          "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors",
-          isSelected ? ["bg-green-500/20", "text-green-300"] : ["bg-gray-800 hover:bg-gray-700", "text-gray-300"]
+          "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200",
+          isSelected ? ["bg-green-500/20", "text-green-300"] : ["bg-gray-800 hover:bg-gray-700", "text-gray-300"],
+          isProcessing && "opacity-50 cursor-not-allowed"
         )}
       >
         {tag.display_type === 'icon' && tag.display_value ? (
@@ -82,7 +87,7 @@ const TagButton: React.FC<{
         )}
       </button>
       <Tooltip
-        text={`Click to ${isSelected ? 'remove' : 'add'} ${tag.name} tag`}
+        text={isProcessing ? 'Processing...' : `Click to ${isSelected ? 'remove' : 'add'} ${tag.name} tag`}
         isOpen={isHovered}
         elementRef={buttonRef}
         placement="top"
@@ -182,13 +187,16 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   
   // Update the tag state management
   const [selectedTags, setSelectedTags] = useState<TagWithRelationships[]>([]);
+  const [isTagProcessing, setIsTagProcessing] = useState<Record<number, boolean>>({});
+  const [isTagPanelProcessing, setIsTagPanelProcessing] = useState(false);
+  const { addTag, removeTag } = useProductTags();
   
   // Query to fetch available product tags
   const queryClient = useQueryClient();
   const { data: availableTags = [], isLoading: isLoadingTags } = useQuery({
     queryKey: ['product_tags'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('view_product_tags').select('*');
+      const { data, error } = await supabase.from('view_product_tags').select('*').order('name');
       if (error) throw error;
       return data as TagWithRelationships[] || [];
     }
@@ -261,44 +269,41 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   useEffect(() => {
     if (mode === 'create') return; // Don't track changes for new products
     
-    if (!initialFormState || !formData) return;
+    if (initialFormState && formData) {
+      const compareValues = (initial: any, current: any) => {
+        const normalizedInitial = initial === null || initial === undefined ? '' : initial.toString();
+        const normalizedCurrent = current === null || current === undefined ? '' : current.toString();
+        return normalizedInitial !== normalizedCurrent;
+      };
 
-    const compareValues = (initial: any, current: any) => {
-      if (initial === current) return false;
-      const normalizedInitial = initial === null || initial === undefined ? '' : initial.toString();
-      const normalizedCurrent = current === null || current === undefined ? '' : current.toString();
-      return normalizedInitial !== normalizedCurrent;
-    };
+      const hasChanges = Object.keys(initialFormState).some(key => {
+        const initial = initialFormState[key];
+        let current = '';
 
-    const hasChanges = Object.keys(initialFormState).some(key => {
-      if (key === 'region') {
-        return compareValues(initialFormState[key], regionRating.region);
+        // Handle special cases for region, rating, and tags
+        if (key === 'region') {
+          current = regionRating.region || '';
+          return compareValues(initial, current);
+        } 
+        if (key === 'rating') {
+          current = regionRating.rating || '';
+          return compareValues(initial, current);
+        } 
+        if (key === 'tags') {
+          const initialTags = product?.tags?.map(t => t.id).sort() || [];
+          const currentTags = selectedTags.map(t => t.id).sort();
+          return JSON.stringify(initialTags) !== JSON.stringify(currentTags);
+        }
+        
+        current = formData[key as keyof typeof formData]?.toString() || '';
+        return compareValues(initial, current);
+      });
+      
+      if (hasFormChanges !== hasChanges) {
+        setHasFormChanges(hasChanges);
       }
-      if (key === 'rating') {
-        return compareValues(initialFormState[key], regionRating.rating);
-      }
-      if (key === 'tags') {
-        const initialTags = product?.tags?.map(t => t.id).sort().join(',') || '';
-        const currentTags = selectedTags.map(t => t.id).sort().join(',') || '';
-        return initialTags !== currentTags;
-      }
-      return compareValues(initialFormState[key], formData[key as keyof typeof formData]);
-    });
-
-    // Only update if the value has actually changed
-    if (hasChanges !== hasFormChanges) {
-      setHasFormChanges(hasChanges);
     }
-  }, [
-    mode,
-    initialFormState,
-    formData,
-    regionRating.region,
-    regionRating.rating,
-    selectedTags,
-    product?.tags,
-    hasFormChanges
-  ]);
+  }, [formData, initialFormState, mode, regionRating.region, regionRating.rating, selectedTags, product?.tags, hasFormChanges]);
 
   // Initialize selected tags when product changes
   useEffect(() => {
@@ -313,7 +318,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   }, [product, availableTags]);
 
   // Handle tag selection
-  const handleTagToggle = async (tag: TagWithRelationships) => {
+  const handleTagToggle = (tag: TagWithRelationships) => {
     if (!product) {
       // For new products, just update the local state
       setSelectedTags(prev => {
@@ -325,59 +330,35 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       return;
     }
 
-    try {
-      const isSelected = selectedTags.some(t => t.id === tag.id);
-      
-      if (isSelected) {
-        // Remove tag relationship
-        const { error } = await supabase
-          .from('product_tag_relationships')
-          .delete()
-          .match({ 
-            product_id: product.product_id, 
-            tag_id: tag.id 
-          });
-        
-        if (error) throw error;
-      } else {
-        // Add tag relationship
-        const { error } = await supabase
-          .from('product_tag_relationships')
-          .insert({ 
-            product_id: product.product_id, 
-            tag_id: tag.id 
-          });
-        
-        if (error) throw error;
-      }
+    // Prevent concurrent operations on the same tag
+    if (isTagProcessing[tag.id]) return;
 
-      // Update local state
-      setSelectedTags(prev => {
-        return isSelected
-          ? prev.filter(t => t.id !== tag.id)
-          : [...prev, tag];
+    const isSelected = selectedTags.some(t => t.id === tag.id);
+
+    // 1. Update local state immediately
+    setSelectedTags(prev => 
+      isSelected 
+        ? prev.filter(t => t.id !== tag.id)
+        : [...prev, tag]
+    );
+
+    // 2. Start the async operation
+    const promise = isSelected
+      ? removeTag({ productId: product.product_id, tagId: tag.id })
+      : addTag({ productId: product.product_id, tagId: tag.id });
+
+    promise
+      .then(() => notify(isSelected ? 'remove' : 'add', `${tag.name} tag ${isSelected ? 'removed' : 'added'}`))
+      .catch(error => {
+        notify('error', `Failed to ${isSelected ? 'remove' : 'add'} tag`);
+        // Revert local state on error
+        setSelectedTags(prev => 
+          isSelected 
+            ? [...prev, tag]
+            : prev.filter(t => t.id !== tag.id)
+        );
+        setErrors(prev => [...prev, `Failed to ${isSelected ? 'remove' : 'add'} tag`]);
       });
-
-      // Update cache
-      queryClient.setQueryData<ProductViewItem[]>(['products'], old => {
-        if (!old) return old;
-        return old.map(p => {
-          if (p.product_id === product.product_id) {
-            return {
-              ...p,
-              tags: isSelected
-                ? p.tags.filter(t => t.id !== tag.id)
-                : [...p.tags, tag]
-            };
-          }
-          return p;
-        });
-      });
-
-    } catch (error) {
-      console.error('Error toggling tag:', error);
-      setErrors(prev => [...prev, 'Failed to update tag']);
-    }
   };
 
   // Only show delete button if product exists and has no inventory items
@@ -386,9 +367,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const confirmDelete = async () => {
     try {
       await handleDelete();
+      notify('success', 'Product deleted');
       onClose();
     } catch (error) {
-      setErrors(['Failed to delete product']);
+      notify('error', 'Failed to delete product');
     }
     setIsDeleteConfirmOpen(false);
   };
@@ -450,12 +432,15 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         handleNavigate('next');
+      } else if (e.key === 'Delete' && canDelete) {
+        e.preventDefault();
+        setIsDeleteConfirmOpen(true);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, mode, product, tableData]);
+  }, [isOpen, mode, product, tableData, canDelete]);
 
   // Update wrappedHandleSubmit to remove tag handling since it's now handled in handleTagToggle
   const wrappedHandleSubmit = async (e: React.FormEvent) => {
@@ -466,10 +451,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     }
 
     try {
-      // Submit the form without handling tags
       await handleSubmit(e);
+      notify('success', `Product ${mode === 'create' ? 'created' : 'updated'}`);
     } catch (error: any) {
-      setErrors(prev => [...prev, error.message]);
+      notify('error', error.message || 'Operation failed');
     }
   };
 
@@ -519,6 +504,24 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     handleInputChange('product_variant', variant);
     setShowVariantSuggestions(false);
   };
+
+  // Add keyboard handler for delete confirmation
+  useEffect(() => {
+    if (!isDeleteConfirmOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'y' || e.key === 'Y' || e.key === 'Enter') {
+        e.preventDefault();
+        confirmDelete();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsDeleteConfirmOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDeleteConfirmOpen]);
 
   return (
     <>
@@ -795,6 +798,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                                 tag={tag}
                                 isSelected={selectedTags.some(t => t.id === tag.id)}
                                 onToggle={handleTagToggle}
+                                isProcessing={isTagProcessing[tag.id]}
                               />
                             ))
                           )}
@@ -894,33 +898,65 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         onClose={() => setIsDeleteConfirmOpen(false)}
         className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" aria-hidden="true" />
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-sm rounded-lg bg-gray-800 p-6 shadow-xl">
-            <Dialog.Title className="text-lg font-medium text-gray-200 mb-4">
-              Delete Product
-            </Dialog.Title>
-            <p className="text-gray-300 mb-6">
-              Are you sure you want to delete this product? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
+          <Card modal className="w-[400px]">
+            <Card.Header
+              icon={<FaTrash />}
+              iconColor="text-red-500"
+              title="Delete Product"
+              bgColor="bg-red-500/20"
+            />
+            <Card.Body>
+              <div className="p-4 space-y-4">
+                <div className="space-y-2">
+                  <div className="text-gray-300">
+                    <span className="text-gray-400">Title:</span> {product?.product_title}
+                    {product?.product_variant && (
+                      <span className="text-cyan-500/75"> ({product.product_variant})</span>
+                    )}
+                  </div>
+                  <div className="text-gray-300">
+                    <span className="text-gray-400">Type:</span> {product?.product_type_name}
+                    {product?.product_group_name && (
+                      <span className="text-gray-400"> • {product.product_group_name}</span>
+                    )}
+                  </div>
+                  <div className="text-gray-300">
+                    <span className="text-gray-400">ID:</span> {product?.product_id}
+                  </div>
+                  {product && product.total_count > 0 && (
+                    <div className="text-orange-400 text-sm flex items-center gap-2 mt-2">
+                      <FaExclamationTriangle />
+                      <span>Cannot delete - {product.total_count} item{product.total_count !== 1 ? 's' : ''} in inventory</span>
+                    </div>
+                  )}
+                </div>
+                <div className="text-red-400 text-sm flex items-center gap-2">
+                  <FaExclamationTriangle />
+                  <span>This action cannot be undone.</span>
+                </div>
+              </div>
+            </Card.Body>
+            <Card.Footer className="flex justify-end gap-2 bg-gray-900/50">
               <Button
                 onClick={() => setIsDeleteConfirmOpen(false)}
-                bgColor="bg-gray-800"
-                hoverBgColor={true}
+                bgColor="bg-gray-700"
+                hoverEffect="scale"
               >
                 Cancel
               </Button>
               <Button
                 onClick={confirmDelete}
                 bgColor="bg-red-900/50"
-                hoverBgColor={true}
+                hoverEffect="scale"
                 iconLeft={<FaTrash />}
+                disabled={Boolean(product?.total_count)}
               >
                 Delete
               </Button>
-            </div>
-          </Dialog.Panel>
+            </Card.Footer>
+          </Card>
         </div>
       </Dialog>
     </>

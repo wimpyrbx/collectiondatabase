@@ -4,6 +4,8 @@ import type { Product, NewProduct } from '@/types/tables';
 import { PRODUCTS_QUERY_KEY } from '@/hooks/viewHooks';
 import type { ProductViewItem } from '@/types/product';
 import { createMutationOptions } from '@/config/queryConfig';
+import { PRODUCT_MUTATION_KEYS } from '@/config/mutationKeys';
+import { deleteImage } from '@/utils/imageUtils';
 
 interface MutationContext {
   previousProducts: ProductViewItem[] | undefined;
@@ -15,6 +17,7 @@ export const useProductsTable = () => {
   // Update mutation
   const updateProductMutation = useMutation(
     createMutationOptions<{data: Product}, unknown, { id: number; updates: Partial<Product> }, MutationContext>({
+      mutationKey: PRODUCT_MUTATION_KEYS.update,
       mutationFn: async ({ id, updates }) => {
         // Create a clean update object that explicitly includes null values
         const updateData: Record<string, any> = {};
@@ -118,6 +121,7 @@ export const useProductsTable = () => {
   // Create mutation
   const createProductMutation = useMutation(
     createMutationOptions<Product, unknown, NewProduct, MutationContext>({
+      mutationKey: PRODUCT_MUTATION_KEYS.create,
       mutationFn: async (product) => {
         const { data, error } = await supabase
           .from('products')
@@ -187,13 +191,18 @@ export const useProductsTable = () => {
   // Delete mutation
   const deleteProductMutation = useMutation(
     createMutationOptions<void, unknown, number, MutationContext>({
+      mutationKey: PRODUCT_MUTATION_KEYS.delete,
       mutationFn: async (id) => {
+        // Delete from database first
         const { error } = await supabase
           .from('products')
           .delete()
           .eq('id', id);
 
         if (error) throw error;
+
+        // If database deletion was successful, delete the image
+        await deleteImage('product', id);
       },
       onMutate: async (id) => {
         await queryClient.cancelQueries({ queryKey: PRODUCTS_QUERY_KEY });
@@ -213,6 +222,10 @@ export const useProductsTable = () => {
         if (context?.previousProducts) {
           queryClient.setQueryData(PRODUCTS_QUERY_KEY, context.previousProducts);
         }
+      },
+      onSettled: () => {
+        // Always invalidate the cache after a delete operation
+        queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY });
       }
     })
   );

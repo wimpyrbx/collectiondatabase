@@ -216,7 +216,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
       <div className="flex justify-between items-start gap-4">
         {/* Left side: Search */}
         {onSearchChange && (
-          <div className="w-1/8 relative">
+          <div className="w-1/6 relative">
             <input
               ref={searchInputRef}
               value={localSearchTerm}
@@ -256,9 +256,9 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
                 if (onSearchChange) onSearchChange('');
               }
             }}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 mb-0 bg-gray-900 border border-gray-700 rounded-lg p-2 hover:border-gray-700 w-[100px]"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 mb-0 bg-gray-900 border border-gray-700 rounded-lg p-2 hover:border-gray-700 w-[70px]"
           >
-            <span>{isFiltersExpanded ? 'Hide Filters' : 'Show Filters'}</span>
+            <span>{isFiltersExpanded ? 'Filters' : 'Filters'}</span>
             <svg
               className={`w-4 h-4 transition-transform duration-200 ${isFiltersExpanded ? 'rotate-180' : ''}`}
               fill="none"
@@ -275,7 +275,9 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
             }`}
           >
             <div className="flex gap-4">
-              {allFilters.map((filter) => (
+              {allFilters
+                .filter(filter => filter.options.length > 1) // Only show filters with more than one option
+                .map((filter) => (
                 <div key={filter.key} className="flex-1">
                   <FormElement
                     elementType="listmultiple"

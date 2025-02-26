@@ -9,7 +9,7 @@ import { ProductTagService, InventoryTagService } from '@/services/TagService';
 import { supabase } from '@/supabaseClient';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Icons from 'react-icons/fa';
-import { FaTag, FaLayerGroup, FaCubes, FaImage, FaFont, FaIcons, FaPalette, FaCheck } from 'react-icons/fa';
+import { FaTag, FaLayerGroup, FaCubes, FaImage, FaFont, FaIcons, FaPalette, FaCheck, FaRandom } from 'react-icons/fa';
 import DisplayError from '@/components/ui/DisplayError';
 import { IconGrid, getCommonIconOptions } from '@/components/ui/IconGrid';
 import Pill from '@/components/ui/Pill';
@@ -17,14 +17,18 @@ import clsx from 'clsx';
 import { TagDisplay } from '@/components/tag/TagDisplay';
 
 const colorOptions = [
-  { value: 'gray', label: 'Gray' },
-  { value: 'red', label: 'Red' },
-  { value: 'yellow', label: 'Yellow' },
-  { value: 'green', label: 'Green' },
+  // Core Colors - these are guaranteed to work with Tailwind
   { value: 'blue', label: 'Blue' },
-  { value: 'indigo', label: 'Indigo' },
+  { value: 'red', label: 'Red' },
+  { value: 'green', label: 'Green' },
+  { value: 'yellow', label: 'Yellow' },
   { value: 'purple', label: 'Purple' },
-  { value: 'pink', label: 'Pink' }
+  { value: 'pink', label: 'Pink' },
+  { value: 'indigo', label: 'Indigo' },
+  { value: 'cyan', label: 'Cyan' },
+  { value: 'orange', label: 'Orange' },
+  { value: 'teal', label: 'Teal' },
+  { value: 'gray', label: 'Gray' }
 ];
 
 interface ColorPickerProps {
@@ -51,13 +55,13 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange, label }) => 
             className={clsx(
               'w-8 h-8 rounded-lg transition-all duration-200',
               'hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-gray-400',
-              `bg-${color.value}-500/20 border-2`,
-              value === color.value ? `border-${color.value}-400` : 'border-transparent'
+              `bg-${color.value}-500`,
+              value === color.value ? `ring-2 ring-${color.value}-400 ring-offset-2 ring-offset-gray-900` : 'ring-0'
             )}
             title={color.label}
           >
             {value === color.value && (
-              <FaCheck className={`w-4 h-4 mx-auto text-${color.value}-400`} />
+              <FaCheck className="w-4 h-4 mx-auto text-white" />
             )}
           </button>
         ))}
@@ -126,7 +130,15 @@ export const TagModal: React.FC<TagModalProps> = ({
       setSelectedTypes([]);
       setColor('gray');
     }
-  }, [tag]);
+    // Clear errors when modal opens
+    setErrors([]);
+  }, [tag, isOpen]);
+
+  const handleClose = () => {
+    // Clear errors when modal closes
+    setErrors([]);
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,41 +173,156 @@ export const TagModal: React.FC<TagModalProps> = ({
   };
 
   const iconOptions = [
-    // First Row
-    { value: 'FaFile', label: 'File', icon: <Icons.FaFile /> },
-    { value: 'FaFolder', label: 'Folder', icon: <Icons.FaFolder /> },
-    { value: 'FaImage', label: 'Image', icon: <Icons.FaImage /> },
-    { value: 'FaVideo', label: 'Video', icon: <Icons.FaVideo /> },
-    { value: 'FaMusic', label: 'Music', icon: <Icons.FaMusic /> },
-    
-    // Second Row
-    { value: 'FaGamepad', label: 'Gamepad', icon: <Icons.FaGamepad /> },
-    { value: 'FaTag', label: 'Tag', icon: <Icons.FaTag /> },
+    // Row 1 - Basic Items
     { value: 'FaBox', label: 'Box', icon: <Icons.FaBox /> },
-    { value: 'FaSmile', label: 'Smile', icon: <Icons.FaSmile /> },
-    { value: 'FaCoffee', label: 'Coffee', icon: <Icons.FaCoffee /> },
+    { value: 'FaBoxOpen', label: 'Box Open', icon: <Icons.FaBoxOpen /> },
+    { value: 'FaBoxes', label: 'Boxes', icon: <Icons.FaBoxes /> },
+    { value: 'FaCube', label: 'Cube', icon: <Icons.FaCube /> },
+    { value: 'FaCubes', label: 'Cubes', icon: <Icons.FaCubes /> },
+    { value: 'FaArchive', label: 'Archive', icon: <Icons.FaArchive /> },
+    { value: 'FaFolder', label: 'Folder', icon: <Icons.FaFolder /> },
+    { value: 'FaFile', label: 'File', icon: <Icons.FaFile /> },
+    { value: 'FaTag', label: 'Tag', icon: <Icons.FaTag /> },
+    { value: 'FaTags', label: 'Tags', icon: <Icons.FaTags /> },
 
-    // Third Row
+    // Row 2 - Groups and Collections
+    { value: 'FaLayerGroup', label: 'Layer Group', icon: <Icons.FaLayerGroup /> },
+    { value: 'FaObjectGroup', label: 'Object Group', icon: <Icons.FaObjectGroup /> },
+    { value: 'FaUsers', label: 'Users Group', icon: <Icons.FaUsers /> },
+    { value: 'FaUserFriends', label: 'User Friends', icon: <Icons.FaUserFriends /> },
+    { value: 'FaThLarge', label: 'Grid', icon: <Icons.FaThLarge /> },
+    { value: 'FaTh', label: 'Grid Small', icon: <Icons.FaTh /> },
+    { value: 'FaThList', label: 'Grid List', icon: <Icons.FaThList /> },
+    { value: 'FaList', label: 'List', icon: <Icons.FaList /> },
+    { value: 'FaListAlt', label: 'List Alt', icon: <Icons.FaListAlt /> },
+    { value: 'FaClone', label: 'Clone', icon: <Icons.FaClone /> },
+
+    // Row 3 - Media and Content
+    { value: 'FaImage', label: 'Image', icon: <Icons.FaImage /> },
+    { value: 'FaImages', label: 'Images', icon: <Icons.FaImages /> },
+    { value: 'FaVideo', label: 'Video', icon: <Icons.FaVideo /> },
+    { value: 'FaFilm', label: 'Film', icon: <Icons.FaFilm /> },
+    { value: 'FaMusic', label: 'Music', icon: <Icons.FaMusic /> },
+    { value: 'FaGamepad', label: 'Gamepad', icon: <Icons.FaGamepad /> },
+    { value: 'FaPuzzlePiece', label: 'Puzzle', icon: <Icons.FaPuzzlePiece /> },
+    { value: 'FaDice', label: 'Dice', icon: <Icons.FaDice /> },
+    { value: 'FaBook', label: 'Book', icon: <Icons.FaBook /> },
+    { value: 'FaBookOpen', label: 'Book Open', icon: <Icons.FaBookOpen /> },
+
+    // Row 4 - Status and Actions
     { value: 'FaShoppingCart', label: 'Cart', icon: <Icons.FaShoppingCart /> },
+    { value: 'FaStore', label: 'Store', icon: <Icons.FaStore /> },
     { value: 'FaDollarSign', label: 'Dollar', icon: <Icons.FaDollarSign /> },
     { value: 'FaStar', label: 'Star', icon: <Icons.FaStar /> },
     { value: 'FaHeart', label: 'Heart', icon: <Icons.FaHeart /> },
     { value: 'FaCheck', label: 'Check', icon: <Icons.FaCheck /> },
-
-    // Fourth Row
     { value: 'FaTimes', label: 'Times', icon: <Icons.FaTimes /> },
     { value: 'FaExclamation', label: 'Exclamation', icon: <Icons.FaExclamation /> },
     { value: 'FaQuestion', label: 'Question', icon: <Icons.FaQuestion /> },
     { value: 'FaInfo', label: 'Info', icon: <Icons.FaInfo /> },
-    { value: 'FaCog', label: 'Settings', icon: <Icons.FaCog /> },
 
-    // Fifth Row
-    { value: 'FaUser', label: 'User', icon: <Icons.FaUser /> },
-    { value: 'FaUsers', label: 'Users', icon: <Icons.FaUsers /> },
+    // Row 5 - Miscellaneous
     { value: 'FaGlobe', label: 'Globe', icon: <Icons.FaGlobe /> },
     { value: 'FaHome', label: 'Home', icon: <Icons.FaHome /> },
-    { value: 'FaBookmark', label: 'Bookmark', icon: <Icons.FaBookmark /> }
+    { value: 'FaBookmark', label: 'Bookmark', icon: <Icons.FaBookmark /> },
+    { value: 'FaCog', label: 'Settings', icon: <Icons.FaCog /> },
+    { value: 'FaTools', label: 'Tools', icon: <Icons.FaTools /> },
+    { value: 'FaWrench', label: 'Wrench', icon: <Icons.FaWrench /> },
+    { value: 'FaSearch', label: 'Search', icon: <Icons.FaSearch /> },
+    { value: 'FaFilter', label: 'Filter', icon: <Icons.FaFilter /> },
+    { value: 'FaSort', label: 'Sort', icon: <Icons.FaSort /> },
+    { value: 'FaRandom', label: 'Random', icon: <Icons.FaRandom /> }
   ];
+
+  // Add additional icons for random selection
+  const additionalIcons = [
+    // Original icons
+    { value: 'FaAdjust', label: 'Adjust', icon: <Icons.FaAdjust /> },
+    { value: 'FaAsterisk', label: 'Asterisk', icon: <Icons.FaAsterisk /> },
+    { value: 'FaBell', label: 'Bell', icon: <Icons.FaBell /> },
+    { value: 'FaBolt', label: 'Bolt', icon: <Icons.FaBolt /> },
+    { value: 'FaBullhorn', label: 'Bullhorn', icon: <Icons.FaBullhorn /> },
+    { value: 'FaCamera', label: 'Camera', icon: <Icons.FaCamera /> },
+    { value: 'FaChartBar', label: 'Chart Bar', icon: <Icons.FaChartBar /> },
+    { value: 'FaCloud', label: 'Cloud', icon: <Icons.FaCloud /> },
+    { value: 'FaCode', label: 'Code', icon: <Icons.FaCode /> },
+    { value: 'FaCompass', label: 'Compass', icon: <Icons.FaCompass /> },
+    { value: 'FaCrown', label: 'Crown', icon: <Icons.FaCrown /> },
+    { value: 'FaDatabase', label: 'Database', icon: <Icons.FaDatabase /> },
+    { value: 'FaEnvelope', label: 'Envelope', icon: <Icons.FaEnvelope /> },
+    { value: 'FaEye', label: 'Eye', icon: <Icons.FaEye /> },
+    { value: 'FaFlag', label: 'Flag', icon: <Icons.FaFlag /> },
+    { value: 'FaGem', label: 'Gem', icon: <Icons.FaGem /> },
+    { value: 'FaGift', label: 'Gift', icon: <Icons.FaGift /> },
+    { value: 'FaGraduationCap', label: 'Graduation Cap', icon: <Icons.FaGraduationCap /> },
+    { value: 'FaKey', label: 'Key', icon: <Icons.FaKey /> },
+    { value: 'FaLeaf', label: 'Leaf', icon: <Icons.FaLeaf /> },
+    { value: 'FaLightbulb', label: 'Lightbulb', icon: <Icons.FaLightbulb /> },
+    { value: 'FaMagic', label: 'Magic', icon: <Icons.FaMagic /> },
+    { value: 'FaMap', label: 'Map', icon: <Icons.FaMap /> },
+    { value: 'FaMedal', label: 'Medal', icon: <Icons.FaMedal /> },
+    { value: 'FaMicrophone', label: 'Microphone', icon: <Icons.FaMicrophone /> },
+    { value: 'FaPalette', label: 'Palette', icon: <Icons.FaPalette /> },
+    { value: 'FaPaperPlane', label: 'Paper Plane', icon: <Icons.FaPaperPlane /> },
+    { value: 'FaRocket', label: 'Rocket', icon: <Icons.FaRocket /> },
+    { value: 'FaShieldAlt', label: 'Shield', icon: <Icons.FaShieldAlt /> },
+    { value: 'FaTrophy', label: 'Trophy', icon: <Icons.FaTrophy /> },
+    // Additional new icons
+    { value: 'FaAnchor', label: 'Anchor', icon: <Icons.FaAnchor /> },
+    { value: 'FaAtom', label: 'Atom', icon: <Icons.FaAtom /> },
+    { value: 'FaBrain', label: 'Brain', icon: <Icons.FaBrain /> },
+    { value: 'FaBriefcase', label: 'Briefcase', icon: <Icons.FaBriefcase /> },
+    { value: 'FaBug', label: 'Bug', icon: <Icons.FaBug /> },
+    { value: 'FaBuilding', label: 'Building', icon: <Icons.FaBuilding /> },
+    { value: 'FaCar', label: 'Car', icon: <Icons.FaCar /> },
+    { value: 'FaChess', label: 'Chess', icon: <Icons.FaChess /> },
+    { value: 'FaChild', label: 'Child', icon: <Icons.FaChild /> },
+    { value: 'FaCoins', label: 'Coins', icon: <Icons.FaCoins /> },
+    { value: 'FaDrum', label: 'Drum', icon: <Icons.FaDrum /> },
+    { value: 'FaFeather', label: 'Feather', icon: <Icons.FaFeather /> },
+    { value: 'FaFire', label: 'Fire', icon: <Icons.FaFire /> },
+    { value: 'FaFlask', label: 'Flask', icon: <Icons.FaFlask /> },
+    { value: 'FaFootballBall', label: 'Football', icon: <Icons.FaFootballBall /> },
+    { value: 'FaGuitar', label: 'Guitar', icon: <Icons.FaGuitar /> },
+    { value: 'FaHammer', label: 'Hammer', icon: <Icons.FaHammer /> },
+    { value: 'FaHandshake', label: 'Handshake', icon: <Icons.FaHandshake /> },
+    { value: 'FaHeadphones', label: 'Headphones', icon: <Icons.FaHeadphones /> },
+    { value: 'FaHorse', label: 'Horse', icon: <Icons.FaHorse /> },
+    { value: 'FaIceCream', label: 'Ice Cream', icon: <Icons.FaIceCream /> },
+    { value: 'FaKeyboard', label: 'Keyboard', icon: <Icons.FaKeyboard /> },
+    { value: 'FaLaptop', label: 'Laptop', icon: <Icons.FaLaptop /> },
+    { value: 'FaMoon', label: 'Moon', icon: <Icons.FaMoon /> },
+    { value: 'FaMountain', label: 'Mountain', icon: <Icons.FaMountain /> },
+    { value: 'FaPaintBrush', label: 'Paint Brush', icon: <Icons.FaPaintBrush /> },
+    { value: 'FaPaw', label: 'Paw', icon: <Icons.FaPaw /> },
+    { value: 'FaPlane', label: 'Plane', icon: <Icons.FaPlane /> },
+    { value: 'FaRing', label: 'Ring', icon: <Icons.FaRing /> },
+    { value: 'FaSeedling', label: 'Seedling', icon: <Icons.FaSeedling /> },
+    { value: 'FaSnowflake', label: 'Snowflake', icon: <Icons.FaSnowflake /> },
+    { value: 'FaSpaceShuttle', label: 'Space Shuttle', icon: <Icons.FaSpaceShuttle /> },
+    { value: 'FaSun', label: 'Sun', icon: <Icons.FaSun /> },
+    { value: 'FaTheaterMasks', label: 'Theater Masks', icon: <Icons.FaTheaterMasks /> },
+    { value: 'FaTree', label: 'Tree', icon: <Icons.FaTree /> },
+    { value: 'FaUmbrella', label: 'Umbrella', icon: <Icons.FaUmbrella /> },
+    { value: 'FaVolleyballBall', label: 'Volleyball', icon: <Icons.FaVolleyballBall /> },
+    { value: 'FaWifi', label: 'Wifi', icon: <Icons.FaWifi /> },
+    { value: 'FaWind', label: 'Wind', icon: <Icons.FaWind /> }
+  ];
+
+  const [randomIcons, setRandomIcons] = React.useState<typeof additionalIcons>([]);
+
+  const handleRandomize = () => {
+    // Create a copy of the array and shuffle it
+    const shuffled = [...additionalIcons].sort(() => Math.random() - 0.5);
+    // Take the first 30 icons (10x3 grid)
+    const selected = shuffled.slice(0, 30);
+    setRandomIcons(selected);
+  };
+
+  // Initialize random icons on mount
+  React.useEffect(() => {
+    handleRandomize();
+  }, []);
 
   const getDisplayTypeIcon = () => {
     switch (displayType) {
@@ -214,15 +341,17 @@ export const TagModal: React.FC<TagModalProps> = ({
     const newType = String(value) as 'text' | 'icon' | 'image';
     setDisplayType(newType);
     if (newType === 'icon') {
-      setDisplayValue('FaTag');
-    } else {
+      setDisplayValue('FaBox');
+    } else if (newType === 'text') {
+      setDisplayValue('');
+    } else if (newType === 'image') {
       setDisplayValue('');
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
-      <Card modal className="w-[600px]">
+    <Modal isOpen={isOpen} onClose={handleClose} size="lg">
+      <Card modal className="w-[800px]">
         <Card.Header
           icon={<FaTag />}
           iconColor="text-purple-500"
@@ -242,7 +371,12 @@ export const TagModal: React.FC<TagModalProps> = ({
                   <div className="aspect-square w-full flex items-center justify-center bg-gray-800 rounded-lg p-3">
                     {displayType === 'icon' && displayValue ? (
                       React.createElement((Icons as any)[displayValue], {
-                        className: `w-6 h-6 text-${color}-500`
+                        className: clsx(
+                          `w-24 h-24`,
+                          `text-${color}-500`,
+                          `hover:text-${color}-400`,
+                          'transition-all duration-200'
+                        )
                       })
                     ) : displayType === 'image' && displayValue ? (
                       <img
@@ -254,7 +388,7 @@ export const TagModal: React.FC<TagModalProps> = ({
                       <Pill
                         bgColor={`bg-${color}-500/20`}
                         textColor={`text-${color}-400`}
-                        className="!text-xs"
+                        className="!text-lg"
                       >
                         {displayValue}
                       </Pill>
@@ -325,14 +459,50 @@ export const TagModal: React.FC<TagModalProps> = ({
                         labelIconColor="text-yellow-400"
                         textSize="xs"
                       />
-                      <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
-                        <IconGrid
-                          options={iconOptions}
-                          value={displayValue}
-                          onChange={setDisplayValue}
-                          size="sm"
-                          className="max-w-[300px]"
-                        />
+                      <div className="bg-gray-900 rounded-lg p-3 border border-gray-700 overflow-auto max-h-[400px]">
+                        <div className="space-y-6">
+                          {/* Main Icons */}
+                          <div>
+                            <IconGrid
+                              options={iconOptions}
+                              value={displayValue}
+                              onChange={setDisplayValue}
+                              size="sm"
+                              className="grid-cols-10 gap-2"
+                              iconColor={`text-${color}-500`}
+                              selectedIconColor={`text-${color}-400`}
+                            />
+                          </div>
+
+                          {/* Random Icons Section */}
+                          <div className="border-t border-gray-700 pt-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs text-gray-400">Additional Random Icons</span>
+                              <Button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleRandomize();
+                                }}
+                                bgColor="bg-indigo-900/50"
+                                size="xs"
+                                className="flex items-center gap-1"
+                                type="button"
+                              >
+                                <FaRandom className="w-3 h-3" />
+                                Randomize
+                              </Button>
+                            </div>
+                            <IconGrid
+                              options={randomIcons}
+                              value={displayValue}
+                              onChange={setDisplayValue}
+                              size="sm"
+                              className="grid-cols-10 gap-2"
+                              iconColor={`text-${color}-500`}
+                              selectedIconColor={`text-${color}-400`}
+                            />
+                          </div>
+                        </div>
                       </div>
                       <ColorPicker
                         label="Icon Color"
@@ -364,7 +534,7 @@ export const TagModal: React.FC<TagModalProps> = ({
                   labelIconColor="text-indigo-400"
                   initialValue={description}
                   onValueChange={(value) => setDescription(String(value))}
-                  rows={2}
+                  rows={4}
                   labelPosition="above"
                 />
 
@@ -413,7 +583,7 @@ export const TagModal: React.FC<TagModalProps> = ({
         </Card.Body>
         <Card.Footer className="flex justify-end gap-2 bg-gray-900/50">
           <Button
-            onClick={onClose}
+            onClick={handleClose}
             bgColor="bg-gray-700"
             hoverEffect="scale"
           >
