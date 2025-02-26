@@ -15,6 +15,8 @@ import { ImageDisplay } from '@/components/image/ImageDisplay';
 import { DisplayError, Button } from '@/components/ui';
 import { QuickAddInventory } from '@/components/inventory/QuickAddInventory';
 import { TagDisplay } from '@/components/tag/TagDisplay';
+import { getStatusStyles } from '@/constants/inventory';
+import clsx from 'clsx';
 
 const Inventory = () => {
   const { data, isLoading, isError, error } = useInventoryCache();
@@ -98,15 +100,18 @@ const Inventory = () => {
       header: 'Status',
       icon: <FaStore className="w-4 h-4" />,
       width: '100px',
-      accessor: (item: InventoryViewItem) => (
-        <span className={`px-2 py-0.5 rounded-full text-xs ${
-          item.inventory_status === 'FOR_SALE' ? 'bg-green-500/20 text-green-300' :
-          item.inventory_status === 'SOLD' ? 'bg-blue-500/20 text-blue-300' :
-          'bg-gray-500/20 text-gray-300'
-        }`}>
-          {item.inventory_status.replace('_', ' ')}
-        </span>
-      ),
+      accessor: (item: InventoryViewItem) => {
+        const styles = getStatusStyles(item.inventory_status);
+        return (
+          <span className={clsx(
+            'px-2 py-0.5 rounded-full text-xs',
+            styles.bgColor,
+            styles.textColor
+          )}>
+            {item.inventory_status}
+          </span>
+        );
+      },
       sortable: true
     },
     {

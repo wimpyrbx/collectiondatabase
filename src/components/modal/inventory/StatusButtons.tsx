@@ -1,7 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import { Button } from '@/components/ui';
-import { STATUS_OPTIONS, StatusOption } from './constants';
+import { INVENTORY_STATUSES } from '@/constants/inventory';
 import { InventoryViewItem } from '@/types/inventory';
 import { notify } from '@/utils/notifications';
 import { supabase } from '@/supabaseClient';
@@ -18,6 +18,8 @@ interface StatusButtonsProps {
   isConnectedToSale: boolean;
   handleRemoveFromSale: () => Promise<void>;
 }
+
+const STATUS_OPTIONS = Object.values(INVENTORY_STATUSES);
 
 export const StatusButtons: React.FC<StatusButtonsProps> = ({
   inventory,
@@ -36,28 +38,28 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
     <div className="space-y-3">
       <div className="flex gap-2">
         {STATUS_OPTIONS.map(option => {
-          const isCurrentStatus = formData.inventory_status === option.status;
+          const isCurrentStatus = formData.inventory_status === option.value;
           const isSold = formData.inventory_status === 'Sold';
           const isAllowed = !inventory || (
             !isSold ? 
-              isTransitionAllowed(formData.inventory_status, option.status, inventory.sale_status) :
+              isTransitionAllowed(formData.inventory_status, option.value, inventory.sale_status) :
               // If sold, only allow For Sale if sale is Reserved
-              option.status === 'For Sale' && formData.sale_status === 'Reserved'
+              option.value === 'For Sale' && formData.sale_status === 'Reserved'
           );
           
           // If connected to a sale, only allow For Sale status
-          const isDisabled = !isAllowed || isCurrentStatus || (isConnectedToSale && option.status !== 'For Sale');
+          const isDisabled = !isAllowed || isCurrentStatus || (isConnectedToSale && option.value !== 'For Sale');
         
           return (
             <Button
-              key={option.status}
+              key={option.value}
               type="button"
               disabled={isDisabled}
               onClick={async () => {
                 if (!inventory || !isAllowed || isCurrentStatus) return;
                 
                 // If this is the For Sale button, immediately enable tags and override price
-                if (option.status === 'For Sale') {
+                if (option.value === 'For Sale') {
                   // Set isConnectedToSale to false right away, before any async operations
                   setIsConnectedToSale(false);
                   
@@ -69,7 +71,7 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
                 
                 try {
                   // Check if we should remove from sale (more reliable check)
-                  if (option.status === 'For Sale' && (formData.sale_id || inventory.sale_id)) {
+                  if (option.value === 'For Sale' && (formData.sale_id || inventory.sale_id)) {
                     // Use the simplified handler
                     await handleRemoveFromSale();
                     return;
@@ -77,16 +79,16 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
 
                   // For other status changes
                   const updates = {
-                    inventory_status: option.status
+                    inventory_status: option.value
                   };
 
-                  handleInputChange('inventory_status', option.status);
+                  handleInputChange('inventory_status', option.value);
                   await updateInventory({ 
                     id: inventory.inventory_id, 
                     updates 
                   });
 
-                  notify('success', `${inventory.product_title} status updated to ${option.status}`);
+                  notify('success', `${inventory.product_title} status updated to ${option.value}`);
                 } catch (error) {
                   console.error('Error updating status:', error);
                   setErrors(prev => [...prev, 'Failed to update status']);
@@ -98,7 +100,7 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
                   
                   // Revert connection state based on inventory
                   // Only revert the connection state when it's not the For Sale button
-                  if (option.status !== 'For Sale') {
+                  if (option.value !== 'For Sale') {
                     setIsConnectedToSale(Boolean(inventory.sale_id));
                   }
                     
@@ -118,7 +120,7 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
                     });
                   });
 
-                  notify('error', `Failed to update ${inventory?.product_title || 'item'} status to ${option.status}`);
+                  notify('error', `Failed to update ${inventory?.product_title || 'item'} status to ${option.value}`);
                 }
               }}
               className={clsx(
@@ -126,16 +128,12 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
                 'relative',
                 'px-4 py-2',
                 isCurrentStatus ? [
-                  option.bgColor,
+                  option.styles.bgColor,
                   '!bg-opacity-100',
                   'ring-1',
-                  option.status === 'Normal' && 'ring-gray-600',
-                  option.status === 'Collection' && 'ring-orange-600',
-                  option.status === 'For Sale' && 'ring-green-600',
+                  option.styles.borderColor,
                   'shadow-lg',
-                  option.status === 'Normal' && 'shadow-black',
-                  option.status === 'Collection' && 'shadow-black',
-                  option.status === 'For Sale' && 'shadow-black',
+                  'shadow-black',
                 ] : [
                   'bg-gray-800',
                   'hover:bg-opacity-80',
@@ -153,13 +151,13 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
                 isCurrentStatus && "scale-110 transform"
               )}>
                 <div className={clsx(
-                  isCurrentStatus ? option.textColor : "text-gray-400"
+                  isCurrentStatus ? option.styles.textColor : "text-gray-400"
                 )}>
                   {option.icon}
                 </div>
                 <div className={clsx(
                   "font-medium whitespace-nowrap",
-                  isCurrentStatus ? option.textColor : "text-gray-300"
+                  isCurrentStatus ? option.styles.textColor : "text-gray-300"
                 )}>
                   {option.label} ({option.shortcut})
                 </div>

@@ -28,6 +28,7 @@ import { notifyTagAction } from '@/utils/notifications';
 import { notify } from '@/utils/notifications';
 import type { SaleViewItem } from '@/types/sale';
 import { BaseStyledContainer } from '@/components/ui/BaseStyledContainer';
+import { useInventoryDelete } from '@/hooks/useInventoryDelete';
 
 // Import extracted components
 import { 
@@ -804,6 +805,9 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
     setIsConnectedToSale(hasSaleConnection);
   }, [inventory, formData.sale_id, inventory?.sale_id, formData.inventory_status, isConnectedToSale]);
 
+  // Add the hook
+  const { canDelete, setCanDelete } = useInventoryDelete(inventory, formData);
+
   return (
     <>
       <ModalContainer
@@ -824,6 +828,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
             setIsDeleteConfirmOpen={setIsDeleteConfirmOpen}
             tableData={tableData}
             onNavigate={onNavigate}
+            canDelete={canDelete}
           />
         }
       >
@@ -835,6 +840,15 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
               <TwoColumnLayout
                 leftColumn={
+                  <PricingSection
+                    inventory={inventory}
+                    formData={formData}
+                    isConnectedToSale={isConnectedToSale}
+                    handleInputChange={handleInputChange}
+                    updateInventory={updateInventory}
+                  />
+                }
+                rightColumn={
                   <StatusSection
                     inventory={inventory}
                     formData={formData}
@@ -845,15 +859,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     handleRemoveFromSale={handleRemoveFromSale}
                     updateInventory={updateInventory}
                     setErrors={setErrors}
-                  />
-                }
-                rightColumn={
-                  <PricingSection
-                    inventory={inventory}
-                    formData={formData}
-                    isConnectedToSale={isConnectedToSale}
-                    handleInputChange={handleInputChange}
-                    updateInventory={updateInventory}
                   />
                 }
               />
@@ -868,6 +873,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     handlePurchaseSelect={handlePurchaseSelect}
                     handleRemovePurchase={handleRemovePurchase}
                     handleInputChange={handleInputChange}
+                    setCanDelete={setCanDelete}
                   />
                 }
                 rightColumn={

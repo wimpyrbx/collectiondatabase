@@ -16,6 +16,7 @@ interface ModalFooterProps {
   setIsDeleteConfirmOpen: (isOpen: boolean) => void;
   tableData: InventoryViewItem[];
   onNavigate?: (inventoryId: number) => void;
+  canDelete: boolean;
 }
 
 const ModalFooter: React.FC<ModalFooterProps> = ({
@@ -28,11 +29,9 @@ const ModalFooter: React.FC<ModalFooterProps> = ({
   handleNavigate,
   setIsDeleteConfirmOpen,
   tableData,
-  onNavigate
+  onNavigate,
+  canDelete
 }) => {
-  // Only show delete button if product exists and has no purchase or sale connection
-  const canDelete = inventory && !inventory.purchase_id && !isConnectedToSale;
-
   return (
     <div>
       <div className="flex items-center justify-between w-full">
@@ -74,7 +73,7 @@ const ModalFooter: React.FC<ModalFooterProps> = ({
               <FaExclamationTriangle className="text-yellow-500" />
               Cannot delete - Item has {[
                 inventory.purchase_id && 'purchase',
-                isConnectedToSale && 'sale'
+                inventory.sale_id && 'sale'
               ].filter(Boolean).join(' and ')} linked
             </span>
           )}
