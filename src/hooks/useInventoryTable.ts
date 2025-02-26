@@ -271,7 +271,7 @@ export const useInventoryTable = () => {
   );
 
   return {
-    updateInventory: updateInventoryMutation.mutate,
+    updateInventory: updateInventoryMutation.mutateAsync,
     createInventory: createInventoryMutation.mutate,
     deleteInventory: deleteInventoryMutation.mutate,
     addTag: addTagMutation.mutate,
