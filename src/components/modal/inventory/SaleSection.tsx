@@ -28,10 +28,12 @@ export const SaleSection: React.FC<SaleSectionProps> = ({
   return (
     <div className={clsx(
       "bg-gray-900/50 rounded-lg overflow-hidden transition-all duration-200",
+      availableSales.length === 0 && [
+        "opacity-30",
+        "pointer-events-none"
+      ],
       formData.inventory_status !== 'For Sale' && !(formData.inventory_status === 'Sold' && formData.sale_status === 'Reserved') && [
         "opacity-30",
-        "bg-gray-900/40",
-        "grayscale",
         "pointer-events-none"
       ]
     )}>
@@ -124,7 +126,7 @@ export const SaleSection: React.FC<SaleSectionProps> = ({
         ) : (
           <div className="space-y-3">
             {availableSales.length === 0 ? (
-              <div className="text-gray-400 text-sm flex items-center gap-2">
+              <div className="text-gray-400 text-sm flex items-center gap-2 justify-center">
                 <FaExclamationTriangle className="text-yellow-500" />
                 No active sales available
               </div>

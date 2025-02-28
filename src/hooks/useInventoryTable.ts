@@ -26,6 +26,55 @@ export const useInventoryTable = () => {
           .single();
 
         if (error) throw error;
+        
+        // Get the product_id for the updated item
+        const updatedItem = queryClient.getQueryData<InventoryViewItem[]>(['inventory'])
+          ?.find(item => item.inventory_id === id);
+        
+        if (updatedItem && updatedItem.product_id) {
+          // Update cache for all items with the same product_id
+          queryClient.setQueryData<InventoryViewItem[]>(['inventory'], oldData => {
+            if (!oldData) return oldData;
+            
+            // Calculate new counts
+            const itemsWithSameProduct = oldData.filter(item => 
+              item.product_id === updatedItem.product_id
+            );
+            
+            // Count items by status
+            const normalCount = itemsWithSameProduct.filter(i => 
+              i.inventory_id === id ? updates.inventory_status === 'Normal' : i.inventory_status === 'Normal'
+            ).length;
+            
+            const collectionCount = itemsWithSameProduct.filter(i => 
+              i.inventory_id === id ? updates.inventory_status === 'Collection' : i.inventory_status === 'Collection'
+            ).length;
+            
+            const forSaleCount = itemsWithSameProduct.filter(i => 
+              i.inventory_id === id ? updates.inventory_status === 'For Sale' : i.inventory_status === 'For Sale'
+            ).length;
+            
+            const soldCount = itemsWithSameProduct.filter(i => 
+              i.inventory_id === id ? updates.inventory_status === 'Sold' : i.inventory_status === 'Sold'
+            ).length;
+            
+            // Update all items with the same product_id
+            return oldData.map(item => {
+              if (item.product_id === updatedItem.product_id) {
+                return {
+                  ...item,
+                  total_count: itemsWithSameProduct.length,
+                  normal_count: normalCount,
+                  collection_count: collectionCount,
+                  for_sale_count: forSaleCount,
+                  sold_count: soldCount
+                };
+              }
+              return item;
+            });
+          });
+        }
+        
         return data;
       },
       onMutate: async ({ id, updates }) => {

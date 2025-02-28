@@ -622,8 +622,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
   }, [availableSales]);
 
   // Function to handle purchase selection
-  const handlePurchaseSelect = async (purchaseId: number) => {
-    if (!inventory) return;
+  const handlePurchaseSelect = async (purchaseId: number | null) => {
+    if (!inventory || purchaseId === null) return;
     
     try {
       // Find the selected purchase
@@ -631,7 +631,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       if (!selectedPurchase) throw new Error('Purchase not found');
       
       // Immediately update form data
-                                  const updates = {
+      const updates = {
         purchase_id: purchaseId,
         purchase_seller: selectedPurchase.seller,
         purchase_origin: selectedPurchase.origin,
@@ -644,8 +644,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       });
       
       // Update the API
-                                  await updateInventory({ 
-                                    id: inventory.inventory_id, 
+      await updateInventory({ 
+        id: inventory.inventory_id, 
         updates: { purchase_id: purchaseId }
       });
       
@@ -665,7 +665,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       });
       
       notify('success', `${inventory.product_title} connected to purchase`);
-                                } catch (error) {
+    } catch (error) {
       // Revert on error
       handleInputChange('purchase_id', inventory.purchase_id);
       handleInputChange('purchase_seller', inventory.purchase_seller);
@@ -772,7 +772,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
           leftColumn={<ImageSection inventory={inventory} setErrors={actions.setErrors} />}
           rightColumn={
             <>
-              <ProductInfoDisplay inventory={inventory} />
+              <ProductInfoDisplay 
+                inventory={inventory} 
+                key={`product-info-${inventory?.inventory_id}-${formData.inventory_status}`} 
+              />
 
               <TwoColumnLayout
                 leftColumn={
@@ -795,6 +798,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     handleRemoveFromSale={handleRemoveFromSale}
                     updateInventory={updateInventory}
                     setErrors={actions.setErrors}
+                    availableSales={availableSales}
                   />
                 }
               />
@@ -806,8 +810,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     formData={formData}
                     availablePurchases={availablePurchases}
                     isLoadingPurchases={isLoadingPurchases}
-                    handlePurchaseSelect={handlePurchaseSelect}
                     handleRemovePurchase={handleRemovePurchase}
+                    handlePurchaseSelect={handlePurchaseSelect}
                     handleInputChange={handleInputChange}
                     setCanDelete={actions.setCanDelete}
                   />

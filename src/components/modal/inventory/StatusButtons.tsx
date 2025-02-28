@@ -5,7 +5,8 @@ import { INVENTORY_STATUSES } from '@/constants/inventory';
 import { InventoryViewItem } from '@/types/inventory';
 import { notify } from '@/utils/notifications';
 import { useQueryClient } from '@tanstack/react-query';
-import { FaStore, FaArchive, FaShoppingCart, FaCheck } from 'react-icons/fa';
+import { FaStore, FaArchive, FaShoppingCart, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
+import { saleItemsConfig } from '@/hooks/viewHooks';
 
 interface StatusButtonsProps {
   inventory: InventoryViewItem | null;
@@ -17,6 +18,7 @@ interface StatusButtonsProps {
   setIsConnectedToSale: (value: boolean) => void;
   isConnectedToSale: boolean;
   handleRemoveFromSale: () => Promise<void>;
+  availableSales: any[];
 }
 
 const STATUS_OPTIONS = Object.values(INVENTORY_STATUSES);
@@ -37,7 +39,8 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
   setErrors,
   setIsConnectedToSale,
   isConnectedToSale,
-  handleRemoveFromSale
+  handleRemoveFromSale,
+  availableSales
 }) => {
   const queryClient = useQueryClient();
 
@@ -288,13 +291,25 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
       )}
       {!formData.sale_id && formData.inventory_status === 'For Sale' && (
         <div className="flex items-center justify-center gap-1 pt-2 text-md text-green-400">
-          You are now able to connect this item to a sale
+          {availableSales && availableSales.length > 0 ? (
+            "You can now connect this item to a sale"
+          ) : (
+            <span className="text-yellow-400 flex items-center gap-2">
+              You can now connect to sale, but no sales are available
+            </span>
+          )}
         </div>
       )}
       {/* If sale_status is Reserved, output that we ARE able to change the status while the sale is Reserved */} 
       {formData.sale_status === 'Reserved' && (
         <div className="flex items-center mt-10 justify-center gap-1 pt-2 text-md text-green-500">
           Item is connected to a sale that has status <span className="text-green-300">Reserved</span>
+        </div>
+      )}
+      {/* If sale_status is Finalized, output that we ARE able to change the status while the sale is Finalized */}
+      {formData.sale_status === 'Finalized' && (
+        <div className="flex items-center mt-10 justify-center gap-1 pt-2 text-md text-green-500">
+          This item is connected to a <span className="text-green-300">Finalized</span> sale
         </div>
       )}
     </div>

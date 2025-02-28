@@ -13,6 +13,7 @@ interface StatusSectionProps {
   handleRemoveFromSale: () => Promise<void>;
   updateInventory: (params: { id: number; updates: any }) => Promise<any> | void;
   setErrors: (errors: string[] | ((prev: string[]) => string[])) => void;
+  availableSales: any[];
 }
 
 const StatusSection: React.FC<StatusSectionProps> = ({
@@ -24,7 +25,8 @@ const StatusSection: React.FC<StatusSectionProps> = ({
   handleInputChange,
   handleRemoveFromSale,
   updateInventory,
-  setErrors
+  setErrors,
+  availableSales
 }) => {
   return (
     <div className="bg-gray-900/40 rounded-lg overflow-hidden shadow-md shadow-black/30">
@@ -54,6 +56,7 @@ const StatusSection: React.FC<StatusSectionProps> = ({
             handleRemoveFromSale={handleRemoveFromSale}
             updateInventory={updateInventory}
             setErrors={setErrors}
+            availableSales={availableSales}
           />
         </div>
       </div>

@@ -1,14 +1,43 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FaBox, FaLayerGroup, FaCubes, FaGlobe, FaCalendar } from 'react-icons/fa';
 import { InventoryViewItem } from '@/types/inventory';
 import regionsData from '@/data/regions.json';
 import { getRatingDisplayInfo } from '@/utils/productUtils';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ProductInfoDisplayProps {
   inventory: InventoryViewItem | null;
 }
 
 export const ProductInfoDisplay: React.FC<ProductInfoDisplayProps> = ({ inventory }) => {
+  const queryClient = useQueryClient();
+  
+  // Get the latest data from cache, including updated counters
+  const latestInventory = useMemo(() => {
+    if (!inventory) return null;
+    
+    // Get the latest data from cache
+    const cachedInventory = queryClient.getQueryData<InventoryViewItem[]>(['inventory'])
+      ?.find(item => item.inventory_id === inventory.inventory_id);
+    
+    return cachedInventory || inventory;
+  }, [inventory, queryClient.getQueryData(['inventory'])]);
+  
+  // Force re-render when inventory status changes
+  const [_, forceUpdate] = React.useReducer(x => x + 1, 0);
+  
+  // Listen for cache invalidation events
+  React.useEffect(() => {
+    const handleCacheChange = () => forceUpdate();
+    
+    // Subscribe to query cache changes
+    const unsubscribe = queryClient.getQueryCache().subscribe(handleCacheChange);
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [queryClient]);
+
   return (
     <div className="bg-gray-900/40 rounded-lg overflow-hidden shadow-md shadow-black/30">
       <div className="px-4 py-2 bg-gray-900 border-b border-gray-700">
@@ -22,15 +51,15 @@ export const ProductInfoDisplay: React.FC<ProductInfoDisplayProps> = ({ inventor
           {/* Region Rating Image - Floating Right */}
           {(() => {
             const ratingInfo = getRatingDisplayInfo(
-              inventory?.region_name || '', 
-              inventory?.rating_name || '', 
+              latestInventory?.region_name || '', 
+              latestInventory?.rating_name || '', 
               regionsData.regions
             );
             return ratingInfo && ratingInfo.imagePath ? (
               <div className="absolute right-0 h-full aspect-square">
                 <img 
                   src={ratingInfo.imagePath} 
-                  alt={inventory?.rating_name || ''} 
+                  alt={latestInventory?.rating_name || ''} 
                   className="h-full w-full object-contain shadow-lg shadow-black/30" 
                 />
               </div>
@@ -42,18 +71,18 @@ export const ProductInfoDisplay: React.FC<ProductInfoDisplayProps> = ({ inventor
             {/* Group and Type */}
             <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
               <FaLayerGroup className="text-indigo-400" />
-              <span>{inventory?.product_group_name || '-'}</span>
+              <span>{latestInventory?.product_group_name || '-'}</span>
               <span className="mx-2">•</span>
               <FaCubes className="text-pink-400" />
-              <span>{inventory?.product_type_name || '-'}</span>
+              <span>{latestInventory?.product_type_name || '-'}</span>
             </div>
 
             {/* Title and Variant */}
             <div className="mb-2">
               <h4 className="text-xl font-medium text-gray-200">
-                {inventory?.product_title || '-'}
-                {inventory?.product_variant && (
-                  <span className="text-gray-400 ml-2">({inventory.product_variant})</span>
+                {latestInventory?.product_title || '-'}
+                {latestInventory?.product_variant && (
+                  <span className="text-gray-400 ml-2">({latestInventory.product_variant})</span>
                 )}
               </h4>
             </div>
@@ -61,26 +90,32 @@ export const ProductInfoDisplay: React.FC<ProductInfoDisplayProps> = ({ inventor
             {/* Region and Year */}
             <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
               <FaGlobe className="text-blue-400" />
-              <span>{inventory?.region_name || '-'}</span>
+              <span>{latestInventory?.region_name || '-'}</span>
               <span className="mx-2">•</span>
               <FaCalendar className="text-yellow-400" />
-              <span>{inventory?.release_year || '-'}</span>
+              <span>{latestInventory?.release_year || '-'}</span>
             </div>
 
             {/* Inventory Status Summary */}
             <div className="text-sm text-gray-300">
               {(() => {
-                if (!inventory?.total_count) return 'Error loading inventory count';
-                if (inventory.total_count === 1) return 'This is the only entry of this item in inventory';
+                if (!latestInventory) return 'No inventory data available';
                 
-                // Group items by status
+                if (latestInventory.total_count === 0) return 'No other entries of this item in inventory';
+                
+                if (latestInventory.total_count === undefined || latestInventory.total_count === null) {
+                  return 'Count data not available';
+                }
+                
+                if (latestInventory.total_count === 1) return 'This is the only entry of this item in inventory';
+                
                 const statusCounts = new Map();
-                if (inventory.normal_count) statusCounts.set('Normal', inventory.normal_count);
-                if (inventory.collection_count) statusCounts.set('Collection', inventory.collection_count);
-                if (inventory.for_sale_count) statusCounts.set('For Sale', inventory.for_sale_count);
-                if (inventory.sold_count) statusCounts.set('Sold', inventory.sold_count);
+                if (latestInventory.normal_count) statusCounts.set('Normal', latestInventory.normal_count);
+                if (latestInventory.collection_count) statusCounts.set('Collection', latestInventory.collection_count);
+                if (latestInventory.for_sale_count) statusCounts.set('For Sale', latestInventory.for_sale_count);
+                if (latestInventory.sold_count) statusCounts.set('Sold', latestInventory.sold_count);
                 
-                return `${inventory.total_count} total entries: ${Array.from(statusCounts.entries())
+                return `${latestInventory.total_count} total entries: ${Array.from(statusCounts.entries())
                   .map(([status, count]) => `${count} ${status}`)
                   .join(', ')}`;
               })()}

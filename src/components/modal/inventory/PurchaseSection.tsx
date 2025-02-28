@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { FaStore, FaCalendar, FaMapMarker, FaBox, FaChevronDown, FaExclamationTriangle, FaDollarSign } from 'react-icons/fa';
 import { InventoryViewItem } from '@/types/inventory';
@@ -8,13 +8,14 @@ import { Combobox } from '@headlessui/react';
 import { PurchaseItem } from './types';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabaseClient';
+import { createPortal } from 'react-dom';
 
 interface PurchaseSectionProps {
   inventory: InventoryViewItem | null;
   formData: any;
   availablePurchases: PurchaseItem[];
   isLoadingPurchases: boolean;
-  handlePurchaseSelect: (purchaseId: number) => Promise<void>;
+  handlePurchaseSelect: (purchaseId: number | null) => Promise<void>;
   handleRemovePurchase: () => Promise<void>;
   handleInputChange: (key: string, value: any) => void;
   setCanDelete: (canDelete: boolean) => void;
@@ -33,6 +34,7 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
   const [purchaseSearchQuery, setPurchaseSearchQuery] = useState('');
   const [isSearchingPurchases, setIsSearchingPurchases] = useState(false);
   const [localPurchaseId, setLocalPurchaseId] = useState<number | null>(formData.purchase_id || inventory?.purchase_id || null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Update useEffect to sync the localPurchaseId with props
   useEffect(() => {
@@ -188,7 +190,7 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
               </div>
 
               {/* Connected Items List */}
-              <div className="mt-4 border-t border-purple-500/20 pt-0">
+              <div className="mt-4 border-t border-green-500/20 pt-0">
                 <div className="text-sm text-gray-400 mb-2">
                   {isLoadingConnectedItems && (
                     <span className="ml-2 text-gray-500">(Loading...)</span>
@@ -231,7 +233,7 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
                         ))
                       )}
                     </div>
-                    <div className="mt-4 flex justify-between items-center border-t border-purple-500/20 pt-4">
+                    <div className="mt-4 flex justify-between items-center border-t border-green-500/20 pt-4">
                       <span className="text-sm text-gray-400">Total Value:</span>
                       <span className="text-lg font-medium text-green-400">
                         NOK {Math.round(totalValue)},-
@@ -241,32 +243,36 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
                 )}
               </div>
 
-              <div className="absolute -top-3 right-4 bg-gray-800 px-2 py-0.5 text-xs text-purple-400 font-medium rounded">
+              <div className="absolute -top-3 right-4 bg-gray-800 px-2 py-0.5 text-xs text-green-400 font-medium rounded">
                 Connected Purchase
               </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="text-gray-400 text-sm mb-2">
+          <div className="">
               {availablePurchases.length === 0 ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-center text-sm">
                   <FaExclamationTriangle className="text-yellow-500" />
-                  Purchase functionality not available (view_purchases not found)
+                  No purchases found
                 </div>
               ) : (
-                "Select a purchase to connect:"
+                <>
+                </>
               )}
-            </div>
             
             {/* Only show the dropdown if we have purchases */}
             {availablePurchases.length > 0 && (
               <div className="relative">
-                <Combobox onChange={handlePurchaseSelect}>
+                <Combobox onChange={(purchaseId) => {
+                  if (purchaseId) {
+                    handlePurchaseSelect(purchaseId as number);
+                  }
+                }}>
                   <div className="relative">
                     <div className="flex">
                       <Combobox.Input
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                        ref={inputRef}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:ring-1 focus:ring-green-500 focus:border-gray-500"
                         placeholder="Search purchases..."
                         onChange={(e) => setPurchaseSearchQuery(e.target.value)}
                         onFocus={() => setIsSearchingPurchases(true)}
@@ -274,52 +280,62 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
                       />
                     </div>
                     
-                    {isSearchingPurchases && (
-                      <Combobox.Options 
-                        className="absolute z-10 mt-1 w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-auto py-1 text-sm"
-                        static
+                    {isSearchingPurchases && createPortal(
+                      <div 
+                        className="fixed z-50 shadow-2xl"
+                        style={{
+                          top: (inputRef.current?.getBoundingClientRect().bottom || 0) + window.scrollY + 4 || 0,
+                          left: (inputRef.current?.getBoundingClientRect().left || 0) + window.scrollX || 0,
+                          width: inputRef.current?.offsetWidth || 'auto'
+                        }}
                       >
-                        {isLoadingPurchases ? (
-                          <div className="px-4 py-2 text-gray-400">Loading purchases...</div>
-                        ) : filteredPurchases.length === 0 ? (
-                          <div className="px-4 py-2 text-gray-400">No purchases found</div>
-                        ) : (
-                          filteredPurchases.map((purchase) => (
-                            <Combobox.Option
-                              key={purchase.purchase_id}
-                              value={purchase.purchase_id}
-                              className={({ active }) =>
-                                `cursor-pointer select-none relative py-2 px-4 ${
-                                  active ? 'bg-purple-500/20 text-gray-200' : 'text-gray-300'
-                                }`
-                              }
-                            >
-                              {({ selected, active }) => (
-                                <div className="flex flex-col">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-medium">{purchase.seller || 'No seller'}</span>
-                                    <span className="text-xs text-gray-400">#{purchase.purchase_id}</span>
+                        <Combobox.Options 
+                          className="bg-gray-700/50 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-auto text-sm w-full"
+                          static
+                        >
+                          {isLoadingPurchases ? (
+                            <div className="px-4 py-2 text-gray-400">Loading purchases...</div>
+                          ) : filteredPurchases.length === 0 ? (
+                            <div className="px-4 py-2 text-gray-400">No purchases found</div>
+                          ) : (
+                            filteredPurchases.map((purchase) => (
+                              <Combobox.Option
+                                key={purchase.purchase_id}
+                                value={purchase.purchase_id}
+                                className={({ active }) =>
+                                  `cursor-pointer select-none relative py-2 px-4 ${
+                                    active ? 'bg-green-500/20 text-gray-200' : 'text-gray-300'
+                                  }`
+                                }
+                              >
+                                {({ selected, active }) => (
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium">{purchase.seller || 'No seller'}</span>
+                                      <span className="text-xs text-gray-400">#{purchase.purchase_id}</span>
+                                    </div>
+                                    <div className="text-xs text-gray-400 flex items-center gap-4 mt-1">
+                                      <span className="flex items-center gap-1">
+                                        <FaCalendar className="w-2 h-2" />
+                                        {purchase.purchase_date ? new Date(purchase.purchase_date).toLocaleDateString('no-NO') : '-'}
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <FaMapMarker className="w-2 h-2" />
+                                        {purchase.origin || '-'}
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <FaBox className="w-2 h-2" />
+                                        {purchase.item_count || 0} items
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-400 flex items-center gap-4 mt-1">
-                                    <span className="flex items-center gap-1">
-                                      <FaCalendar className="w-2 h-2" />
-                                      {purchase.purchase_date ? new Date(purchase.purchase_date).toLocaleDateString('no-NO') : '-'}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <FaMapMarker className="w-2 h-2" />
-                                      {purchase.origin || '-'}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <FaBox className="w-2 h-2" />
-                                      {purchase.item_count || 0} items
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-                            </Combobox.Option>
-                          ))
-                        )}
-                      </Combobox.Options>
+                                )}
+                              </Combobox.Option>
+                            ))
+                          )}
+                        </Combobox.Options>
+                      </div>,
+                      document.body
                     )}
                   </div>
                 </Combobox>
