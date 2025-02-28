@@ -56,26 +56,98 @@ export const useInventoryCache = () => {
 };
 
 // Sales
-export const SALES_QUERY_KEY = ['sales'] as const;
-export const salesConfig = {
-  queryKey: SALES_QUERY_KEY,
-  viewName: 'view_sales'
-};
+export const SALES_KEY = ['sales'] as const;
 
 export const useSalesCache = () => {
   return useQuery({
-    queryKey: SALES_QUERY_KEY,
+    queryKey: SALES_KEY,
     queryFn: async () => {
-      const { data, error } = await fetchViewData<SaleViewItem>(
-        supabase,
-        'view_sales',
-        {
-          orderBy: { column: 'created_at', ascending: false }
-        }
-      );
+      const { data, error } = await supabase
+        .from('view_sales')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
       if (error) throw error;
       return data;
     }
+  });
+};
+
+export const useSaleWithItems = (saleId: number) => {
+  return useQuery({
+    queryKey: [...SALES_KEY, saleId],
+    queryFn: async () => {
+      // First get the sale
+      const { data: sale, error: saleError } = await supabase
+        .from('view_sales')
+        .select('*')
+        .eq('sale_id', saleId)
+        .single();
+      
+      if (saleError) throw saleError;
+      
+      // Then get the sale items with inventory details
+      const { data: items, error: itemsError } = await supabase
+        .from('view_sale_items')
+        .select('*')
+        .eq('sale_id', saleId);
+      
+      if (itemsError) throw itemsError;
+      
+      return {
+        ...sale,
+        items: items || []
+      };
+    },
+    enabled: Boolean(saleId)
+  });
+};
+
+// Purchases
+export const PURCHASES_KEY = ['purchases'] as const;
+
+export const usePurchasesCache = () => {
+  return useQuery({
+    queryKey: PURCHASES_KEY,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('view_purchases')
+        .select('*')
+        .order('purchase_date', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+};
+
+export const usePurchaseWithItems = (purchaseId: number) => {
+  return useQuery({
+    queryKey: [...PURCHASES_KEY, purchaseId],
+    queryFn: async () => {
+      // First get the purchase
+      const { data: purchase, error: purchaseError } = await supabase
+        .from('view_purchases')
+        .select('*')
+        .eq('purchase_id', purchaseId)
+        .single();
+      
+      if (purchaseError) throw purchaseError;
+      
+      // Then get the inventory items connected to this purchase
+      const { data: items, error: itemsError } = await supabase
+        .from('view_inventory')
+        .select('*')
+        .eq('purchase_id', purchaseId);
+      
+      if (itemsError) throw itemsError;
+      
+      return {
+        ...purchase,
+        items: items || []
+      };
+    },
+    enabled: Boolean(purchaseId)
   });
 };
 

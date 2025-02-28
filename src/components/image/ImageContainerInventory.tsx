@@ -29,6 +29,7 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCropMode, setIsCropMode] = useState(false);
   const [isFallbackImage, setIsFallbackImage] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Use the centralized image upload hook
   const {
@@ -168,7 +169,7 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
     <>
       <div 
         className={clsx(
-          "relative w-full h-[350px] rounded-xl overflow-hidden",
+          "relative w-full h-[323px] rounded-xl overflow-hidden",
           "bg-gray-900/50 border border-gray-700",
           isDragging && "border-blue-500 border-4",
           "transition-all duration-200",
@@ -180,6 +181,8 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         {imageSrc ? (
           <div className="relative w-full h-full">
@@ -187,7 +190,7 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
               src={imageSrc}
               alt={title}
               className={clsx(
-                "p-5 object-contain w-full h-[350px] cursor-pointer",
+                "p-5 object-contain w-full h-[323px] cursor-pointer",
                 isDragging && "opacity-50"
               )}
               onClick={() => setIsModalOpen(true)}
@@ -195,9 +198,9 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
             />
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-gray-500">
+          <div className="flex flex-col items-center justify-center text-gray-500 h-[323px]">
             <FaImage className="w-12 h-12 mb-2" />
-            <span className="text-sm">No image</span>
+            <span className="text-lg">No image</span>
           </div>
         )}
 
@@ -278,17 +281,16 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
           </div>
         )}
 
-        {/* Fallback Image Indicator */}
-        {isFallbackImage && imageSrc && (
+        {/* Fallback Image Indicator - only show when not hovered */}
+        {isFallbackImage && imageSrc && !isHovered && (
           <div className={clsx(
-            "absolute top-4 w-[75%] left-1/2 -translate-x-1/2",
-            "bg-orange-600 text-white px-4 py-3 rounded-xl",
-            "text-sm font-bold shadow-lg",
+            "absolute top-50 w-[70%] left-1/2 -translate-x-1/2",
+            "bg-red-800/80 text-white px-2 py-2 rounded-md",
+            "text-xs animate-pulse",
             "flex items-center justify-center gap-2",
-            "shadow-lg shadow-black/50",
+            "shadow-xl shadow-black/80",
             "z-[70] cursor-default"
           )}>
-            <FaImage className="w-4 h-4 text-cyan-500" />
             Displaying Product Image!
           </div>
         )}

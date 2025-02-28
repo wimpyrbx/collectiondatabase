@@ -1,3 +1,6 @@
+import React from 'react';
+import { FaStore, FaArchive, FaShoppingCart, FaCheck } from 'react-icons/fa';
+
 export interface StatusStyle {
   bgColor: string;
   textColor: string;
@@ -10,6 +13,7 @@ export interface StatusConfig {
   value: string;
   shortcut: string;
   styles: StatusStyle;
+  iconType: 'store' | 'archive' | 'cart' | 'check';
 }
 
 export const INVENTORY_STATUSES: Record<string, StatusConfig> = {
@@ -17,6 +21,7 @@ export const INVENTORY_STATUSES: Record<string, StatusConfig> = {
     label: 'Normal',
     value: 'Normal',
     shortcut: 'N',
+    iconType: 'store',
     styles: {
       bgColor: 'bg-gray-700',
       textColor: 'text-gray-100',
@@ -28,6 +33,7 @@ export const INVENTORY_STATUSES: Record<string, StatusConfig> = {
     label: 'Collection',
     value: 'Collection',
     shortcut: 'C',
+    iconType: 'archive',
     styles: {
       bgColor: 'bg-orange-800',
       textColor: 'text-orange-100',
@@ -39,22 +45,12 @@ export const INVENTORY_STATUSES: Record<string, StatusConfig> = {
     label: 'For Sale',
     value: 'For Sale',
     shortcut: 'F',
+    iconType: 'cart',
     styles: {
       bgColor: 'bg-green-800',
       textColor: 'text-green-100',
       borderColor: 'border-green-700',
       hoverBgColor: 'hover:bg-green-700'
-    }
-  },
-  Sold: {
-    label: 'Sold',
-    value: 'Sold',
-    shortcut: 'S',
-    styles: {
-      bgColor: 'bg-blue-800',
-      textColor: 'text-blue-100',
-      borderColor: 'border-blue-700',
-      hoverBgColor: 'hover:bg-blue-700'
     }
   }
 };

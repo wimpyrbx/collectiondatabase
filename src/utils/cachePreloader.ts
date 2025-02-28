@@ -3,7 +3,8 @@ import { createQueryOptions, PREFETCH_OPTIONS } from '@/config/queryConfig';
 import {
   productsConfig,
   inventoryConfig,
-  salesConfig,
+  SALES_KEY,
+  PURCHASES_KEY,
   saleItemsConfig,
 } from '@/hooks/viewHooks';
 
@@ -26,12 +27,16 @@ export const preloadQueries = async (queryClient: QueryClient) => {
     ),
 
     // Sales
-    queryClient.prefetchQuery(
-      createQueryOptions({
-        ...salesConfig,
-        ...PREFETCH_OPTIONS,
-      })
-    ),
+    queryClient.prefetchQuery({
+      queryKey: SALES_KEY,
+      ...PREFETCH_OPTIONS,
+    }),
+
+    // Purchases
+    queryClient.prefetchQuery({
+      queryKey: PURCHASES_KEY,
+      ...PREFETCH_OPTIONS,
+    }),
 
     // Sale Items
     queryClient.prefetchQuery(

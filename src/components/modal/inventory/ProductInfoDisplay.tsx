@@ -10,14 +10,14 @@ interface ProductInfoDisplayProps {
 
 export const ProductInfoDisplay: React.FC<ProductInfoDisplayProps> = ({ inventory }) => {
   return (
-    <div className="bg-gray-900/50 rounded-lg overflow-hidden shadow-md shadow-black/40">
-      <div className="px-4 py-2 bg-gray-800/50 border-b border-gray-700">
+    <div className="bg-gray-900/40 rounded-lg overflow-hidden shadow-md shadow-black/30">
+      <div className="px-4 py-2 bg-gray-900 border-b border-gray-700">
         <h3 className="font-medium text-gray-300 flex items-center gap-2">
           <FaBox className="text-cyan-400" />
           Product Information
         </h3>
       </div>
-      <div className="p-4">
+      <div className="p-4 pr-1">
         <div className="relative flex">
           {/* Region Rating Image - Floating Right */}
           {(() => {
@@ -31,7 +31,7 @@ export const ProductInfoDisplay: React.FC<ProductInfoDisplayProps> = ({ inventor
                 <img 
                   src={ratingInfo.imagePath} 
                   alt={inventory?.rating_name || ''} 
-                  className="h-full w-full object-contain" 
+                  className="h-full w-full object-contain shadow-lg shadow-black/30" 
                 />
               </div>
             ) : null;

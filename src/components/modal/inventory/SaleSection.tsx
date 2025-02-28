@@ -30,11 +30,12 @@ export const SaleSection: React.FC<SaleSectionProps> = ({
       "bg-gray-900/50 rounded-lg overflow-hidden transition-all duration-200",
       formData.inventory_status !== 'For Sale' && !(formData.inventory_status === 'Sold' && formData.sale_status === 'Reserved') && [
         "opacity-30",
+        "bg-gray-900/40",
         "grayscale",
         "pointer-events-none"
       ]
     )}>
-      <div className="px-4 py-2 bg-gray-800/50 border-b border-gray-700">
+      <div className="px-4 py-2 bg-gray-900 border-b border-gray-700">
         <h3 className="font-medium text-gray-300 flex items-center gap-2">
           <FaShoppingCart className="text-orange-400" />
           Sale Information

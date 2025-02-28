@@ -4,7 +4,7 @@ import { ImageContainerInventory } from '@/components/image/ImageContainerInvent
 
 interface ImageSectionProps {
   inventory: InventoryViewItem | null;
-  setErrors: React.Dispatch<React.SetStateAction<string[]>>;
+  setErrors: (errors: string[] | ((prev: string[]) => string[])) => void;
 }
 
 const ImageSection: React.FC<ImageSectionProps> = ({ inventory, setErrors }) => {

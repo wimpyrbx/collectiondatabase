@@ -1,18 +1,39 @@
+import { InventoryViewItem } from './inventory';
+
+export interface SaleItem {
+  id: number;
+  sale_id: number;
+  inventory_id: number;
+  price: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SaleViewItem {
   sale_id: number;
   buyer_name: string | null;
-  sale_total: number | null;
-  sale_date: string | null;
+  sale_status: string;
   sale_notes: string | null;
   created_at: string;
+  updated_at: string;
   number_of_items: number;
-  sale_status: string | null;
-  item_count: number;
-  total_sold_price: number | null;
-  product_titles: string[];
-  product_variants: (string | null)[];
-  product_groups: string[];
+  total_sold_price: number;
+  items?: SaleItemWithInventory[];
 }
+
+export interface SaleItemWithInventory extends SaleItem {
+  inventory?: InventoryViewItem;
+}
+
+export interface SaleWithItems extends SaleViewItem {
+  items: SaleItemWithInventory[];
+}
+
+export const SALE_STATUSES = {
+  Reserved: 'Reserved',
+  Completed: 'Completed',
+  Cancelled: 'Cancelled'
+};
 
 export interface SaleItemViewItem {
   sale_item_id: number;

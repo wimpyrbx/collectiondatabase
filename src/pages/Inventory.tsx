@@ -2,7 +2,7 @@ import React from 'react';
 import Page from '@/components/page/Page';
 import { useInventoryCache, useProductsCache } from '@/hooks/viewHooks';
 import { InventoryViewItem } from '@/types/inventory';
-import { FaBoxes, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaStar, FaPlus, FaImage, FaStore, FaClock, FaTags } from 'react-icons/fa';
+import { FaBoxes, FaTag, FaDollarSign, FaLayerGroup, FaGlobe, FaCalendar, FaStar, FaPlus, FaImage, FaStore, FaClock, FaTags, FaShoppingCart, FaShoppingBag } from 'react-icons/fa';
 import { BaseFilterableTable } from '@/components/table/BaseFilterableTable';
 import { type Column } from '@/components/table/Table';
 import { useTableState } from '@/components/table/hooks/useTableState';
@@ -17,6 +17,12 @@ import { QuickAddInventory } from '@/components/inventory/QuickAddInventory';
 import { TagDisplay } from '@/components/tag/TagDisplay';
 import { getStatusStyles } from '@/constants/inventory';
 import clsx from 'clsx';
+import { TooltipWrapper } from '@/components/tooltip/TooltipWrapper';
+import { SaleItemWithInventory, SaleViewItem } from '@/types/sale';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/supabaseClient';
+import { PurchaseViewItem } from '@/types/purchase';
+import { getPriceDisplayText } from '@/utils/priceUtils';
 
 const Inventory = () => {
   const { data, isLoading, isError, error } = useInventoryCache();
@@ -25,6 +31,88 @@ const Inventory = () => {
   const [isCreating, setIsCreating] = React.useState(false);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const { data: products = [] } = useProductsCache();
+  
+  // Fetch all sales and purchases data upfront
+  const { data: allSales = {} } = useQuery({
+    queryKey: ['all_sales_with_items'],
+    queryFn: async () => {
+      const { data: sales, error } = await supabase
+        .from('view_sales')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Create a map of sale_id to sale data
+      const salesMap: Record<number, any> = {};
+      
+      // For each sale, fetch its items
+      await Promise.all((sales || []).map(async (sale: SaleViewItem) => {
+        // First get the sale items
+        const { data: saleItems, error: saleItemsError } = await supabase
+          .from('view_sale_items')
+          .select('*')
+          .eq('sale_id', sale.sale_id);
+        
+        if (saleItemsError) throw saleItemsError;
+        
+        // For each sale item, get the inventory details
+        const itemsWithInventory = await Promise.all((saleItems || []).map(async (saleItem: any) => {
+          const { data: inventory, error: inventoryError } = await supabase
+            .from('view_inventory')
+            .select('*')
+            .eq('inventory_id', saleItem.inventory_id)
+            .single();
+          
+          if (inventoryError && inventoryError.code !== 'PGRST116') {
+            console.warn(`Error fetching inventory for sale item ${saleItem.id}:`, inventoryError);
+          }
+          
+          return {
+            ...saleItem,
+            inventory: inventory || null
+          };
+        }));
+        
+        salesMap[sale.sale_id] = {
+          ...sale,
+          items: itemsWithInventory || []
+        };
+      }));
+      
+      return salesMap;
+    }
+  });
+  
+  const { data: allPurchases = {} } = useQuery({
+    queryKey: ['all_purchases_with_items'],
+    queryFn: async () => {
+      const { data: purchases, error } = await supabase
+        .from('view_purchases')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Create a map of purchase_id to purchase data
+      const purchasesMap: Record<number, any> = {};
+      
+      // For each purchase, fetch its items
+      await Promise.all((purchases || []).map(async (purchase: PurchaseViewItem) => {
+        const { data: items, error: itemsError } = await supabase
+          .from('view_inventory')
+          .select('*')
+          .eq('purchase_id', purchase.purchase_id);
+        
+        if (itemsError) throw itemsError;
+        
+        purchasesMap[purchase.purchase_id] = {
+          ...purchase,
+          items: items || []
+        };
+      }));
+      
+      return purchasesMap;
+    }
+  });
 
   const columns: Column<InventoryViewItem>[] = [
     {
@@ -63,11 +151,138 @@ const Inventory = () => {
       key: 'product_title',
       header: 'Product Title',
       icon: <FaTag className="w-4 h-4" />,
-      accessor: (item: InventoryViewItem) => (
-        <div className="flex flex-col">
-          <span>{item.product_title} {item.product_variant && <span className="text-sm text-cyan-500/75">({item.product_variant})</span>}</span>
-        </div>
-      ),
+      accessor: (item: InventoryViewItem) => {
+        // Get sale and purchase data from the pre-fetched maps
+        const saleData = item.sale_id ? allSales[item.sale_id] : null;
+        const purchaseData = item.purchase_id ? allPurchases[item.purchase_id] : null;
+        
+        return (
+          <div className="flex flex-col w-full">
+            <div className="flex items-center justify-between w-full">
+              <span>{item.product_title} {item.product_variant && <span className="text-sm text-cyan-500/75">({item.product_variant})</span>}</span>
+              
+              <div className="flex items-center gap-1.5">
+                {/* Sale icon with tooltip */}
+                {item.sale_id && (
+                  <TooltipWrapper 
+                    content={
+                      <div className="p-2 space-y-3 max-w-xs">
+                        <div className="font-semibold text-blue-300 border-b border-gray-700 pb-1">Sale #{item.sale_id}</div>
+                        <div className="grid grid-cols-2 gap-x-2 text-sm">
+                          <span className="text-gray-400">Status:</span>
+                          <span className="text-white">{item.sale_status || 'N/A'}</span>
+                          
+                          <span className="text-gray-400">Buyer:</span>
+                          <span className="text-white">{item.sale_buyer || 'N/A'}</span>
+                          
+                          <span className="text-gray-400">Date:</span>
+                          <span className="text-white">{item.sale_date ? new Date(item.sale_date).toLocaleDateString() : 'N/A'}</span>
+                          
+                          <span className="text-gray-400">Price:</span>
+                          <span className="text-white">{item.sold_price ? `NOK ${item.sold_price},-` : 'N/A'}</span>
+                        </div>
+                        
+                        {saleData && saleData.items && saleData.items.length > 0 && (
+                          <div className="mt-2">
+                            <div className="text-gray-400 text-sm font-semibold border-b border-gray-700 pb-1">Items in this sale:</div>
+                            <div className="mt-1 max-h-40 overflow-y-auto">
+                              {saleData.items.map((saleItem: SaleItemWithInventory, index: number) => (
+                                <div 
+                                  key={`sale-item-${saleItem.id}-${index}`} 
+                                  className={`text-sm py-1 ${saleItem.inventory_id === item.inventory_id ? 'text-blue-300 font-semibold' : 'text-white'} ${index !== saleData.items.length - 1 ? 'border-b border-gray-700' : ''}`}
+                                >
+                                  {saleItem.inventory?.product_title}
+                                  {saleItem.inventory?.product_variant && ` (${saleItem.inventory.product_variant})`}
+                                  {saleItem.price ? ` - NOK ${saleItem.price},-` : saleItem.inventory?.sold_price ? ` - NOK ${saleItem.inventory.sold_price},-` : ''}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-2 text-sm font-semibold text-blue-300 border-t border-gray-700 pt-1">
+                              Total: NOK {saleData.total_sold_price},-
+                            </div>
+                          </div>
+                        )}
+                        
+                        {item.sale_notes && (
+                          <div className="mt-2">
+                            <span className="text-gray-400 text-sm">Notes:</span>
+                            <p className="text-white text-sm mt-1">{item.sale_notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    }
+                    placement="right"
+                    style="minimal"
+                  >
+                    <div className="flex items-center justify-center p-1 rounded-full bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors cursor-help">
+                      <FaShoppingCart className="w-3 h-3" />
+                    </div>
+                  </TooltipWrapper>
+                )}
+                
+                {/* Purchase icon with tooltip */}
+                {item.purchase_id && (
+                  <TooltipWrapper 
+                    content={
+                      <div className="p-2 space-y-3 max-w-xs">
+                        <div className="font-semibold text-green-300 border-b border-gray-700 pb-1">Purchase #{item.purchase_id}</div>
+                        <div className="grid grid-cols-2 gap-x-2 text-sm">
+                          <span className="text-gray-400">Seller:</span>
+                          <span className="text-white">{item.purchase_seller || 'N/A'}</span>
+                          
+                          <span className="text-gray-400">Origin:</span>
+                          <span className="text-white">{item.purchase_origin || 'N/A'}</span>
+                          
+                          <span className="text-gray-400">Date:</span>
+                          <span className="text-white">{item.purchase_date ? new Date(item.purchase_date).toLocaleDateString() : 'N/A'}</span>
+                          
+                          <span className="text-gray-400">Cost:</span>
+                          <span className="text-white">{item.purchase_cost ? `NOK ${item.purchase_cost},-` : 'N/A'}</span>
+                        </div>
+                        
+                        {purchaseData && purchaseData.items && purchaseData.items.length > 0 && (
+                          <div className="mt-2">
+                            <div className="text-gray-400 text-sm font-semibold border-b border-gray-700 pb-1">Items in this purchase:</div>
+                            <div className="mt-1 max-h-40 overflow-y-auto">
+                              {purchaseData.items.map((inventoryItem: InventoryViewItem, index: number) => (
+                                <div 
+                                  key={`purchase-item-${inventoryItem.inventory_id}-${index}`} 
+                                  className={`text-sm py-1 ${inventoryItem.inventory_id === item.inventory_id ? 'text-green-300 font-semibold' : 'text-white'} ${index !== purchaseData.items.length - 1 ? 'border-b border-gray-700' : ''}`}
+                                >
+                                  {inventoryItem.product_title}
+                                  {inventoryItem.product_variant && ` (${inventoryItem.product_variant})`}
+                                  {` - ${getPriceDisplayText(inventoryItem)}`}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-2 text-sm font-semibold text-green-300 border-t border-gray-700 pt-1">
+                              Total Items: {purchaseData.items.length}
+                              {purchaseData.total_cost > 0 && ` - Cost: NOK ${purchaseData.total_cost},-`}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {item.purchase_notes && (
+                          <div className="mt-2">
+                            <span className="text-gray-400 text-sm">Notes:</span>
+                            <p className="text-white text-sm mt-1">{item.purchase_notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    }
+                    placement="right"
+                    style="minimal"
+                  >
+                    <div className="flex items-center justify-center p-1 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors cursor-help">
+                      <FaShoppingBag className="w-3 h-3" />
+                    </div>
+                  </TooltipWrapper>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      },
       align: 'left' as const,
       sortable: true,
       sortKey: 'product_title'
@@ -147,7 +362,7 @@ const Inventory = () => {
       header: 'Price',
       icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
       width: '100px',
-      accessor: (item: InventoryViewItem) => item.final_price ? `NOK ${item.final_price.toFixed(0)},-` : '',
+      accessor: (item: InventoryViewItem) => getPriceDisplayText(item),
       sortable: true,
       sortKey: 'final_price',
       align: 'left' as const

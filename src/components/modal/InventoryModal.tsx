@@ -28,7 +28,7 @@ import { notifyTagAction } from '@/utils/notifications';
 import { notify } from '@/utils/notifications';
 import type { SaleViewItem } from '@/types/sale';
 import { BaseStyledContainer } from '@/components/ui/BaseStyledContainer';
-import { useInventoryDelete } from '@/hooks/useInventoryDelete';
+import { useInventoryModalState } from '@/hooks/useInventoryModalState';
 
 // Import extracted components
 import { 
@@ -78,15 +78,15 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 }) => {
   const { transitions, isTransitionAllowed, getRequiredSaleStatus } = useInventoryStatusTransitionsCache();
   const queryClient = useQueryClient();
-  const [selectedTags, setSelectedTags] = React.useState<TagWithRelationships[]>([]);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = React.useState(false);
+  const { state, actions } = useInventoryModalState();
+  const {
+    tags: { selected: selectedTags, processing: isTagProcessing, isPanelProcessing: isTagPanelProcessing },
+    sales: { isConnected: isConnectedToSale, totals: localSalesTotals },
+    purchase: { searchQuery: purchaseSearchQuery, isSearching: isSearchingPurchases },
+    delete: { isConfirmOpen: isDeleteConfirmOpen },
+    form: { isUpdating, errors }
+  } = state;
   const { deleteInventory, updateInventory, addTag, removeTag } = useInventoryTable();
-  const [isTagProcessing, setIsTagProcessing] = useState<Record<number, boolean>>({});
-  const [isTagPanelProcessing, setIsTagPanelProcessing] = useState(false);
-  const [localSalesTotals, setLocalSalesTotals] = useState<Record<number, { items: number, total: number }>>({});
-  const [isConnectedToSale, setIsConnectedToSale] = useState(false);
-  const [purchaseSearchQuery, setPurchaseSearchQuery] = useState('');
-  const [isSearchingPurchases, setIsSearchingPurchases] = useState(false);
 
   // Query to fetch available inventory tags
   const { data: availableTags = [], isLoading: isLoadingTags } = useQuery({
@@ -175,7 +175,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       ? availableTags.filter(tag => allTags.some(t => t.id === tag.id))
       : [];
 
-    setSelectedTags(newTags);
+    actions.setSelectedTags(newTags);
   }, [isOpen, inventory?.inventory_id, availableTags, queryClient]);
 
   // Handle tag selection
@@ -185,16 +185,16 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
     const isSelected = selectedTags.some(t => t.id === tag.id);
     
-    // Immediate local state update
-    setSelectedTags(prev => 
+    // Update local state first
+    actions.setSelectedTags(
       isSelected 
-        ? prev.filter(t => t.id !== tag.id)
-        : [...prev, tag]
+        ? selectedTags.filter(t => t.id !== tag.id)
+        : [...selectedTags, tag]
     );
 
     try {
-      setIsTagProcessing(prev => ({ ...prev, [tag.id]: true }));
-      setIsTagPanelProcessing(true);
+      actions.setTagProcessing(tag.id, true);
+      actions.setTagPanelProcessing(true);
 
       if (isSelected) {
         await removeTag({ inventoryId: inventory.inventory_id, tagId: tag.id });
@@ -215,26 +215,23 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       }
     } catch (error) {
       // Revert on error
-      setSelectedTags(prev => 
+      actions.setSelectedTags(
         isSelected 
-          ? [...prev, tag]
-          : prev.filter(t => t.id !== tag.id)
+          ? [...selectedTags, tag]
+          : selectedTags.filter(t => t.id !== tag.id)
       );
       notify('error', `Failed to update ${inventory.product_title}`);
     } finally {
-      setIsTagProcessing(prev => ({ ...prev, [tag.id]: false }));
-      setIsTagPanelProcessing(false);
+      actions.setTagProcessing(tag.id, false);
+      actions.setTagPanelProcessing(false);
     }
   }, [inventory, selectedTags, addTag, removeTag, isTagProcessing]);
 
   const {
     formData,
-    errors,
     handleInputChange,
     handleClose,
     handleSubmit,
-    isUpdating,
-    setErrors,
     pendingImage,
     handlePendingImageChange
   } = useInventoryModal({
@@ -272,6 +269,9 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if any modifier key is pressed
+      if (e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) return;
+
       // Only handle keyboard navigation when not in form elements
       if (
         document.activeElement?.tagName === 'INPUT' ||
@@ -281,82 +281,23 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
         return;
       }
 
+      // Skip if the key is a status shortcut
+      const isStatusShortcut = STATUS_OPTIONS.some(opt => opt.shortcut === e.key.toUpperCase());
+      if (isStatusShortcut) return;
+
       if (e.key === 'ArrowLeft') {
         handleNavigate('prev');
       } else if (e.key === 'ArrowRight') {
         handleNavigate('next');
       } else if (e.key === 'Delete' && !inventory?.purchase_id && !inventory?.sale_id) {
         e.preventDefault();
-        setIsDeleteConfirmOpen(true);
+        actions.setDeleteConfirm(true);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleNavigate, inventory]);
-
-  // Add keyboard shortcut handler
-  React.useEffect(() => {
-    if (!isOpen || !inventory) return;
-
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if (
-        document.activeElement?.tagName === 'INPUT' ||
-        document.activeElement?.tagName === 'TEXTAREA' ||
-        document.activeElement?.tagName === 'SELECT'
-      ) {
-        return;
-      }
-
-      const key = e.key.toUpperCase();
-      
-      // Find the matching status option and update status if allowed
-      const statusOption = STATUS_OPTIONS.find(option => option.shortcut === key);
-      if (!statusOption || !inventory) return;
-
-      if (isTransitionAllowed(formData.inventory_status, statusOption.status, inventory.sale_status)) {
-        e.preventDefault();
-        try {
-          const updates = {
-            inventory_status: statusOption.status
-          };
-
-          // Update local form state first
-          handleInputChange('inventory_status', statusOption.status);
-
-          // Call the mutation
-          await updateInventory({ 
-            id: inventory.inventory_id, 
-            updates 
-          });
-          notify('success', `${inventory.product_title} status updated to ${statusOption.status}`);
-        } catch (error) {
-          console.error('Error updating status:', error);
-          setErrors(prev => [...prev, 'Failed to update status']);
-          
-          // Revert local form state on error
-          // Revert optimistic update on error
-          handleInputChange('inventory_status', inventory.inventory_status);
-          queryClient.setQueryData<InventoryViewItem[]>(['inventory'], old => {
-            if (!old) return old;
-            return old.map(item => {
-              if (item.inventory_id === inventory.inventory_id) {
-                return {
-                  ...item,
-                  inventory_status: inventory.inventory_status
-                };
-              }
-              return item;
-            });
-          });
-          notify('error', `Failed to update ${inventory.product_title} status to ${statusOption.status}`);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, inventory, handleInputChange, queryClient, isTransitionAllowed]);
 
   // Get available status transitions
   const getAvailableStatusTransitions = () => {
@@ -436,10 +377,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
         onClose();
     } catch (error) {
       console.error('Error deleting inventory:', error);
-      setErrors(prev => [...prev, 'Failed to delete inventory item']);
+      actions.setErrors(['Failed to delete inventory item']);
       notify('error', `Failed to delete ${inventory.product_title}`);
     }
-    setIsDeleteConfirmOpen(false);
+    actions.setDeleteConfirm(false);
   };
 
   // Add this utility function for cleaner code
@@ -466,10 +407,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       : Math.max(0, (currentSale.total_sold_price || 0) - itemPrice);
     
     // Update local state
-    setLocalSalesTotals(prev => ({
-      ...prev,
-      [saleId]: { items: newItemCount, total: newTotalPrice }
-    }));
+    actions.updateSaleTotals(saleId, newItemCount, newTotalPrice);
     
     // Update sales cache
     queryClient.setQueryData<SaleViewItem[]>(['sales'], old => {
@@ -495,7 +433,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
     
     try {
       // Set the sale connection state immediately
-      setIsConnectedToSale(true);
+      actions.setSaleConnection(true);
       
       // Find the selected sale
       const selectedSale = availableSales.find(s => s.sale_id === saleId);
@@ -539,7 +477,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       notify('success', `${inventory.product_title} added to sale`);
     } catch (error) {
       // Revert the sale connection state
-      setIsConnectedToSale(Boolean(inventory.sale_id));
+      actions.setSaleConnection(Boolean(inventory.sale_id));
       
       // Revert all form data on error
       const revertUpdates = {
@@ -583,7 +521,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       }
       
       // Immediately update the sale connection state to re-enable UI elements
-      setIsConnectedToSale(false);
+      actions.setSaleConnection(false);
       
       // Update sale totals
       updateSaleTotals(currentSaleId, 'remove');
@@ -641,7 +579,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
     } catch (error) {
       console.error('Error removing from sale:', error);
       // Revert on error - also revert the sale connection state
-      setIsConnectedToSale(Boolean(inventory.sale_id));
+      actions.setSaleConnection(Boolean(inventory.sale_id));
       
       const revertUpdates = {
         sale_id: inventory.sale_id,
@@ -665,7 +603,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
       notify('error', `Failed to remove ${inventory.product_title} from sale`);
     }
-  }, [inventory, formData, handleInputChange, queryClient, updateSaleTotals]);
+  }, [inventory, formData, handleInputChange, queryClient]);
 
   // Initialize localSalesTotals on component mount
   useEffect(() => {
@@ -678,7 +616,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
           total: sale.total_sold_price || 0
         };
       });
-      setLocalSalesTotals(totalsMap);
+      const firstSaleId = Number(Object.keys(totalsMap)[0]);
+      actions.updateSaleTotals(firstSaleId, totalsMap[firstSaleId].items, totalsMap[firstSaleId].total);
     }
   }, [availableSales]);
 
@@ -795,18 +734,15 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
     // Special case: If status is 'For Sale', force disconnection state
     if (formData.inventory_status === 'For Sale') {
       if (isConnectedToSale) {
-        setIsConnectedToSale(false);
+        actions.setSaleConnection(false);
       }
       return;
     }
     
     // Normal case: Track connection based on sale_id
     const hasSaleConnection = Boolean(formData.sale_id || inventory?.sale_id);
-    setIsConnectedToSale(hasSaleConnection);
+    actions.setSaleConnection(hasSaleConnection);
   }, [inventory, formData.sale_id, inventory?.sale_id, formData.inventory_status, isConnectedToSale]);
-
-  // Add the hook
-  const { canDelete, setCanDelete } = useInventoryDelete(inventory, formData);
 
   return (
     <>
@@ -825,15 +761,15 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
             handleSubmit={handleSubmit}
             handleClose={handleClose}
             handleNavigate={handleNavigate}
-            setIsDeleteConfirmOpen={setIsDeleteConfirmOpen}
+            setIsDeleteConfirmOpen={actions.setDeleteConfirm}
             tableData={tableData}
             onNavigate={onNavigate}
-            canDelete={canDelete}
+            canDelete={state.delete.canDelete}
           />
         }
       >
         <ContentLayout
-          leftColumn={<ImageSection inventory={inventory} setErrors={setErrors} />}
+          leftColumn={<ImageSection inventory={inventory} setErrors={actions.setErrors} />}
           rightColumn={
             <>
               <ProductInfoDisplay inventory={inventory} />
@@ -854,11 +790,11 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     formData={formData}
                     isTransitionAllowed={isTransitionAllowed}
                     isConnectedToSale={isConnectedToSale}
-                    setIsConnectedToSale={setIsConnectedToSale}
+                    setIsConnectedToSale={actions.setSaleConnection}
                     handleInputChange={handleInputChange}
                     handleRemoveFromSale={handleRemoveFromSale}
                     updateInventory={updateInventory}
-                    setErrors={setErrors}
+                    setErrors={actions.setErrors}
                   />
                 }
               />
@@ -873,7 +809,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     handlePurchaseSelect={handlePurchaseSelect}
                     handleRemovePurchase={handleRemovePurchase}
                     handleInputChange={handleInputChange}
-                    setCanDelete={setCanDelete}
+                    setCanDelete={actions.setCanDelete}
                   />
                 }
                 rightColumn={
@@ -905,7 +841,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
       <DeleteConfirmDialog
         isOpen={isDeleteConfirmOpen}
-        onClose={() => setIsDeleteConfirmOpen(false)}
+        onClose={() => actions.setDeleteConfirm(false)}
         onConfirm={handleDelete}
         inventory={inventory}
       />

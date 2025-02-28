@@ -19,6 +19,7 @@ import { updateInventoryCache } from '@/utils/inventoryUtils';
 import { TagDisplay } from '@/components/tag/TagDisplay';
 import { useQuery } from '@tanstack/react-query';
 import { notify } from '@/utils/notifications';
+import { getProductPriceDisplayText } from '@/utils/priceUtils';
 
 interface InventoryItem {
   id: number;
@@ -165,7 +166,7 @@ const Home = () => {
       header: 'Price',
       icon: <FaDollarSign className="w-4 h-4 text-green-500" />,
       width: '80px',
-      accessor: (item: ProductViewItem) => item.final_price ? `NOK ${item.final_price.toFixed(0)},-` : '',
+      accessor: (item: ProductViewItem) => getProductPriceDisplayText(item),
       sortKey: 'final_price',
       align: 'center' as const
     },

@@ -12,7 +12,7 @@ interface StatusSectionProps {
   handleInputChange: (key: string, value: any) => void;
   handleRemoveFromSale: () => Promise<void>;
   updateInventory: (params: { id: number; updates: any }) => Promise<any> | void;
-  setErrors: React.Dispatch<React.SetStateAction<string[]>>;
+  setErrors: (errors: string[] | ((prev: string[]) => string[])) => void;
 }
 
 const StatusSection: React.FC<StatusSectionProps> = ({
@@ -27,8 +27,8 @@ const StatusSection: React.FC<StatusSectionProps> = ({
   setErrors
 }) => {
   return (
-    <div className="bg-gray-900/50 rounded-lg overflow-hidden">
-      <div className="px-4 py-2 bg-gray-800/50 border-b border-gray-700">
+    <div className="bg-gray-900/40 rounded-lg overflow-hidden shadow-md shadow-black/30">
+      <div className="px-4 py-2 bg-gray-900 border-b border-gray-700">
         <h3 className="font-medium text-gray-300 flex items-center gap-2">
           <FaBox className="text-blue-400" />
           Inventory Status
