@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaImage, FaTrash, FaUpload, FaCrop, FaEye } from 'react-icons/fa';
+import { FaImage, FaTrash, FaUpload, FaCrop, FaEye, FaExclamationTriangle } from 'react-icons/fa';
 import clsx from 'clsx';
 import { getInventoryImageUrl, useImageUpload, deleteImage, checkImageExists, getInventoryWithFallbackUrl, invalidateImage } from '@/utils/imageUtils';
 import Button from '../ui/Button';
@@ -284,14 +284,20 @@ export const ImageContainerInventory: React.FC<ImageContainerInventoryProps> = (
         {/* Fallback Image Indicator - only show when not hovered */}
         {isFallbackImage && imageSrc && !isHovered && (
           <div className={clsx(
-            "absolute top-50 w-[70%] left-1/2 -translate-x-1/2",
-            "bg-red-800/80 text-white px-2 py-2 rounded-md",
-            "text-xs animate-pulse",
-            "flex items-center justify-center gap-2",
+            "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+            "w-[70%] h-auto",
+            "bg-red-800/90 text-white px-4 py-3 rounded-md",
+            "text-md animate-pulse",
+            "flex flex-col items-center justify-center gap-3",
             "shadow-xl shadow-black/80",
-            "z-[70] cursor-default"
+            "z-[70] cursor-default",
+            "text-center",
+            "border border-red-500"
           )}>
-            Displaying Product Image!
+            <FaExclamationTriangle className="w-6 h-6 text-yellow-500 mx-auto" />
+            <div className="w-full text-center">
+              <span className="font-semibold">Displaying Product Image</span>
+            </div>
           </div>
         )}
       </div>

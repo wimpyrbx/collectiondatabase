@@ -94,7 +94,7 @@ export const useInventoryTable = () => {
 
         return { previousInventory };
       },
-      onError: (error: unknown, _variables: unknown, context: { previousInventory: InventoryViewItem[] } | undefined) => {
+      onError: (error: unknown, _variables: { id: number; updates: UpdateInventory }, context: MutationContext | undefined) => {
         console.error('Error updating inventory:', error);
         if (context?.previousInventory) {
           queryClient.setQueryData(INVENTORY_QUERY_KEY, context.previousInventory);
@@ -142,24 +142,26 @@ export const useInventoryTable = () => {
           product_notes: null,
           product_created_at: new Date().toISOString(),
           product_updated_at: new Date().toISOString(),
+          inventory_updated_at: new Date().toISOString(),
           product_group_name: null,
           product_type_name: '',
           rating_name: null,
           region_name: null,
           override_price: newInventory.override_price,
-          price_nok_fixed: null,
-          price_new_nok_fixed: null,
+          prices: null,
           final_price: null,
-          purchase_seller: newInventory.purchase_seller,
-          purchase_origin: newInventory.purchase_origin,
-          purchase_cost: newInventory.purchase_cost,
-          purchase_date: newInventory.purchase_date,
-          purchase_notes: newInventory.purchase_notes,
-          sale_buyer: newInventory.sale_buyer,
-          sale_status: newInventory.sale_status,
-          sale_date: newInventory.sale_date,
-          sale_notes: newInventory.sale_notes,
-          sold_price: newInventory.sold_price
+          purchase_seller: null,
+          purchase_origin: null,
+          purchase_cost: null,
+          purchase_date: null,
+          purchase_notes: null,
+          sale_buyer: null,
+          sale_status: null,
+          sale_date: null,
+          sale_notes: null,
+          sold_price: null,
+          tags: [],
+          product_tags: []
         };
 
         queryClient.setQueryData<InventoryViewItem[]>(INVENTORY_QUERY_KEY, old => {
@@ -189,6 +191,22 @@ export const useInventoryTable = () => {
     createMutationOptions<void, unknown, number, MutationContext>({
       mutationKey: INVENTORY_MUTATION_KEYS.delete,
       mutationFn: async (id) => {
+        // Delete dependent records first
+        const { error: tagError } = await supabase
+          .from('inventory_tag_relationships')
+          .delete()
+          .eq('inventory_id', id);
+
+        if (tagError) throw tagError;
+
+        const { error: historyError } = await supabase
+          .from('inventory_history')
+          .delete()
+          .eq('inventory_id', id);
+
+        if (historyError) throw historyError;
+
+        // Finally delete the inventory item
         const { error } = await supabase
           .from('inventory')
           .delete()

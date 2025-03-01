@@ -467,13 +467,10 @@ const Inventory = () => {
   };
 
   const handleSuccess = (inventoryId: number) => {
-    setSelectedInventory(null);
-    setIsCreating(false);
     setUpdatedInventoryId(inventoryId);
     setTimeout(() => {
       setUpdatedInventoryId(null);
     }, 1500);
-    setIsModalOpen(false);
   };
 
   const handleAddSuccess = (inventoryId: number) => {
@@ -502,6 +499,17 @@ const Inventory = () => {
           return values.some(value => 
             item.product_tags?.some(tag => tag.name === value)
           );
+        }
+        
+        // Handle recent updates filter
+        if (key === 'recent_updates') {
+          const secondsAgo = item.inventory_updated_at ? 
+            Math.floor((Date.now() - new Date(item.inventory_updated_at).getTime()) / 1000) : 
+            Number.MAX_SAFE_INTEGER;
+          if (values.includes('recent')) {
+            return secondsAgo <= 3600; // 1 hour = 3600 seconds
+          }
+          return true;
         }
         
         // For other filters, use the existing logic
@@ -546,7 +554,13 @@ const Inventory = () => {
             keyExtractor={(item) => item.inventory_id ? item.inventory_id.toString() : 'undefined-id'}
             isLoading={isLoading}
             error={error}
-            filters={tableState.filters}
+            filters={tableState.filters.filter(filter => 
+              // Only include filters that have more than one option
+              filter.options.length > 1 || 
+              // Always include tag filters if there are any tags
+              (filter.key === 'tag_inventory' && filter.options.length > 0) ||
+              (filter.key === 'tag_product' && filter.options.length > 0)
+            )}
             selectedFilters={tableState.selectedFilters}
             onFilterChange={tableState.onFilterChange}
             searchTerm={tableState.searchTerm}

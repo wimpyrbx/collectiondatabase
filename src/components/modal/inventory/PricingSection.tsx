@@ -14,8 +14,8 @@ interface PricingSectionProps {
   inventory: InventoryViewItem | null;
   formData: any;
   isConnectedToSale: boolean;
-  handleInputChange: (key: string, value: any) => void;
-  updateInventory: (params: { id: number; updates: any }) => Promise<any> | void;
+  handleInputChange: (field: string, value: any) => void;
+  updateInventory: (newPrice: string) => void | Promise<any>;
 }
 
 export const PricingSection: React.FC<PricingSectionProps> = ({
@@ -77,10 +77,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         });
         
         // Make API call
-        const result = updateInventory({
-          id: effectiveInventory.inventory_id,
-          updates: { override_price: numericValue }
-        });
+        const result = updateInventory(value);
 
         // Check if result is a Promise before using .then()
         if (result instanceof Promise) {
@@ -148,7 +145,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             isOpen={showPriceInfo}
             elementRef={infoButtonRef}
             placement="top"
-            style={TooltipStyle.frost}
+            style={TooltipStyle.minimal}
           />
         </div>
       </div>

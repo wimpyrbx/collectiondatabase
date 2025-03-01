@@ -33,21 +33,16 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
 }) => {
   const [purchaseSearchQuery, setPurchaseSearchQuery] = useState('');
   const [isSearchingPurchases, setIsSearchingPurchases] = useState(false);
-  const [localPurchaseId, setLocalPurchaseId] = useState<number | null>(formData.purchase_id || inventory?.purchase_id || null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Update useEffect to sync the localPurchaseId with props
-  useEffect(() => {
-    setLocalPurchaseId(formData.purchase_id || inventory?.purchase_id || null);
-  }, [formData.purchase_id, inventory?.purchase_id]);
+  
+  // Get the current purchase ID directly from formData or inventory
+  const currentPurchaseId = formData.purchase_id || inventory?.purchase_id || null;
 
   // Query to get all items connected to the current purchase
   const { data: connectedItems = [], isLoading: isLoadingConnectedItems, error: connectedItemsError } = useQuery({
-    queryKey: ['purchase_items', localPurchaseId],
+    queryKey: ['purchase_items', currentPurchaseId],
     queryFn: async () => {
-      if (!localPurchaseId) return [];
-
-      console.log('Fetching connected items for purchase:', localPurchaseId);
+      if (!currentPurchaseId) return [];
 
       const { data, error } = await supabase
         .from('view_inventory')
@@ -61,17 +56,18 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
           final_price,
           prices
         `)
-        .eq('purchase_id', localPurchaseId);
+        .eq('purchase_id', currentPurchaseId);
 
       if (error) {
         console.error('Error fetching connected items:', error);
         throw error;
       }
 
-      console.log('Connected items data:', data);
       return data as InventoryViewItem[];
     },
-    enabled: !!localPurchaseId
+    enabled: !!currentPurchaseId,
+    // Add staleTime to prevent frequent refetches
+    staleTime: 30000 // 30 seconds
   });
 
   // Calculate total value of connected items
@@ -82,11 +78,9 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
       const itemPrice = item.final_price || 
                        item.override_price || 
                        (item.prices?.complete?.nok_fixed) || 0;
-      console.log(`Item ${item.product_title} price:`, itemPrice);
       return sum + itemPrice;
     }, 0);
 
-    console.log('Total value calculated:', total);
     return total;
   }, [connectedItems]);
 
@@ -124,14 +118,6 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
       // Call API first
       await handleRemovePurchase();
       
-      // Only if API call succeeds, update local state
-      setLocalPurchaseId(null);
-      handleInputChange('purchase_id', null);
-      handleInputChange('purchase_seller', null);
-      handleInputChange('purchase_origin', null);
-      handleInputChange('purchase_date', null);
-      handleInputChange('purchase_cost', null);
-
       // Update delete button state based on sale connection
       setCanDelete(!formData.sale_id);
 
@@ -153,7 +139,7 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
         </h3>
       </div>
       <div className="p-4">
-        {localPurchaseId ? (
+        {currentPurchaseId ? (
           <div className="grid grid-cols-1 gap-4">
             {/* Connected Purchase Display */}
             <div className="bg-gradient-to-r from-purple-700/20 to-purple-600/10 rounded-lg p-3 border border-purple-500/20 relative">

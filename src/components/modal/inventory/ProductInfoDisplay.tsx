@@ -1,9 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { FaBox, FaLayerGroup, FaCubes, FaGlobe, FaCalendar } from 'react-icons/fa';
 import { InventoryViewItem } from '@/types/inventory';
 import regionsData from '@/data/regions.json';
 import { getRatingDisplayInfo } from '@/utils/productUtils';
 import { useQueryClient } from '@tanstack/react-query';
+import { isEqual } from 'lodash';
+
+// Use destructuring to get isEqual from lodash
+// const { isEqual } = lodash;
 
 interface ProductInfoDisplayProps {
   inventory: InventoryViewItem | null;
@@ -12,31 +16,62 @@ interface ProductInfoDisplayProps {
 export const ProductInfoDisplay: React.FC<ProductInfoDisplayProps> = ({ inventory }) => {
   const queryClient = useQueryClient();
   
-  // Get the latest data from cache, including updated counters
-  const latestInventory = useMemo(() => {
-    if (!inventory) return null;
-    
-    // Get the latest data from cache
-    const cachedInventory = queryClient.getQueryData<InventoryViewItem[]>(['inventory'])
-      ?.find(item => item.inventory_id === inventory.inventory_id);
-    
-    return cachedInventory || inventory;
-  }, [inventory, queryClient.getQueryData(['inventory'])]);
+  // Use ref to store the current inventory data to avoid re-renders
+  const inventoryRef = useRef<InventoryViewItem | null>(inventory);
   
-  // Force re-render when inventory status changes
-  const [_, forceUpdate] = React.useReducer(x => x + 1, 0);
+  // Use ref to track the inventory ID to detect changes
+  const inventoryIdRef = useRef<number | null>(inventory?.inventory_id || null);
   
-  // Listen for cache invalidation events
-  React.useEffect(() => {
-    const handleCacheChange = () => forceUpdate();
+  // Force re-render when needed
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+  
+  // Update refs when inventory prop changes
+  useEffect(() => {
+    if (inventory?.inventory_id !== inventoryIdRef.current) {
+      inventoryIdRef.current = inventory?.inventory_id || null;
+      inventoryRef.current = inventory;
+      forceUpdate();
+    }
+  }, [inventory]);
+  
+  // Set up cache subscription only once
+  useEffect(() => {
+    // Function to check cache for updates
+    const checkCacheForUpdates = () => {
+      // Get the latest inventory data from cache
+      const inventoryData = queryClient.getQueryData<InventoryViewItem[]>(['inventory']);
+      
+      // Only update if the inventory data exists
+      if (inventoryData && inventoryIdRef.current) {
+        const cachedInventory = inventoryData.find(item => 
+          item.inventory_id === inventoryIdRef.current
+        );
+        
+        // Only update if the data has actually changed (deep comparison)
+        if (cachedInventory && !isEqual(cachedInventory, inventoryRef.current)) {
+          inventoryRef.current = cachedInventory;
+          forceUpdate();
+        }
+      }
+    };
     
     // Subscribe to query cache changes
-    const unsubscribe = queryClient.getQueryCache().subscribe(handleCacheChange);
+    const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+      checkCacheForUpdates();
+    });
+    
+    // Initial check from cache
+    checkCacheForUpdates();
     
     return () => {
       unsubscribe();
     };
   }, [queryClient]);
+  
+  // Get the current inventory data from ref
+  const latestInventory = inventoryRef.current;
+  
+  if (!latestInventory) return null;
 
   return (
     <div className="bg-gray-900/40 rounded-lg overflow-hidden shadow-md shadow-black/30">

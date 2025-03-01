@@ -247,55 +247,59 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
 
         {/* Right side: Filters */}
         <div className={onSearchChange ? "w-5/6" : "w-full"}>
-          <button
-            onClick={() => {
-              setIsFiltersExpanded(!isFiltersExpanded);
-              if (isFiltersExpanded) {
-                // Reset all filters when hiding
-                allFilters.forEach(filter => onFilterChange(filter.key, []));
-                if (onSearchChange) onSearchChange('');
-              }
-            }}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 mb-0 bg-gray-900 border border-gray-700 rounded-lg p-2 hover:border-gray-700 w-[70px]"
-          >
-            <span>{isFiltersExpanded ? 'Filters' : 'Filters'}</span>
-            <svg
-              className={`w-4 h-4 transition-transform duration-200 ${isFiltersExpanded ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+          {allFilters.length > 0 && (
+            <>
+              <button
+                onClick={() => {
+                  setIsFiltersExpanded(!isFiltersExpanded);
+                  if (isFiltersExpanded) {
+                    // Reset all filters when hiding
+                    allFilters.forEach(filter => onFilterChange(filter.key, []));
+                    if (onSearchChange) onSearchChange('');
+                  }
+                }}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 mb-0 bg-gray-900 border border-gray-700 rounded-lg p-2 hover:border-gray-700 w-[70px]"
+              >
+                <span>{isFiltersExpanded ? 'Filters' : 'Filters'}</span>
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${isFiltersExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
 
-          <div
-            className={`transition-all duration-200 ease-in-out overflow-hidden ${
-              isFiltersExpanded ? 'max-h-[500px] opacity-100 mt-3' : 'max-h-0 opacity-0'
-            }`}
-          >
-            <div className="flex gap-4">
-              {allFilters
-                .filter(filter => filter.options.length > 1) // Only show filters with more than one option
-                .map((filter) => (
-                <div key={filter.key} className="flex-1">
-                  <FormElement
-                    elementType="listmultiple"
-                    label={filter.label}
-                    labelIcon={<FaFilter />}
-                    labelIconColor="text-gray-400"
-                    labelPosition="above"
-                    options={filter.options}
-                    selectedOptions={selectedFilters[filter.key] || []}
-                    onValueChange={(values) => onFilterChange(filter.key, Array.isArray(values) ? values.map(String) : [])}
-                    placeholder={`Select ${filter.label}...`}
-                    className="w-full"
-                    showResetPill={true}
-                  />
+              <div
+                className={`transition-all duration-200 ease-in-out overflow-hidden ${
+                  isFiltersExpanded ? 'max-h-[500px] opacity-100 mt-3' : 'max-h-0 opacity-0'
+                }`}
+              >
+                <div className="flex gap-4">
+                  {allFilters
+                    .filter(filter => filter.options.length > 0) // Only show filters with at least one option
+                    .map((filter) => (
+                    <div key={filter.key} className="flex-1">
+                      <FormElement
+                        elementType="listmultiple"
+                        label={filter.label}
+                        labelIcon={<FaFilter />}
+                        labelIconColor="text-gray-400"
+                        labelPosition="above"
+                        options={filter.options}
+                        selectedOptions={selectedFilters[filter.key] || []}
+                        onValueChange={(values) => onFilterChange(filter.key, Array.isArray(values) ? values.map(String) : [])}
+                        placeholder={`Select ${filter.label}...`}
+                        className="w-full"
+                        showResetPill={true}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

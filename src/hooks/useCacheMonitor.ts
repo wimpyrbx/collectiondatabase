@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { isEqual } from 'lodash';
 
 export interface CacheEntry {
   queryKey: string[];
@@ -11,6 +12,7 @@ export interface CacheEntry {
 export const useCacheMonitor = () => {
   const queryClient = useQueryClient();
   const [cacheEntries, setCacheEntries] = useState<CacheEntry[]>([]);
+  const previousEntriesRef = useRef<CacheEntry[]>([]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -24,7 +26,11 @@ export const useCacheMonitor = () => {
         data: query.state.data
       }));
 
-      setCacheEntries(entries);
+      // Only update state if entries have changed
+      if (!isEqual(entries, previousEntriesRef.current)) {
+        previousEntriesRef.current = entries;
+        setCacheEntries(entries);
+      }
     }, 1000);
 
     return () => clearInterval(interval);

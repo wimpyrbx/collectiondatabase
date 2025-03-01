@@ -116,6 +116,15 @@ export const QuickAddInventory: React.FC<QuickAddInventoryProps> = ({
       // Clear search and notify parent
       setSearchTerm('');
       onSuccess?.(product.product_id);
+      
+      // Focus the search input after adding item
+      setTimeout(() => {
+        // Find the input element in the DOM
+        const inputElement = document.querySelector('.absolute.right-20 input');
+        if (inputElement) {
+          (inputElement as HTMLInputElement).focus();
+        }
+      }, 100);
     } catch (error) {
       setErrors(['Failed to add inventory item']);
     } finally {

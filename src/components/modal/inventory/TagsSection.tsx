@@ -1,8 +1,9 @@
 import React from 'react';
 import clsx from 'clsx';
-import { FaTags } from 'react-icons/fa';
-import { TagWithRelationships } from '@/types/tags';
+import { FaTags, FaInfoCircle } from 'react-icons/fa';
+import { TagWithRelationships, TagInfo } from '@/types/tags';
 import { TagButton } from './TagButton';
+import { TagDisplay } from '@/components/tag/TagDisplay';
 
 interface TagsSectionProps {
   availableTags: TagWithRelationships[];
@@ -12,6 +13,7 @@ interface TagsSectionProps {
   isTagPanelProcessing: boolean;
   isTagProcessing: Record<number, boolean>;
   handleTagToggle: (tag: TagWithRelationships) => void;
+  productTags?: TagInfo[];
 }
 
 export const TagsSection: React.FC<TagsSectionProps> = ({
@@ -21,7 +23,8 @@ export const TagsSection: React.FC<TagsSectionProps> = ({
   isConnectedToSale,
   isTagPanelProcessing,
   isTagProcessing,
-  handleTagToggle
+  handleTagToggle,
+  productTags = []
 }) => {
   return (
     <div className="bg-gray-900/50 rounded-lg overflow-hidden relative">
@@ -46,28 +49,39 @@ export const TagsSection: React.FC<TagsSectionProps> = ({
             </div>
           </div>
         )}
-        <div className={clsx(
-          "flex flex-wrap gap-2",
-          isConnectedToSale && "opacity-70 pointer-events-none"
-        )}>
-          {isLoadingTags ? (
-            <div className="text-gray-400 text-sm">Loading tags...</div>
-          ) : availableTags.length === 0 ? (
-            <div className="text-gray-400 text-sm">No tags available</div>
-          ) : (
-            availableTags.map(tag => (
-              <TagButton
-                key={tag.id}
-                tag={tag}
-                isSelected={selectedTags.some(t => t.id === tag.id)}
-                onToggle={handleTagToggle}
-                isProcessing={isTagProcessing[tag.id]}
-              />
-            ))
-          )}
+        
+        {/* Inventory Tags Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-2 text-gray-300">
+            <FaTags className="text-purple-400" />
+            <span className="text-sm font-medium">Inventory-specific Tags</span>
+            <span className="text-xs text-gray-400">(can be added/removed)</span>
+          </div>
+          <div className={clsx(
+            "flex flex-wrap gap-2",
+            isConnectedToSale && "opacity-70 pointer-events-none"
+          )}>
+            {isLoadingTags ? (
+              <div className="text-gray-400 text-sm">Loading tags...</div>
+            ) : availableTags.length === 0 ? (
+              <div className="text-gray-400 text-sm">No tags available</div>
+            ) : (
+              availableTags.map(tag => (
+                <TagButton
+                  key={tag.id}
+                  tag={tag}
+                  isSelected={selectedTags.some(t => t.id === tag.id)}
+                  onToggle={handleTagToggle}
+                  isProcessing={isTagProcessing[tag.id]}
+                />
+              ))
+            )}
+          </div>
         </div>
+        
       </div>
     </div>
+
   );
 };
 

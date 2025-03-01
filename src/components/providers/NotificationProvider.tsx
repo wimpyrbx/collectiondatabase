@@ -17,8 +17,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           duration: 3000,
           style: {
             background: '#1f2937',
-            color: '#f3f4f6',
-          },
+            color: '#f3f4f6',          },
         }}
         position="top-center"
       />

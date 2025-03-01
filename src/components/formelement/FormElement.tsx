@@ -46,6 +46,7 @@ export interface For3mElementProps {
   className?: string;
   disableTransitionOpacity?: boolean;
   showResetPill?: boolean;
+  inputRef?: React.RefObject<HTMLInputElement>;
 }
 
 const defaultStyles = {
@@ -86,7 +87,8 @@ export const FormElement: React.FC<For3mElementProps> = ({
   truncate = false,
   className,
   disableTransitionOpacity = false,
-  showResetPill = false
+  showResetPill = false,
+  inputRef
 }) => {
   const elementRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const baseClasses = `${bgColor} ${textColor} ${disabled ? 'opacity-50' : ''} text-${textSize} ${width} ${padding} ${margin} ${
@@ -238,7 +240,14 @@ export const FormElement: React.FC<For3mElementProps> = ({
         return (
           <input
             {...commonProps}
-            ref={elementRef as React.RefObject<HTMLInputElement>}
+            ref={(node) => {
+              // Assign to internal ref
+              elementRef.current = node;
+              // Assign to external ref if provided
+              if (inputRef) {
+                (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
+              }
+            }}
             type="text"
             value={initialValue}
             onChange={(e) => numericOnly ? handleNumericInput(e.target.value) : handleChange(e.target.value)}

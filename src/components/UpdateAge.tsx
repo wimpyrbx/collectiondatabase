@@ -45,6 +45,9 @@ export const UpdateAge: React.FC<UpdateAgeProps> = ({ date, secondsAgo: initialS
   const containerRef = React.useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   
+  // Create the ref at the top level of the component
+  const lastUpdateRef = React.useRef(Date.now());
+  
   // Update localSecondsAgo when initialSecondsAgo changes (e.g., after a save)
   React.useEffect(() => {
     if (initialSecondsAgo !== undefined) {
@@ -57,18 +60,36 @@ export const UpdateAge: React.FC<UpdateAgeProps> = ({ date, secondsAgo: initialS
   React.useEffect(() => {
     if (!date && initialSecondsAgo === undefined) return;
 
+    // Create the event once and reuse it
+    const updateEvent = new Event('age-column-update');
+    
     const updateAge = () => {
-      const now = new Date();
-      setCurrentTime(now);
-      setLocalSecondsAgo(prev => prev !== undefined ? prev + 5 : prev);
-      window.dispatchEvent(new Event('age-column-update'));
+      const now = Date.now();
+      
+      // Only update if at least 1 second has passed since the last update
+      if (now - lastUpdateRef.current >= 1000) {
+        lastUpdateRef.current = now;
+        
+        // Use functional updates to avoid dependency on previous state
+        setCurrentTime(new Date(now));
+        
+        if (localSecondsAgo !== undefined) {
+          setLocalSecondsAgo(prev => {
+            if (prev === undefined) return prev;
+            return prev + 5;
+          });
+        }
+        
+        // Dispatch the event we created earlier
+        window.dispatchEvent(updateEvent);
+      }
     };
 
     // Initial update
     updateAge();
     const interval = setInterval(updateAge, 5000);
     return () => clearInterval(interval);
-  }, [date, initialSecondsAgo]);
+  }, [date, initialSecondsAgo, localSecondsAgo]);
 
   // Calculate minutes ago either from secondsAgo or date
   const minutesAgo = React.useMemo(() => 
