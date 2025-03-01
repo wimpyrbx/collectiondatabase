@@ -43,14 +43,14 @@ export const updateInventoryCache = async (productId: number, queryClient: Retur
 
     if (viewError) throw viewError;
 
-    console.log('Complete inventory data from view:', completeInventory);
+    //console.log('Complete inventory data from view:', completeInventory);
 
     // Update cache with the complete data
     queryClient.setQueryData<InventoryItem[]>(['inventory'], (old = []) => {
       // Ensure we don't lose any existing items
       const existingItems = old.filter(item => item.id !== completeInventory.inventory_id);
       const updatedInventory = [completeInventory, ...existingItems];
-      console.log('Updated inventory cache with new data:', updatedInventory);
+      //console.log('Updated inventory cache with new data:', updatedInventory);
       return updatedInventory;
     });
 
@@ -64,7 +64,7 @@ export const updateInventoryCache = async (productId: number, queryClient: Retur
             normal_count: (product.normal_count || 0) + 1,
             products_updated_at: new Date().toISOString()
           };
-          console.log('Updated product in cache:', updatedProduct);
+          //console.log('Updated product in cache:', updatedProduct);
           return updatedProduct;
         }
         return product;
@@ -75,13 +75,13 @@ export const updateInventoryCache = async (productId: number, queryClient: Retur
     // Only invalidate if there have been external changes
     const shouldInvalidate = await shouldInvalidateCache(['inventory', 'products']);
     if (shouldInvalidate) {
-      console.log('External changes detected, invalidating queries...');
+      //console.log('External changes detected, invalidating queries...');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['inventory'] }),
         queryClient.invalidateQueries({ queryKey: ['products'] })
       ]);
     } else {
-      console.log('No external changes, keeping current cache...');
+      //console.log('No external changes, keeping current cache...');
     }
 
   } catch (error) {

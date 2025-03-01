@@ -32,8 +32,8 @@ export const useProductsTable = () => {
           updateData[key] = value;
         });
 
-        console.log('Updating product with ID:', id);
-        console.log('Update data being sent to Supabase:', updateData);
+        //console.log('Updating product with ID:', id);
+        //console.log('Update data being sent to Supabase:', updateData);
 
         // Do the update
         const { data, error } = await supabase
@@ -48,7 +48,7 @@ export const useProductsTable = () => {
           throw error;
         }
 
-        console.log('Update successful, received data:', data);
+        //console.log('Update successful, received data:', data);
         return { data };
       },
       onMutate: async ({ id, updates }) => {

@@ -132,7 +132,16 @@ export const BarcodeSection: React.FC<BarcodeSectionProps> = ({
   }, [inventory, barcodes]);
 
   const handleAddBarcode = async () => {
-    if (!inventory || !newBarcode.trim()) return;
+    if (!inventory) return;
+    
+    // Trim the barcode and validate
+    const trimmedBarcode = newBarcode.trim();
+    
+    // Validate barcode length
+    if (trimmedBarcode.length < 3) {
+      notify('error', 'Barcode must be at least 3 characters long');
+      return;
+    }
     
     setIsAdding(true);
     try {
@@ -140,7 +149,7 @@ export const BarcodeSection: React.FC<BarcodeSectionProps> = ({
         .from('inventory_barcodes')
         .insert({
           inventory_id: inventory.inventory_id,
-          barcode: newBarcode.trim()
+          barcode: trimmedBarcode
         })
         .select()
         .single();
@@ -193,15 +202,33 @@ export const BarcodeSection: React.FC<BarcodeSectionProps> = ({
 
   const handleEditBarcode = (id: number, currentValue: string) => {
     setEditingBarcode({ id, value: currentValue });
+    
+    // Focus and select the input text after the component re-renders
+    setTimeout(() => {
+      const inputElement = document.querySelector(`input[data-barcode-edit-id="${id}"]`);
+      if (inputElement instanceof HTMLInputElement) {
+        inputElement.focus();
+        inputElement.select();
+      }
+    }, 50);
   };
 
   const handleSaveEdit = async () => {
     if (!inventory || !editingBarcode) return;
     
+    // Trim the barcode and validate
+    const trimmedBarcode = editingBarcode.value.trim();
+    
+    // Validate barcode length
+    if (trimmedBarcode.length < 3) {
+      notify('error', 'Barcode must be at least 3 characters long');
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('inventory_barcodes')
-        .update({ barcode: editingBarcode.value.trim() })
+        .update({ barcode: trimmedBarcode })
         .eq('id', editingBarcode.id);
 
       if (error) {
@@ -214,7 +241,7 @@ export const BarcodeSection: React.FC<BarcodeSectionProps> = ({
       
       setBarcodes(barcodes.map(barcode => 
         barcode.id === editingBarcode.id 
-          ? { ...barcode, barcode: editingBarcode.value.trim() } 
+          ? { ...barcode, barcode: trimmedBarcode } 
           : barcode
       ));
       
@@ -308,17 +335,13 @@ export const BarcodeSection: React.FC<BarcodeSectionProps> = ({
       </div>
       
       <div className="p-4 pt-0">
-        {isLoading ? (
-          <>
-          </>
-        ) : (
           <>
             {/* Barcode List */}
             {barcodes.length === 0 ? (
               <>
               </>
             ) : (
-              <div className="space-y-2 mb-4">
+              <div className="space-y-2 mb-4 pt-4">
                 {barcodes.map(barcode => (
                   <div 
                     key={barcode.id} 
@@ -335,8 +358,15 @@ export const BarcodeSection: React.FC<BarcodeSectionProps> = ({
                           value={editingBarcode.value}
                           onChange={(e) => setEditingBarcode({ ...editingBarcode, value: e.target.value })}
                           className="flex-1 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200 w-[50px] text-xs"
-                          placeholder="Enter barcode"
+                          placeholder="Enter barcode (min 3 chars)"
                           disabled={isConnectedToSale}
+                          data-barcode-edit-id={editingBarcode.id}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && editingBarcode.value.trim().length >= 3 && !isConnectedToSale) {
+                              e.preventDefault();
+                              handleSaveEdit();
+                            }
+                          }}
                         />
                         <Button
                           onClick={handleSaveEdit}
@@ -344,7 +374,7 @@ export const BarcodeSection: React.FC<BarcodeSectionProps> = ({
                           iconLeft={<FaSave />}
                           bgColor="bg-green-600/80"
                           className="h-[16px]"
-                          disabled={isConnectedToSale}
+                          disabled={isConnectedToSale || editingBarcode.value.trim().length < 3}
                         >
                         </Button>
                         <Button
@@ -414,21 +444,26 @@ export const BarcodeSection: React.FC<BarcodeSectionProps> = ({
                 value={newBarcode}
                 onChange={(e) => setNewBarcode(e.target.value)}
                 className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-1 text-gray-200 w-[50px] text-xs"
-                placeholder="Enter new barcode"
+                placeholder="Enter new barcode (min 3 chars)"
                 disabled={isAdding || isConnectedToSale}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newBarcode.trim().length >= 3 && !isAdding && !isConnectedToSale) {
+                    e.preventDefault();
+                    handleAddBarcode();
+                  }
+                }}
               />
               <Button
                 onClick={handleAddBarcode}
                 iconLeft={isAdding ? undefined : <FaPlus />}
                 bgColor="bg-orange-600/80"
                 className="h-[16px]"
-                disabled={!newBarcode.trim() || isAdding || isConnectedToSale}
+                disabled={!newBarcode.trim() || newBarcode.trim().length < 3 || isAdding || isConnectedToSale}
               >
                 'Add'
               </Button>
             </div>
           </>
-        )}
       </div>
     </div>
   );

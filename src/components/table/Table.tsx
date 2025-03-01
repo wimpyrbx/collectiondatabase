@@ -214,6 +214,30 @@ export function Table<T>({
     return [ageColumn, ...columns];
   }, [columns, updateAgeColumn]);
 
+  // Add debug logging
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      //console.log('[Table] Received data length:', data.length);
+      //console.log('[Table] Current sortBy:', sortBy);
+      //console.log('[Table] Current sortDirection:', sortDirection);
+      
+      // Log first few items to check if they're sorted
+      if (data.length > 0 && sortBy) {
+        //console.log('[Table] First few items:');
+        data.slice(0, 3).forEach((item, index) => {
+          let value;
+          if (sortBy.includes('.')) {
+            const parts = sortBy.split('.');
+            value = parts.reduce((obj: any, key) => obj?.[key], item);
+          } else {
+            value = (item as any)[sortBy];
+          }
+          //console.log(`  [${index}] ${sortBy}: ${value}`);
+        });
+      }
+    }
+  }, [data, sortBy, sortDirection]);
+
   if (isLoading) {
     return <div className="text-gray-500">Loading...</div>;
   }
@@ -327,7 +351,18 @@ export function Table<T>({
                       column.align === 'right' && 'text-right'
                     )}
                     style={{ width: column.width }}
-                    onClick={() => column.sortable && onSort?.(column.sortKey || column.key)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (process.env.NODE_ENV === 'development') {
+                        //console.log('[Table] Column header clicked:', column.key);
+                        //console.log('[Table] Column is sortable:', column.sortable);
+                        //console.log('[Table] Sort key:', column.sortKey || column.key);
+                        //console.log('[Table] onSort function exists:', !!onSort);
+                      }
+                      if (column.sortable && onSort) {
+                        onSort(column.sortKey || column.key);
+                      }
+                    }}
                     onMouseEnter={() => {
                       if (column.tooltip) {
                         setTooltipState({

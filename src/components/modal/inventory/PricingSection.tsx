@@ -58,51 +58,15 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     debounce((value: string) => {
       const numericValue = value ? Number(value) : null;
       
+      if (process.env.NODE_ENV === 'development') {
+        //console.log('[PricingSection] Updating override price:', value);
+      }
+      
       // Update form data
       handleInputChange('override_price', numericValue);
       
-      // Update cache
-      if (effectiveInventory) {
-        queryClient.setQueryData<InventoryViewItem[]>(['inventory'], old => {
-          if (!old) return old;
-          return old.map(item => {
-            if (item.inventory_id === effectiveInventory.inventory_id) {
-              return {
-                ...item,
-                override_price: numericValue
-              };
-            }
-            return item;
-          });
-        });
-        
-        // Make API call
-        const result = updateInventory(value);
-
-        // Check if result is a Promise before using .then()
-        if (result instanceof Promise) {
-          result.then(() => {
-            notify(
-              value ? 'success' : 'warning',
-              value 
-                ? `${effectiveInventory.product_title} price set to NOK ${value}`
-                : `${effectiveInventory.product_title} price cleared`,
-              { duration: 1500 }
-            );
-          }).catch(() => {
-            notify('error', `Failed to update ${effectiveInventory.product_title} price`);
-          });
-        } else {
-          // If not a Promise, show notification immediately
-          notify(
-            value ? 'success' : 'warning',
-            value 
-              ? `${effectiveInventory.product_title} price set to NOK ${value}`
-              : `${effectiveInventory.product_title} price cleared`,
-            { duration: 1500 }
-          );
-        }
-      }
+      // Make API call - the updateInventory function will handle cache updates and notifications
+      updateInventory(value);
     }, 1000),
     [effectiveInventory, handleInputChange, queryClient, updateInventory]
   );
@@ -154,7 +118,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
           {/* Complete (CIB) Price */}
           <div className={clsx(
             "bg-gray-800/30 rounded-lg p-3",
-            priceType === 'complete' && !formData.override_price ? "ring-1 ring-green-500/50 bg-green-500/10" : "ring-1 ring-gray-500/50",
+            priceType === 'complete' && !formData.override_price ? "ring-1 ring-green-500/50 bg-green-500/10 border-b-4 border-green-500/30" : "ring-1 ring-gray-500/50 border-b-4 border-gray-500/30",
             priceType !== 'complete' && "opacity-75"
           )}>
             <div className="text-xs text-gray-400 mb-1">Complete/CIB</div>
@@ -168,7 +132,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
           {/* New/Sealed Price */}
           <div className={clsx(
             "bg-gray-800/30 rounded-lg p-3",
-            priceType === 'new' && !formData.override_price ? "ring-1 ring-green-500/50 bg-green-500/10" : "ring-1 ring-gray-500/50",
+            priceType === 'new' && !formData.override_price ? "ring-1 ring-green-500/50 bg-green-500/10 border-b-4 border-green-500/30" : "ring-1 ring-gray-500/50 border-b-4 border-gray-500/30",
             priceType !== 'new' && "opacity-75"
           )}>
             <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
@@ -183,11 +147,11 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
 
           {/* Override Price Input */}
           <div className={clsx(
-            "bg-gray-800/30 rounded-lg p-3 items-center justify-center",
-            formData.override_price ? "ring-1 ring-green-500/50 bg-green-500/10" : "ring-1 ring-gray-500/50",
+            "bg-gray-800/30 rounded-lg p-2 items-center justify-center",
+            formData.override_price ? "ring-1 ring-green-500/50 bg-green-500/10 border-b-4 border-green-500/30" : "ring-1 ring-gray-500/50 border-b-4 border-gray-500/30",
             isConnectedToSale && "opacity-50"
           )}>
-            <div className="text-xs text-gray-400 mb-1 flex items-center gap-2 justify-center">
+            <div className="text-xs text-gray-400 flex items-center gap-2 justify-center">
               Override
             </div>
             <FormElement
@@ -200,7 +164,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 setInputValue(newValue); // Update local state immediately for responsive UI
                 debouncedFullUpdate(newValue); // Debounce the actual updates
               }}
-              placeholder="Enter price override"
+              placeholder="..."
               disabled={isConnectedToSale}
               numericOnly={true}
               bgColor="bg-gray-900/50"
@@ -213,7 +177,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
           </div>
 
           {/* Final Price Display */}
-          <div className="bg-green-700/30 rounded-lg p-3 shadow-inner border border-green-300/50 flex flex-col justify-center h-full">
+          <div className="bg-green-700/30 rounded-lg p-3 shadow-inner border border-green-300/50 flex flex-col justify-center h-full border-b-4 border-green-500/30">
             <div className="text-xs text-gray-300 mb-1 font-medium text-center">Final Price</div>
             <div className="text-xs text-white text-center">
               {effectiveInventory ? getPriceDisplayText(effectiveInventory) : 'N/A'}
@@ -222,14 +186,14 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         </div>
         
         {/* Price explanation */}
-        <div className="mt-5 flex items-center justify-center gap-1 text-md text-gray-400 bg-gray-900/20 rounded">
+        <div className="mt-5 flex items-center justify-center gap-1 text-sm text-gray-400 bg-gray-900/20 rounded">
           {effectiveInventory && (
             <>
               {formData.override_price ? (
                 priceType === 'new' ? (
-                  <span>Price <span className="text-blue-400">new</span>, but using override price: <span className="text-green-400">NOK {formData.override_price},-</span></span>
+                  <span>Price <span className="text-blue-400">new</span>, but using override price: NOK {formData.override_price},-</span>
                 ) : (
-                  <span>Price <span className="text-blue-400">complete</span>, but using override price: <span className="text-green-400">NOK {formData.override_price},-</span></span>
+                  <span>Price <span className="text-blue-400">complete</span>, but using override price: NOK {formData.override_price},-</span>
                 )
               ) : effectiveInventory.inventory_status === 'Sold' && effectiveInventory.sold_price ? (
                 <span>Using sold price from sale: <span className="text-blue-400">NOK {effectiveInventory.sold_price},-</span></span>

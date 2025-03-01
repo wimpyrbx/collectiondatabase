@@ -144,8 +144,28 @@ export function useTableState<T extends Record<string, any>>({
     const indexMap = new Map(filtered.map((item, index) => [item, index]));
     
     return [...filtered].sort((a, b) => {
-      const valA = sortBy.endsWith('_secondsago') ? Number(a[sortBy] ?? 0) : (a[sortBy] ?? '');
-      const valB = sortBy.endsWith('_secondsago') ? Number(b[sortBy] ?? 0) : (b[sortBy] ?? '');
+      // Handle special case for _secondsago fields
+      if (sortBy.endsWith('_secondsago')) {
+        const valA = Number(a[sortBy] ?? 0);
+        const valB = Number(b[sortBy] ?? 0);
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      }
+      
+      // For nested properties like 'prices.complete.nok_fixed'
+      let valA, valB;
+      
+      if (sortBy.includes('.')) {
+        const parts = sortBy.split('.');
+        valA = parts.reduce((obj, key) => obj?.[key], a);
+        valB = parts.reduce((obj, key) => obj?.[key], b);
+      } else {
+        valA = a[sortBy];
+        valB = b[sortBy];
+      }
+      
+      // Handle undefined/null values
+      if (valA === undefined || valA === null) valA = '';
+      if (valB === undefined || valB === null) valB = '';
       
       // If values are equal, maintain original order
       if (valA === valB) {
@@ -189,13 +209,35 @@ export function useTableState<T extends Record<string, any>>({
 
   // Handle sort
   const handleSort = React.useCallback((column: string) => {
+    if (process.env.NODE_ENV === 'development') {
+      //console.log('[useTableState] Sorting by column:', column);
+      //console.log('[useTableState] Current sortBy:', sortBy);
+      //console.log('[useTableState] Current sortDirection:', sortDirection);
+    }
+    
     if (column === sortBy) {
-      setSortDirection(d => (d === 'asc' ? 'desc' : 'asc'));
+      setSortDirection(prevDirection => {
+        const newDirection = prevDirection === 'asc' ? 'desc' : 'asc';
+        if (process.env.NODE_ENV === 'development') {
+          //console.log('[useTableState] Changing direction to:', newDirection);
+        }
+        return newDirection;
+      });
     } else {
+      if (process.env.NODE_ENV === 'development') {
+        //console.log('[useTableState] Setting new sortBy:', column);
+      }
       setSortBy(column);
       setSortDirection('asc');
     }
   }, [sortBy]);
+
+  // Add a useEffect to log when sortBy or sortDirection changes
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      //console.log('[useTableState] Sort state changed - sortBy:', sortBy, 'sortDirection:', sortDirection);
+    }
+  }, [sortBy, sortDirection]);
 
   return {
     // Data

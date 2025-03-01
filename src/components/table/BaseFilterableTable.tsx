@@ -164,6 +164,11 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
     return [...filters, recentFilter];
   }, [filters, updateAgeColumn, data, keyExtractor]);
 
+  // Filter out any filters that only have one option
+  const validFilters = React.useMemo(() => {
+    return allFilters.filter(filter => filter.options.length > 1);
+  }, [allFilters]);
+
   // Adjust pagination based on the data from useTableState
   const adjustedPagination = React.useMemo(() => {
     const totalItems = data.length;
@@ -206,10 +211,57 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
 
   // Calculate the current page's data
   const currentPageData = React.useMemo(() => {
+    if (process.env.NODE_ENV === 'development') {
+      //console.log('[BaseFilterableTable] Recalculating currentPageData');
+      //console.log('[BaseFilterableTable] sortBy:', sortBy);
+      //console.log('[BaseFilterableTable] sortDirection:', sortDirection);
+    }
+    
+    // First sort the data
+    const sortedData = [...data].sort((a, b) => {
+      // Get the values to compare
+      let valA, valB;
+      
+      // Handle special case for _secondsago fields
+      if (sortBy.endsWith('_secondsago')) {
+        valA = Number(a[sortBy] ?? 0);
+        valB = Number(b[sortBy] ?? 0);
+      }
+      // For nested properties like 'prices.complete.nok_fixed'
+      else if (sortBy.includes('.')) {
+        const parts = sortBy.split('.');
+        valA = parts.reduce((obj, key) => obj?.[key], a);
+        valB = parts.reduce((obj, key) => obj?.[key], b);
+      } 
+      // Regular properties
+      else {
+        valA = a[sortBy];
+        valB = b[sortBy];
+      }
+      
+      // Handle undefined/null values
+      if (valA === undefined || valA === null) valA = '';
+      if (valB === undefined || valB === null) valB = '';
+      
+      // Handle numeric sorting
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      }
+      
+      // String comparison
+      const strA = String(valA).toLowerCase();
+      const strB = String(valB).toLowerCase();
+      
+      return sortDirection === 'asc' 
+        ? strA.localeCompare(strB)
+        : strB.localeCompare(strA);
+    });
+    
+    // Then paginate
     const startIndex = (adjustedPagination.currentPage - 1) * adjustedPagination.pageSize;
-    const endIndex = Math.min(startIndex + adjustedPagination.pageSize, data.length);
-    return data.slice(startIndex, endIndex);
-  }, [data, adjustedPagination.currentPage, adjustedPagination.pageSize]);
+    const endIndex = Math.min(startIndex + adjustedPagination.pageSize, sortedData.length);
+    return sortedData.slice(startIndex, endIndex);
+  }, [data, sortBy, sortDirection, adjustedPagination.currentPage, adjustedPagination.pageSize]);
 
   return (
     <div className="space-y-4">
@@ -247,14 +299,14 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
 
         {/* Right side: Filters */}
         <div className={onSearchChange ? "w-5/6" : "w-full"}>
-          {allFilters.length > 0 && (
+          {validFilters.length > 0 && (
             <>
               <button
                 onClick={() => {
                   setIsFiltersExpanded(!isFiltersExpanded);
                   if (isFiltersExpanded) {
                     // Reset all filters when hiding
-                    allFilters.forEach(filter => onFilterChange(filter.key, []));
+                    validFilters.forEach(filter => onFilterChange(filter.key, []));
                     if (onSearchChange) onSearchChange('');
                   }
                 }}
@@ -277,9 +329,7 @@ export const BaseFilterableTable = <T extends Record<string, any>>({
                 }`}
               >
                 <div className="flex gap-4">
-                  {allFilters
-                    .filter(filter => filter.options.length > 0) // Only show filters with at least one option
-                    .map((filter) => (
+                  {validFilters.map((filter) => (
                     <div key={filter.key} className="flex-1">
                       <FormElement
                         elementType="listmultiple"

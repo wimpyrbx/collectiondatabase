@@ -319,17 +319,17 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
       </div>
       <div className="p-4 pt-3">
       {formData.inventory_status === 'Normal' && (
-        <div className="flex items-center justify-center gap-1 pt-2 text-md text-gray-400">
+        <div className="flex items-center justify-center gap-1 pt-2 text-sm text-gray-400">
           Item is in <span className="text-gray-300">Normal</span> status
         </div>
       )}
       {formData.inventory_status === 'Collection' && (
-        <div className="flex items-center justify-center gap-1 pt-2 text-md text-orange-400">
+        <div className="flex items-center justify-center gap-1 pt-2 text-sm text-orange-400">
           Item is in <span className="text-orange-300">Collection</span> status
         </div>
       )}
       {!formData.sale_id && formData.inventory_status === 'For Sale' && (
-        <div className="flex items-center justify-center gap-1 pt-2 text-md text-green-400">
+        <div className="flex items-center justify-center gap-1 pt-2 text-sm text-green-400">
           {availableSales && availableSales.length > 0 ? (
             "You can now connect this item to a sale"
           ) : (
@@ -341,13 +341,13 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
       )}
       {/* If sale_status is Reserved, output that we ARE able to change the status while the sale is Reserved */} 
       {formData.sale_status === 'Reserved' && (
-        <div className="flex items-center justify-center gap-1 pt-2 text-md text-green-500">
+        <div className="flex items-center justify-center gap-1 pt-2 text-sm text-green-500">
           Item is connected to a sale that has status <span className="text-green-300">Reserved</span>
         </div>
       )}
       {/* If sale_status is Finalized, output that we ARE able to change the status while the sale is Finalized */}
       {formData.sale_status === 'Finalized' && (
-        <div className="flex items-center justify-center gap-1 pt-2 text-md text-green-500">
+        <div className="flex items-center justify-center gap-1 pt-2 text-sm text-green-500">
           This item is connected to a <span className="text-green-300">Finalized</span> sale
         </div>
       )}

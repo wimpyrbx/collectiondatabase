@@ -131,7 +131,7 @@ export const PurchaseSection: React.FC<PurchaseSectionProps> = ({
   };
 
   return (
-    <div className="bg-gray-900/40 rounded-lg overflow-hidden shadow-md shadow-black/30">
+    <div className={`bg-gray-900/40 rounded-lg overflow-hidden shadow-md shadow-black/30 ${availablePurchases.length === 0 ? 'opacity-30' : ''}`}>
       <div className="px-4 py-2 bg-gray-900 border-b border-gray-700">
         <h3 className="font-medium text-gray-300 flex items-center gap-2">
           <FaStore className="text-purple-400" />

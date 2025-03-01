@@ -435,7 +435,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       const currentSaleId = formData.sale_id || inventory.sale_id;
       
       if (!currentSaleId) {
-        console.log('No sale ID found to remove');
+        //console.log('No sale ID found to remove');
         return;
       }
       
@@ -641,6 +641,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
     debounce(async (newPrice: string) => {
       if (!inventory) return;
       
+      if (process.env.NODE_ENV === 'development') {
+        //console.log('[InventoryModal] Updating override price in database:', newPrice);
+      }
+      
       try {
         const { error } = await supabase
           .from('inventory')
@@ -648,6 +652,24 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
           .eq('id', inventory.inventory_id);
           
         if (error) throw error;
+
+        if (process.env.NODE_ENV === 'development') {
+          //console.log('[InventoryModal] Successfully updated override price in database');
+        }
+
+        // Update the cache to reflect the new price
+        queryClient.setQueryData<InventoryViewItem[]>(['inventory'], old => {
+          if (!old) return old;
+          return old.map(item => {
+            if (item.inventory_id === inventory.inventory_id) {
+              return {
+                ...item,
+                override_price: newPrice ? Number(newPrice) : null
+              };
+            }
+            return item;
+          });
+        });
 
         notify(
           newPrice ? 'success' : 'warning',
@@ -659,10 +681,13 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
           }
         );
       } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[InventoryModal] Failed to update override price:', error);
+        }
         notify('error', `Failed to update ${inventory.product_title} price`);
       }
     }, 500),
-    [inventory]
+    [inventory, queryClient]
   );
 
   // Add this useEffect after the existing hooks

@@ -28,17 +28,17 @@ const imageVersions = new Map<string, number>();
 // Helper function for logging
 const logDebug = (...args: any[]) => {
   if (DEBUG) {
-    console.log('[ImageUtils]', ...args);
+    //console.log('[ImageUtils]', ...args);
   }
 };
 
 // Enhanced debug logging for image operations
 const logImageOperation = (operation: string, data: any) => {
   if (DEBUG) {
-    console.group(`[ImageUtils] ${operation}`);
-    console.log('Time:', new Date().toISOString());
+    //console.group(`[ImageUtils] ${operation}`);
+    //console.log('Time:', new Date().toISOString());
     Object.entries(data).forEach(([key, value]) => {
-      console.log(`${key}:`, value);
+      //console.log(`${key}:`, value);
     });
     console.groupEnd();
   }
