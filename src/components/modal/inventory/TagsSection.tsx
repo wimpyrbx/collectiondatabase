@@ -27,8 +27,8 @@ export const TagsSection: React.FC<TagsSectionProps> = ({
   productTags = []
 }) => {
   return (
-    <div className="bg-gray-900/50 rounded-lg overflow-hidden relative">
-      <div className="px-4 py-2 bg-gray-800/50 border-b border-gray-700">
+    <div className="bg-gray-900/50 rounded-lg overflow-hidden relative shadow-md shadow-black/30">
+      <div className="px-4 py-2 bg-gray-900 border-b border-gray-700">
         <h3 className="font-medium text-gray-300 flex items-center gap-2">
           <FaTags className="text-purple-400" />
           Inventory Tags
@@ -52,11 +52,6 @@ export const TagsSection: React.FC<TagsSectionProps> = ({
         
         {/* Inventory Tags Section */}
         <div>
-          <div className="flex items-center gap-2 mb-2 text-gray-300">
-            <FaTags className="text-purple-400" />
-            <span className="text-sm font-medium">Inventory-specific Tags</span>
-            <span className="text-xs text-gray-400">(can be added/removed)</span>
-          </div>
           <div className={clsx(
             "flex flex-wrap gap-2",
             isConnectedToSale && "opacity-70 pointer-events-none"

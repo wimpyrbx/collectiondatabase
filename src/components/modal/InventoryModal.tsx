@@ -28,7 +28,8 @@ import {
   StatusSection,
   ModalContainer,
   ContentLayout,
-  TwoColumnLayout
+  TwoColumnLayout,
+  BarcodeSection
 } from './inventory';
 
 interface InventoryModalProps {
@@ -370,10 +371,26 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
         
       if (error) throw error;
 
+      // Update the inventory cache immediately to ensure UI consistency
+      queryClient.setQueryData<InventoryViewItem[]>(['inventory'], old => {
+        if (!old) return old;
+        return old.map(item => {
+          if (item.inventory_id === inventory.inventory_id) {
+            return {
+              ...item,
+              ...updates,
+              inventory_updated_at: new Date().toISOString()
+            };
+          }
+          return item;
+        });
+      });
+
       // Invalidate related queries to fetch fresh data
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['sales'] }),
-        queryClient.invalidateQueries({ queryKey: ['sale_items'] })
+        queryClient.invalidateQueries({ queryKey: ['sale_items'] }),
+        queryClient.invalidateQueries({ queryKey: ['inventory'] })
       ]);
 
       notify('success', `${inventory.product_title} added to sale`);
@@ -710,7 +727,15 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
         }
       >
         <ContentLayout
-          leftColumn={<ImageSection inventory={inventory} setErrors={actions.setErrors} />}
+          leftColumn={
+            <>
+              <ImageSection inventory={inventory} setErrors={actions.setErrors} />
+              <BarcodeSection
+                inventory={inventory}
+                isConnectedToSale={isConnectedToSale}
+              />
+            </>
+          }
           rightColumn={
             <>
               <ProductInfoDisplay 
@@ -728,7 +753,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     updateInventory={debouncedUpdateOverridePrice}
                   />
                 }
-              rightColumn={
+                rightColumn={
                   <StatusSection
                     inventory={inventory}
                     formData={formData}
@@ -780,6 +805,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                 handleTagToggle={handleTagToggle}
                 productTags={productTags}
               />
+
             </>
           }
         />

@@ -97,7 +97,7 @@ export const Tooltip: React.FC<TooltipComponentProps> = ({
     }
   };
 
-  if (!isOpen || !text) return null;
+  if (!isOpen || text === undefined || text === null) return null;
 
   return createPortal(
     <div

@@ -78,8 +78,24 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
         return;
       }
       
+      // Special handling for For Sale button shortcut (F)
+      const isForSaleOption = option.value === 'For Sale';
+      
+      // For the For Sale option, we need special handling:
+      // - If connected to a sale with a valid sale_id, ALLOW the shortcut (to remove from sale)
+      // - Otherwise, check if transition is allowed
+      let isTransitionAllowedForOption = true;
+      if (isForSaleOption && isConnectedToSale) {
+        // If we have a sale_id, ALLOW the shortcut (to remove from sale)
+        // Otherwise, disable it (can't set to For Sale when connected to a sale without a sale_id)
+        isTransitionAllowedForOption = Boolean(formData.sale_id);
+      } else {
+        // For other options, use the normal transition rules
+        isTransitionAllowedForOption = isTransitionAllowed(formData.inventory_status, option.value, null);
+      }
+      
       // Check if transition is allowed
-      if (!isTransitionAllowed(formData.inventory_status, option.value, null)) {
+      if (!isTransitionAllowedForOption) {
         return;
       }
       
@@ -176,9 +192,24 @@ export const StatusButtons: React.FC<StatusButtonsProps> = ({
   // Status button renderer
   const renderStatusButton = (option: typeof STATUS_OPTIONS[0]) => {
     const isActive = formData.inventory_status === option.value;
-    const isDisabled = isActive || 
-                     !isTransitionAllowed(formData.inventory_status, option.value, null) ||
-                     (option.value === 'For Sale' && isConnectedToSale && !inventory?.sale_id);
+    
+    // Fix the condition for disabling the For Sale button
+    // The button should be disabled if:
+    // 1. It's already active (current status is For Sale)
+    // 2. The transition is not allowed
+    // 3. For the For Sale button specifically, we need special handling:
+    //    - If connected to a sale with a valid sale_id, ENABLE the button (to allow removing from sale)
+    //    - Otherwise, follow normal transition rules
+    const isForSaleButton = option.value === 'For Sale';
+    
+    let isDisabled = isActive || !isTransitionAllowed(formData.inventory_status, option.value, null);
+    
+    // Special handling for For Sale button
+    if (isForSaleButton && isConnectedToSale) {
+      // If we have a sale_id, ENABLE the button (to allow removing from sale)
+      // Otherwise, disable it (can't set to For Sale when connected to a sale without a sale_id)
+      isDisabled = !formData.sale_id;
+    }
     
     const handleClick = async () => {
       // Check if trying to set the same status

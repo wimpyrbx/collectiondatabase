@@ -9,16 +9,14 @@ interface ImageSectionProps {
 
 const ImageSection: React.FC<ImageSectionProps> = ({ inventory, setErrors }) => {
   return (
-    <div className="col-span-3">
-      <div className="space-y-4">
-        <ImageContainerInventory
-          id={inventory?.inventory_id || -1}
-          title={inventory?.product_title || 'New Inventory'}
-          onError={(message) => setErrors(prev => [...prev, message])}
-          className="w-full h-full"
-          productId={inventory?.product_id}
-        />
-      </div>
+    <div className="w-full shadow-md shadow-black/30">
+      <ImageContainerInventory
+        id={inventory?.inventory_id || -1}
+        title={inventory?.product_title || 'New Inventory'}
+        onError={(message) => setErrors(prev => [...prev, message])}
+        className="w-full h-full"
+        productId={inventory?.product_id}
+      />
     </div>
   );
 };

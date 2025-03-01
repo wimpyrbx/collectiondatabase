@@ -13,5 +13,6 @@ export { default as StatusSection } from './StatusSection';
 export { default as ModalContainer } from './ModalContainer';
 export { default as ContentLayout } from './ContentLayout';
 export { default as TwoColumnLayout } from './TwoColumnLayout';
+export { default as BarcodeSection } from './BarcodeSection';
 export * from './constants';
 export * from './types'; 

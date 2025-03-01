@@ -12,8 +12,10 @@ const ContentLayout: React.FC<ContentLayoutProps> = ({
 }) => {
   return (
     <div className="grid grid-cols-12 gap-4">
-      {/* Left Column - Image and Product Info */}
-      {leftColumn}
+      {/* Left Column - Image and Barcodes */}
+      <div className="col-span-3 space-y-4">
+        {leftColumn}
+      </div>
 
       {/* Right Column - Form Fields */}
       <div className="col-span-9 space-y-6">

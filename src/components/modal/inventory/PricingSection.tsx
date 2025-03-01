@@ -222,7 +222,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         </div>
         
         {/* Price explanation */}
-        <div className="mt-5 flex items-center justify-center gap-1 text-md text-gray-400 bg-gray-900/30 rounded">
+        <div className="mt-5 flex items-center justify-center gap-1 text-md text-gray-400 bg-gray-900/20 rounded">
           {effectiveInventory && (
             <>
               {formData.override_price ? (

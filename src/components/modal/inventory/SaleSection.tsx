@@ -28,6 +28,7 @@ export const SaleSection: React.FC<SaleSectionProps> = ({
   return (
     <div className={clsx(
       "bg-gray-900/50 rounded-lg overflow-hidden transition-all duration-200",
+      "shadow-md shadow-black/30",
       availableSales.length === 0 && [
         "opacity-30",
         "pointer-events-none"
@@ -37,7 +38,7 @@ export const SaleSection: React.FC<SaleSectionProps> = ({
         "pointer-events-none"
       ]
     )}>
-      <div className="px-4 py-2 bg-gray-900 border-b border-gray-700">
+      <div className="px-4 py-2 bg-gray-900 border-b border-gray-700 ">
         <h3 className="font-medium text-gray-300 flex items-center gap-2">
           <FaShoppingCart className="text-orange-400" />
           Sale Information
@@ -50,7 +51,7 @@ export const SaleSection: React.FC<SaleSectionProps> = ({
           )}
         </h3>
       </div>
-      <div className="p-4">
+      <div className="p-4 bg-gray-800/20 shadow-lg shadow-black/80">
         {(formData.sale_id || (inventory?.sale_id && formData.inventory_status === 'Sold')) ? (
           <div className="space-y-4">
             {/* Connected Sale Details */}
